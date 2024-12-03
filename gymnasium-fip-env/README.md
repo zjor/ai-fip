@@ -31,3 +31,13 @@ cd fip_env
 pip install -e .
 ```
 
+## Development dependencies
+
+- `pip install imageio`
+
+## How to run locally
+
+```{shell}
+python -m fip_env.sandbox
+```
+
