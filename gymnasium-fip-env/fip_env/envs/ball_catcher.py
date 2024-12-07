@@ -1,3 +1,4 @@
+import copy
 from enum import Enum
 
 import gymnasium as gym
@@ -9,6 +10,38 @@ from numpy.ma.core import shape
 
 PADDING = 32
 RACKET_SIZE = 96
+
+g = 9.81  # gravity
+
+
+def integrate_rk4(state, step, t, dt, dydx_func):
+    """
+    Fourth-order Runge-Kutta method.
+    Source: https://www.geeksforgeeks.org/runge-kutta-4th-order-method-solve-differential-equation/
+    :param step:
+    :param state:
+    :param t:
+    :param dt:
+    :param dydx_func:
+    :return:
+    """
+    k1 = dydx_func(state, step, t, dt)
+    k2 = dydx_func([v + d * dt / 2 for v, d in zip(state, k1)], step, t, dt)
+    k3 = dydx_func([v + d * dt / 2 for v, d in zip(state, k2)], step, t, dt)
+    k4 = dydx_func([v + d * dt for v, d in zip(state, k3)], step, t, dt)
+    return [v + (k1_ + 2 * k2_ + 2 * k3_ + k4_) * dt / 6 for v, k1_, k2_, k3_, k4_ in zip(state, k1, k2, k3, k4)]
+
+
+def dydx_ball(state: np.ndarray[float], _step: int, _t: float, _dt: float) -> np.ndarray[float]:
+    """
+    :param state:
+    :param _step:
+    :param _t:
+    :param _dt:
+    :return: derivatives of all state variables of a free-falling ball
+    """
+    [_x, _y, vx, vy] = state
+    return np.array([vx, vy, 0, -g], dtype=float)
 
 
 def draw_radial_gradient_circle(surface, center, radius, inner_color, outer_color):
@@ -47,17 +80,19 @@ class BallCatcherEnv(gym.Env):
         self.window_size = size + PADDING * 2
 
         self.dt = 1.0 / self.metadata['render_fps']
-        self.g = 9.81
 
-        self._ball_location = np.array([0, self.size / 2], dtype=np.float32)
-        self._ball_velocity = np.array([0, self.size / 2], dtype=np.float32)
+        self._step: int = 0  # current step
+        self._time: float = 0  # elapsed time
+        self._last_state: np.ndarray[float] = None  # the state from the last timestep
+        self._state: np.ndarray[float] = None  # ball [x, y, vx, vy]
+
         self._agent_location = np.array([self.size, self.size / 2], dtype=np.float32)
 
         self.observation_space = gym.spaces.Dict(
             {
-                "ball_location": spaces.Box(0, size, shape(2, ), dtype=np.float32),
-                "ball_prev_location": spaces.Box(0, size, shape(2, ), dtype=np.float32),
-                "agent": spaces.Box(0, size, shape(1, ), dtype=np.float32),
+                "ball_location": spaces.Box(0, size, shape(2, ), dtype=float),
+                "last_ball_location": spaces.Box(0, size, shape(2, ), dtype=float),
+                "agent": spaces.Box(0, size, shape(1, ), dtype=float),
             }
         )
 
@@ -76,9 +111,11 @@ class BallCatcherEnv(gym.Env):
         self.clock = None
 
     def _get_observation(self):
+        [x, y, _, _] = self._state
+        [last_x, last_y, _, _] = self._last_state
         return {
-            "ball_location": self._ball_location,
-            "ball_prev_location": self._ball_location,  # TODO: calc ball location using velocity and a timestep
+            "ball_location": np.array([x, y], dtype=float),
+            "last_ball_location": np.array([last_x, last_y], dtype=float),
             "agent": self._agent_location
         }
 
@@ -88,9 +125,15 @@ class BallCatcherEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
+
         # TODO: calc location & velocity to hit the wall and stay within boundaries
-        self._ball_location = np.array([0, self.size / 2], dtype=np.float32)
-        self._ball_velocity = np.array([50, 30], dtype=np.float32)
+        x = 0
+        y = self.size / 2
+        vx = 50
+        vy = 30
+        self._state = np.array([x, y, vx, vy], dtype=float)
+        self._last_state = copy.deepcopy(self._state)
+
         self._agent_location = np.array([
             self.size,
             self.size / 2],
@@ -98,15 +141,12 @@ class BallCatcherEnv(gym.Env):
         return self._get_observation(), self._get_info()
 
     def step(self, action):
-        [x, y] = self._ball_location
-        [vx, vy] = self._ball_velocity
+        self._last_state = copy.deepcopy(self._state)
+        self._state = integrate_rk4(self._state, self._step, self._time, self.dt, dydx_ball)
+        self._step += 1
+        self._time += self.dt
 
-        # TODO: use RK-4 integrator
-        x += vx * self.dt
-        y += vy * self.dt
-        vy -= self.g * self.dt
-        self._ball_location = np.array([x, y], dtype=np.float32)
-        self._ball_velocity = np.array([vx, vy], dtype=np.float32)
+        print(self._last_state, self._state)
 
         direction = self._action_to_direction[action]
         self._agent_location = np.clip(self._agent_location + direction, 0, self.size)
@@ -133,7 +173,7 @@ class BallCatcherEnv(gym.Env):
     def _render_to_surface(self) -> pygame.Surface:
         canvas = pygame.Surface((self.window_size, self.window_size))
         canvas.fill((0, 0, 0))
-        [x, y] = self._ball_location
+        [x, y, _, _] = self._state
         draw_radial_gradient_circle(
             canvas,
             (PADDING + x, PADDING + y),
