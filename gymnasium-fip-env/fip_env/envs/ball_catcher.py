@@ -126,15 +126,21 @@ class BallCatcherEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
 
-        # TODO: calc location & velocity to hit the wall and stay within boundaries
-        x = 0
-        y = self.size / 2
-        vx = 65
-        vy = 35
-        self._state = np.array([x, y, vx, vy], dtype=float)
+        rnd = self.np_random
+        [y0, y1] = rnd.uniform(0, self.size, (2,))
+        if y0 < y1:
+            b = rnd.uniform(2 * (y1 - y0) / self.size, 4 * (y1 - y0) / self.size, (1,))[0]
+            a = (y1 - y0 - b * self.size) / self.size ** 2
+        else:
+            b = rnd.uniform(0.1, 2, (1,))[0]
+            a = (y1 - y0 - b * self.size) / self.size ** 2
+        vx = np.sqrt(-g / (2 * a))
+        vy = b * vx
+
+        self._state = np.array([0, y0, vx, vy], dtype=float)
         self._last_state = copy.deepcopy(self._state)
 
-        self._agent_location = self.size / 2
+        self._agent_location = rnd.uniform(RACKET_SIZE / 2, self.size - RACKET_SIZE / 2, (1,))[0]
         return self._get_observation(), self._get_info()
 
     def step(self, action):
@@ -158,8 +164,6 @@ class BallCatcherEnv(gym.Env):
                 reward = 100 * (1 - 2 * delta / RACKET_SIZE)
         else:
             reward = 0 if action == Actions.nop.value else -0.01
-
-        print(f"Terminated: {terminated}; Reward: {reward:.2f}; Delta: {delta}")
 
         if self.render_mode == "human":
             self._render_interactive()
