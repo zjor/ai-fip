@@ -73,7 +73,7 @@ class Actions(Enum):
 
 
 class BallCatcherEnv(gym.Env):
-    metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 60}
+    metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 24}
 
     def __init__(self, render_mode=None, size=512):
         self.size = size
@@ -86,7 +86,7 @@ class BallCatcherEnv(gym.Env):
         self._last_state: np.ndarray[float] = None  # the state from the last timestep
         self._state: np.ndarray[float] = None  # ball [x, y, vx, vy]
 
-        self._agent_location = np.array([self.size, self.size / 2], dtype=np.float32)
+        self._agent_location: float = 0  # racket location
 
         self.observation_space = gym.spaces.Dict(
             {
@@ -99,9 +99,9 @@ class BallCatcherEnv(gym.Env):
         # We have 3 actions: "up", "down", "nop"
         self.action_space = spaces.Discrete(3)
         self._action_to_direction = {
-            Actions.up.value: np.array([0, 1]),
-            Actions.down.value: np.array([0, -1]),
-            Actions.nop.value: np.array([0, 0]),
+            Actions.up.value: 1,
+            Actions.down.value: -1,
+            Actions.nop.value: 0,
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -129,15 +129,12 @@ class BallCatcherEnv(gym.Env):
         # TODO: calc location & velocity to hit the wall and stay within boundaries
         x = 0
         y = self.size / 2
-        vx = 50
-        vy = 30
+        vx = 65
+        vy = 35
         self._state = np.array([x, y, vx, vy], dtype=float)
         self._last_state = copy.deepcopy(self._state)
 
-        self._agent_location = np.array([
-            self.size,
-            self.size / 2],
-            dtype=np.float32)
+        self._agent_location = self.size / 2
         return self._get_observation(), self._get_info()
 
     def step(self, action):
@@ -146,14 +143,23 @@ class BallCatcherEnv(gym.Env):
         self._step += 1
         self._time += self.dt
 
-        print(self._last_state, self._state)
-
         direction = self._action_to_direction[action]
         self._agent_location = np.clip(self._agent_location + direction, 0, self.size)
-        # TODO: calc if terminated => detect collision or miss
-        terminated = False
-        # TODO: calc reward, if collided, calc distance from the center of an agent
-        reward = 0
+
+        [x, y, _, _] = self._state
+        terminated = x >= self.size
+
+        delta = 0
+        if terminated:
+            delta = abs(y - self._agent_location)
+            if delta >= RACKET_SIZE / 2:
+                reward = -100
+            else:
+                reward = 100 * (1 - 2 * delta / RACKET_SIZE)
+        else:
+            reward = 0 if action == Actions.nop.value else -0.01
+
+        print(f"Terminated: {terminated}; Reward: {reward:.2f}; Delta: {delta}")
 
         if self.render_mode == "human":
             self._render_interactive()
@@ -173,20 +179,31 @@ class BallCatcherEnv(gym.Env):
     def _render_to_surface(self) -> pygame.Surface:
         canvas = pygame.Surface((self.window_size, self.window_size))
         canvas.fill((0, 0, 0))
+        [ox, oy] = [PADDING, PADDING]
         [x, y, _, _] = self._state
         draw_radial_gradient_circle(
             canvas,
-            (PADDING + x, PADDING + y),
+            (x + ox, y + oy),
             16,
             (185, 67, 102),
             (204, 146, 155)
         )
-        [x, y] = self._agent_location
+
         pygame.draw.rect(
             canvas,
             (144, 238, 144),
-            pygame.Rect((x - 8, y - RACKET_SIZE / 2), (16, RACKET_SIZE))
+            pygame.Rect(
+                (self.size + ox, self._agent_location - RACKET_SIZE / 2 + oy),
+                (16, RACKET_SIZE))
         )
+        pygame.draw.rect(
+            canvas,
+            (204, 146, 155),
+            pygame.Rect(
+                (self.size + ox, self._agent_location - 2 + oy),
+                (16, 4))
+        )
+
         return pygame.transform.flip(canvas, False, True)
 
     def _render_frame(self):
