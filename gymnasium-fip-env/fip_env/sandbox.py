@@ -6,22 +6,22 @@ from gymnasium.wrappers import FlattenObservation
 
 from fip_env.rl import Policy, reinforce
 
-if __name__ == '__main__':
+params = {
+    "h_size": 16,
+    "n_training_episodes": 10000,
+    "n_evaluation_episodes": 20,
+    "max_t": 1000,
+    "gamma": 1.0,
+    "lr": 1e-2,
+    "state_space": 5,
+    "action_space": 3,
+}
+
+
+def train(device: torch.device, output_filename: str):
     env = gymnasium.make('fip_env/BallCatcher-v0', render_mode=None)
     env = FlattenObservation(env)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    params = {
-        "h_size": 16,
-        "n_training_episodes": 5000,
-        "n_evaluation_episodes": 10,
-        "max_t": 1000,
-        "gamma": 1.0,
-        "lr": 1e-2,
-        "state_space": 5,
-        "action_space": 3,
-    }
     policy = Policy(
         params["state_space"],
         params["action_space"],
@@ -40,11 +40,31 @@ if __name__ == '__main__':
     )
 
     print("Training finished")
+    torch.save(policy.state_dict(), output_filename)
 
-    # for i in range(400):
-    #     action = env.action_space.sample()
-    #     obs, reward, terminated, _, info = env.step(action)
-    #     if terminated:
-    #         break
-    # pixels = env.render()
-    # iio.imwrite(f"output-{i}.png", pixels)
+
+def load_and_play(device: torch.device, policy_filename: str):
+    policy = Policy(
+        params["state_space"],
+        params["action_space"],
+        params["h_size"],
+    ).to(device)
+    policy.load_state_dict(torch.load(policy_filename))
+    policy.eval()
+
+    env = gymnasium.make('fip_env/BallCatcher-v0', render_mode="human")
+    env = FlattenObservation(env)
+
+    state, _ = env.reset()
+    done = False
+    while not done:
+        action, _ = policy.act(np.array(state))
+        state, reward, done, _, _ = env.step(action)
+
+
+if __name__ == '__main__':
+    policy_filename = "policy.pth"
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # train(device, policy_filename)
+
+    load_and_play(device, policy_filename)

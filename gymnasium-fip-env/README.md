@@ -42,8 +42,7 @@ python -m fip_env.sandbox
 ```
 
 ## TODO
-- save/load policy
-- render full episode given the policy
+- limit motion of the bat if goes beyond the boundaries
 - try reward function without negative score for moves
 - try to add more hidden layers
 - run on collab with GPU | Kaggle
