@@ -10,6 +10,7 @@ name = "fip_env"
 version = "0.0.1"
 dependencies = [
   "gymnasium",
+  "torch>=2.5.1",
   "pygame>=2.1.3",
   "pre-commit",
 ]
