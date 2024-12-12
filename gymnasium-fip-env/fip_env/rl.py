@@ -24,6 +24,7 @@ class Policy(nn.Module):
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
         probs = self.forward(state).cpu()
         m = Categorical(probs)
+        print(m.probs)
         action = m.sample()
         return action.item(), m.log_prob(action)
 

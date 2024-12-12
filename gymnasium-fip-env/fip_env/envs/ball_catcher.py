@@ -9,7 +9,12 @@ from numpy import dtype
 from numpy.ma.core import shape
 
 PADDING = 32
-RACKET_SIZE = 96
+RACKET_SIZE = 48
+
+BALL_RADIUS = 8
+RACKET_WIDTH = 4
+
+RACKET_STEP = 5
 
 g = 9.81  # gravity
 
@@ -69,13 +74,13 @@ def draw_radial_gradient_circle(surface, center, radius, inner_color, outer_colo
 class Actions(Enum):
     up = 0
     down = 1
-    nop = 2
+    # nop = 2
 
 
 class BallCatcherEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 24}
 
-    def __init__(self, render_mode=None, size=512):
+    def __init__(self, render_mode=None, size=128):
         self.size = size
         self.window_size = size + PADDING * 2
 
@@ -96,12 +101,12 @@ class BallCatcherEnv(gym.Env):
             }
         )
 
-        # We have 3 actions: "up", "down", "nop"
-        self.action_space = spaces.Discrete(3)
+        # We have 3 actions: "up", "down", # "nop"
+        self.action_space = spaces.Discrete(2)
         self._action_to_direction = {
-            Actions.up.value: 1,
-            Actions.down.value: -1,
-            Actions.nop.value: 0,
+            Actions.up.value: RACKET_STEP,
+            Actions.down.value: -RACKET_STEP,
+            # Actions.nop.value: 0,
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -150,7 +155,10 @@ class BallCatcherEnv(gym.Env):
         self._time += self.dt
 
         direction = self._action_to_direction[action]
-        self._agent_location = np.clip(self._agent_location + direction, 0, self.size)
+        self._agent_location = np.clip(
+            self._agent_location + direction,
+            RACKET_SIZE / 2,
+            self.size - RACKET_SIZE / 2)
 
         [x, y, _, _] = self._state
         terminated = x >= self.size
@@ -159,11 +167,13 @@ class BallCatcherEnv(gym.Env):
         if terminated:
             delta = abs(y - self._agent_location)
             if delta >= RACKET_SIZE / 2:
-                reward = -100
+                reward = -10
             else:
-                reward = 100 * (1 - 2 * delta / RACKET_SIZE)
+                reward = 10 # * (1 - 2 * delta / RACKET_SIZE)
         else:
-            reward = 0 if action == Actions.nop.value else -0.01
+            step_penalty = 0 # -0.01
+            # reward = 0 if action == Actions.nop.value else step_penalty
+            reward = 0
 
         if self.render_mode == "human":
             self._render_interactive()
@@ -188,7 +198,7 @@ class BallCatcherEnv(gym.Env):
         draw_radial_gradient_circle(
             canvas,
             (x + ox, y + oy),
-            16,
+            BALL_RADIUS,
             (185, 67, 102),
             (204, 146, 155)
         )
@@ -198,14 +208,14 @@ class BallCatcherEnv(gym.Env):
             (144, 238, 144),
             pygame.Rect(
                 (self.size + ox, self._agent_location - RACKET_SIZE / 2 + oy),
-                (16, RACKET_SIZE))
+                (RACKET_WIDTH, RACKET_SIZE))
         )
         pygame.draw.rect(
             canvas,
             (204, 146, 155),
             pygame.Rect(
                 (self.size + ox, self._agent_location - 2 + oy),
-                (16, 4))
+                (RACKET_WIDTH, 4))
         )
 
         return pygame.transform.flip(canvas, False, True)

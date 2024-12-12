@@ -42,8 +42,13 @@ python -m fip_env.sandbox
 ```
 
 ## TODO
-- limit motion of the bat if goes beyond the boundaries
-- try reward function without negative score for moves
+- [x] limit motion of the bat if goes beyond the boundaries
+- [x] make the env smaller, reward is too delayed
+- [x] make action steps bigger (10, 25, 50 pixels)
+- [x] reduce FPS
+- [x] try reward function without negative score for moves
+- plot graph of the learning curve, avg score over the number of episodes
 - try to add more hidden layers
 - run on collab with GPU | Kaggle
 - try huge number of episodes
+- normalize input data between [0, 1]; do we even need it?
