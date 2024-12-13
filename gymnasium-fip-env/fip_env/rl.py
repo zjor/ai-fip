@@ -13,18 +13,22 @@ class Policy(nn.Module):
         super(Policy, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.fc1 = nn.Linear(s_size, h_size)
-        self.fc2 = nn.Linear(h_size, a_size)
+        self.fc2 = nn.Linear(h_size, h_size)
+        self.fc3 = nn.Linear(h_size, h_size)
+        self.fc4 = nn.Linear(h_size, a_size)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = self.fc4(x)
         return F.softmax(x, dim=1)
 
     def act(self, state: np.ndarray):
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
         probs = self.forward(state).cpu()
         m = Categorical(probs)
-        print(m.probs)
+        # print(m.probs)
         action = m.sample()
         return action.item(), m.log_prob(action)
 

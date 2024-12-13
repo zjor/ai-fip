@@ -8,12 +8,12 @@ from fip_env.envs.ball_catcher import Actions
 from fip_env.rl import Policy, reinforce
 
 params = {
-    "h_size": 24,
-    "n_training_episodes": 7000,
+    "h_size": 16,
+    "n_training_episodes": 10000,
     "n_evaluation_episodes": 20,
     "max_t": 1000,
-    "gamma": 0.9,
-    "lr": 0.007,
+    "gamma": 1.0,
+    "lr": 0.05,
     "state_space": 5,
     "action_space": 2,
 }
@@ -66,9 +66,11 @@ def load_and_play(device: torch.device, policy_filename: str):
 def main():
     policy_filename = "policy.pth"
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # train(device, policy_filename)
-
-    load_and_play(device, policy_filename)
+    training = False
+    if training:
+        train(device, policy_filename)
+    else:
+        load_and_play(device, policy_filename)
 
 
 def sandbox():
