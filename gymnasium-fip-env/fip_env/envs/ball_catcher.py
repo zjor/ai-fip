@@ -9,7 +9,7 @@ from numpy import dtype
 from numpy.ma.core import shape
 
 PADDING = 32
-RACKET_SIZE = 48
+RACKET_SIZE = 24
 
 BALL_RADIUS = 8
 RACKET_WIDTH = 4
@@ -74,7 +74,7 @@ def draw_radial_gradient_circle(surface, center, radius, inner_color, outer_colo
 class Actions(Enum):
     up = 0
     down = 1
-    # nop = 2
+    nop = 2
 
 
 class BallCatcherEnv(gym.Env):
@@ -106,7 +106,7 @@ class BallCatcherEnv(gym.Env):
         self._action_to_direction = {
             Actions.up.value: RACKET_STEP,
             Actions.down.value: -RACKET_STEP,
-            # Actions.nop.value: 0,
+            Actions.nop.value: 0,
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -130,17 +130,22 @@ class BallCatcherEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
-
         rnd = self.np_random
-        [y0, y1] = rnd.uniform(0, self.size, (2,))
-        if y0 < y1:
-            b = rnd.uniform(2 * (y1 - y0) / self.size, 4 * (y1 - y0) / self.size, (1,))[0]
-            a = (y1 - y0 - b * self.size) / self.size ** 2
+
+        if options is not None and ('y0' in options and 'vx' in options and 'vy' in options):
+            y0 = options['y0']
+            vx = options['vx']
+            vy = options['vy']
         else:
-            b = rnd.uniform(0.1, 2, (1,))[0]
-            a = (y1 - y0 - b * self.size) / self.size ** 2
-        vx = np.sqrt(-g / (2 * a))
-        vy = b * vx
+            [y0, y1] = rnd.uniform(0, self.size, (2,))
+            if y0 < y1:
+                b = rnd.uniform(2 * (y1 - y0) / self.size, 4 * (y1 - y0) / self.size, (1,))[0]
+                a = (y1 - y0 - b * self.size) / self.size ** 2
+            else:
+                b = rnd.uniform(0.1, 2, (1,))[0]
+                a = (y1 - y0 - b * self.size) / self.size ** 2
+            vx = np.sqrt(-g / (2 * a))
+            vy = b * vx
 
         self._state = np.array([0, y0, vx, vy], dtype=float)
         self._last_state = copy.deepcopy(self._state)
@@ -171,7 +176,7 @@ class BallCatcherEnv(gym.Env):
             else:
                 reward = 10 # * (1 - 2 * delta / RACKET_SIZE)
         else:
-            step_penalty = 0 # -0.01
+            step_penalty = -0.01
             # reward = 0 if action == Actions.nop.value else step_penalty
             reward = 0
 

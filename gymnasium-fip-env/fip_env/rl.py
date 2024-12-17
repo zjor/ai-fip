@@ -1,11 +1,11 @@
+from collections import deque
+from typing import Any
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 from torch.distributions import Categorical
-from collections import deque
-
-import numpy as np
 
 
 class Policy(nn.Module):
@@ -34,7 +34,7 @@ class Policy(nn.Module):
 
 
 # Source: https://huggingface.co/learn/deep-rl-course/unit4/hands-on
-def reinforce(env, policy, optimizer, n_training_episodes, max_t, gamma, print_every):
+def reinforce(env, policy, optimizer, n_training_episodes, max_t, gamma, print_every, env_reset_options: dict[str, Any] | None = None):
     # Help us to calculate the score during the training
     scores_deque = deque(maxlen=100)
     scores = []
@@ -42,7 +42,7 @@ def reinforce(env, policy, optimizer, n_training_episodes, max_t, gamma, print_e
     for i_episode in range(1, n_training_episodes + 1):
         saved_log_probs = []
         rewards = []
-        state, _ = env.reset()
+        state, _ = env.reset(options=env_reset_options)
         # Line 4 of pseudocode
         for t in range(max_t):
             action, log_prob = policy.act(np.array(state))
