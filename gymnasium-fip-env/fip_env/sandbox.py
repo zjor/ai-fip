@@ -1,10 +1,11 @@
+from time import sleep
+
+import gymnasium
+import numpy as np
 import torch
 import torch.optim as optim
-import numpy as np
-import gymnasium
 from gymnasium.wrappers import FlattenObservation
 
-from fip_env.envs.ball_catcher import Actions
 from fip_env.rl import Policy, reinforce
 
 params = {
@@ -74,19 +75,12 @@ def main():
 
 
 def sandbox():
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    p = Policy(5, 3, 16).to(device)
-    a = p.act(np.array([0, 0, 0, 0, 0]))
-    print(a)
-
-    # env = gymnasium.make('fip_env/BallCatcher-v0', render_mode="human")
-    # env.reset()
-    # for i in range(400):
-    #     obs, _, done, _, _ = env.step(Actions.up.value)
-    #     if done:
-    #         break
+    env = gymnasium.make('fip_env/FlywheelInvertedPendulum-v0', render_mode="human")
+    env.reset()
+    env.render()
+    sleep(3)
 
 
 if __name__ == '__main__':
-    # sandbox()
-    main()
+    sandbox()
+    # main()
