@@ -6,6 +6,7 @@ import torch
 import torch.optim as optim
 from gymnasium.wrappers import FlattenObservation
 
+from fip_env.envs import FlywheelInvertedPendulumEnv
 from fip_env.rl import Policy, reinforce
 
 params = {
@@ -75,10 +76,10 @@ def main():
 
 
 def sandbox():
-    env = gymnasium.make('fip_env/FlywheelInvertedPendulum-v0', render_mode="human")
+    env: FlywheelInvertedPendulumEnv = gymnasium.make('fip_env/FlywheelInvertedPendulum-v0', render_mode="human")
     env.reset()
     env.render()
-    sleep(3)
+    sleep(5)
 
 
 if __name__ == '__main__':
