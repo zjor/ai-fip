@@ -79,7 +79,7 @@ def sandbox():
     env: FlywheelInvertedPendulumEnv = gymnasium.make('fip_env/FlywheelInvertedPendulum-v0', render_mode="human")
     env.reset()
     env.render()
-    sleep(5)
+    sleep(3)
 
 
 if __name__ == '__main__':

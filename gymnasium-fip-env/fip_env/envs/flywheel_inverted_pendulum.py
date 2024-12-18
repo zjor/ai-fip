@@ -10,6 +10,11 @@ from numpy import dtype
 from numpy.ma.core import shape
 from numpy import pi, sin, cos
 
+from fip_env.commons.graphics import (
+    COLOR_BLACK,
+    COLOR_BLUE,
+    COLOR_PINK, COLOR_GREEN)
+
 RENDER_FPS = 24
 
 
@@ -33,7 +38,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         # physical model parameters
         self.g: float = 9.81  # gravity
         self.m1: float = 0.9  # mass of the rod
-        self.l: float = 1.0  # length of the rod
+        self.l: float = 1.5  # length of the rod
         self.m2: float = 3.0  # mass of the wheel
         self.r: float = 0.6  # radius of the flywheel
         self.b: float = 0.5  # friction coefficient between the rod and the wheel
@@ -70,7 +75,10 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
-        return np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32), {}
+        rand = self.np_random
+        self.phi = rand.uniform(low=-pi, high=pi, size=(1,))[0]
+        self.theta = rand.uniform(low=-self.theta_threshold, high=self.theta_threshold, size=(1,))[0]
+        return np.array([self.theta, 0.0, self.phi, 0.0], dtype=np.float32), {}
 
     def step(self, action):
         reward = 0.0
@@ -87,17 +95,45 @@ class FlywheelInvertedPendulumEnv(gym.Env):
             return self._render_to_window()
 
     def _render_to_surface(self) -> pygame.Surface:
-        scale = 25.0
-        [offset_x, offset_y] = [self.window_size / 2, self.window_size / 2]
+        scale = 50.0
+        [offset_x, offset_y, offset_angle] = [self.window_size / 2, self.window_size / 2, pi / 2]
+        theta = self.theta + offset_angle
+        phi = self.phi + offset_angle
+        origin = np.array([offset_x, offset_y], dtype=np.float32)
 
         canvas = pygame.Surface((self.window_size, self.window_size))
-        canvas.fill((0, 0, 0))
+        canvas.fill(COLOR_BLACK)
+
         l = self.l * scale
+        r = self.r * scale
+        rod_end = np.array([l * cos(theta), l * sin(theta)])
         pygame.draw.line(
             canvas,
-            (255, 255, 255),
-            (offset_x, offset_y),
-            (l * cos(self.theta) + offset_x, l * sin(self.theta) + offset_y), 2)
+            COLOR_BLUE,
+            origin.tolist(),
+            (rod_end + origin).tolist(), width=3)
+
+
+        # red tick
+        pygame.draw.line(
+            canvas,
+            COLOR_PINK,
+            (np.array([0.5 * r * cos(phi), 0.5 * r * sin(phi)]) + rod_end + origin).tolist(),
+            (np.array([r * cos(phi), r * sin(phi)]) + rod_end + origin).tolist(),
+            width=4
+        )
+
+        # green tick
+        phi2 = phi + pi
+        pygame.draw.line(
+            canvas,
+            COLOR_GREEN,
+            (np.array([0.5 * r * cos(phi2), 0.5 * r * sin(phi2)]) + rod_end + origin).tolist(),
+            (np.array([r * cos(phi2), r * sin(phi2)]) + rod_end + origin).tolist(),
+            width=4
+        )
+
+        pygame.draw.circle(canvas, COLOR_BLUE, (rod_end + origin).tolist(), r, width=3)
 
         return pygame.transform.flip(canvas, False, True)
 
@@ -111,6 +147,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         if self.window is None:
             pygame.init()
             pygame.display.init()
+            pygame.display.set_caption('Flywheel Inverted Pendulum')
             self.window = pygame.display.set_mode((self.window_size, self.window_size))
 
         if self.clock is None:
