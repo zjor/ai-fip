@@ -1,13 +1,7 @@
-import copy
-from dataclasses import dataclass
-from enum import Enum
-
 import gymnasium as gym
-from gymnasium import spaces
 import numpy as np
 import pygame
-from numpy import dtype
-from numpy.ma.core import shape
+from gymnasium import spaces
 from numpy import pi, sin, cos
 
 from fip_env.commons.graphics import (
@@ -67,8 +61,6 @@ class FlywheelInvertedPendulumEnv(gym.Env):
             1.0,  # sin(angle of the rod)
             1.0,  # cos(angle of the rod)
             self.max_rod_w,  # angular velocity of the rod
-            1.0,  # sin(angle of the wheel)
-            1.0,  # cos(angle of the wheel)
             self.max_wheel_w,  # angular velocity of the wheel
         ], dtype=np.float32)
         self.observation_space = spaces.Box(
@@ -122,8 +114,6 @@ class FlywheelInvertedPendulumEnv(gym.Env):
             sin(self.theta),
             cos(self.theta),
             self.theta_dot,
-            sin(self.phi),
-            cos(self.phi),
             self.phi_dot], dtype=np.float32)
 
     def step(self, action):
