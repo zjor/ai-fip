@@ -1,3 +1,6 @@
+from numpy import pi
+
+
 def integrate_rk4(state, step, t, dt, dydx_func):
     """
     Fourth-order Runge-Kutta method.
@@ -14,3 +17,7 @@ def integrate_rk4(state, step, t, dt, dydx_func):
     k3 = dydx_func([v + d * dt / 2 for v, d in zip(state, k2)], step, t, dt)
     k4 = dydx_func([v + d * dt for v, d in zip(state, k3)], step, t, dt)
     return [v + (k1_ + 2 * k2_ + 2 * k3_ + k4_) * dt / 6 for v, k1_, k2_, k3_, k4_ in zip(state, k1, k2, k3, k4)]
+
+
+def normalize_angle(x):
+    return ((x + pi) % (2 * pi)) - pi

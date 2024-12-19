@@ -14,14 +14,9 @@ from fip_env.commons.graphics import (
     COLOR_BLACK,
     COLOR_BLUE,
     COLOR_PINK, COLOR_GREEN)
+from fip_env.commons.physics import integrate_rk4, normalize_angle
 
 RENDER_FPS = 24
-
-
-class Actions(Enum):
-    nop = 0
-    cw = 1
-    ccw = 2
 
 
 class FlywheelInvertedPendulumEnv(gym.Env):
@@ -31,7 +26,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
     def __init__(self, render_mode=None):
         self.theta_threshold = pi / 24  # rod angle limit exceeding which the episode terminates
-        self.max_torque = 2.0  # maximal torque applied to the wheel
+        self.max_torque = 4.0  # maximal torque applied to the wheel
         self.max_wheel_w = 16.0  # maximal angular velocity of the wheel
         self.max_rod_w = 4.0  # maximal angular velocity of the pendulum
 
@@ -41,7 +36,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self.l: float = 1.5  # length of the rod
         self.m2: float = 3.0  # mass of the wheel
         self.r: float = 0.6  # radius of the flywheel
-        self.b: float = 0.5  # friction coefficient between the rod and the wheel
+        self.b: float = 0.0  # friction coefficient between the rod and the wheel
         self.dt: float = 1.0 / RENDER_FPS  # timestep
 
         # state variables
@@ -49,6 +44,11 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self.theta_dot: float = 0.0  # angular velocity of the rod
         self.phi: float = 0.0  # angle of the wheel (we don't care about it)
         self.phi_dot: float = 0.0  # angular velocity of the wheel
+
+        self._step: int = 0
+        self._t: float = 0.0
+        self._current_action: float = 0.0  # applied torque
+        self._last_action: float = 0.0
 
         self.window_size = 512
 
@@ -64,9 +64,11 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
         # observation limits
         high = np.array([
-            self.theta_threshold,  # angle of the rod
+            1.0,  # sin(angle of the rod)
+            1.0,  # cos(angle of the rod)
             self.max_rod_w,  # angular velocity of the rod
-            np.inf,  # angle of the wheel (we don't care)
+            1.0,  # sin(angle of the wheel)
+            1.0,  # cos(angle of the wheel)
             self.max_wheel_w,  # angular velocity of the wheel
         ], dtype=np.float32)
         self.observation_space = spaces.Box(
@@ -75,18 +77,80 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
+
+        self._step = 0
+        self._t = 0.0
+
         rand = self.np_random
-        self.phi = rand.uniform(low=-pi, high=pi, size=(1,))[0]
         self.theta = rand.uniform(low=-self.theta_threshold, high=self.theta_threshold, size=(1,))[0]
-        return np.array([self.theta, 0.0, self.phi, 0.0], dtype=np.float32), {}
+        self.theta_dot = 0.0
+
+        self.phi = rand.uniform(low=-pi, high=pi, size=(1,))[0]
+        self.phi_dot = 0.0
+
+        return self._get_obs(), {}
+
+    """
+    function derive(state, t, dt) {
+        const [_th, _dth, _phi, _dphi] = state
+        const friction = -b * (_dphi - _dth)
+        ddth = (-friction - (0.5 * m1 + m2) * l * g * sin(-_th)) / (m1 * l ** 2 / 3 + m2 * l ** 2 + J)
+        ddphi = friction / J
+        return [_dth, ddth, _dphi, ddphi]
+    }
+    """
+
+    def _derivate(self, state: np.ndarray[float], _step: int, _t: float, _dt: float) -> np.ndarray[float]:
+        """
+        :param state:
+        :param _step:
+        :param _t:
+        :param _dt:
+        :return: derivatives of all state variables of the flywheel inverted pendulum
+        """
+        [_th, _dth, _phi, _dphi] = state
+        [l, m1, m2, r, b, g] = [self.l, self.m1, self.m2, self.r, self.b, self.g]
+        friction = - b * (_dphi - _dth)
+        force = self._current_action + friction
+        J = m2 * r ** 2
+        ddth = (force - (0.5 * m1 + m2) * l * g * sin(-_th)) / (m1 * l ** 2 / 3 + m2 * l ** 2 + J)
+        ddphi = force / J
+        return np.array([_dth, ddth, _dphi, ddphi], dtype=float)
+
+    def _get_obs(self):
+        return np.array([
+            sin(self.theta),
+            cos(self.theta),
+            self.theta_dot,
+            sin(self.phi),
+            cos(self.phi),
+            self.phi_dot], dtype=np.float32)
 
     def step(self, action):
-        reward = 0.0
+        self._last_action = self._current_action
+        self._current_action = np.clip(action, -self.max_torque, self.max_torque)[0]
+
+        state = [self.theta, self.theta_dot, self.phi, self.phi_dot]
+        state = integrate_rk4(state, self._step, self._t, self.dt, self._derivate)
+        self._step += 1
+        self._t += self.dt
+
+        self.theta = state[0]
+        self.theta_dot = state[1]
+        self.phi = state[2]
+        self.phi_dot = state[3]
+
+        cost = (normalize_angle(self.theta) ** 2 +
+                0.1 * self.theta_dot ** 2 +
+                0.05 * self.phi_dot ** 2 +
+                0.001 * (self._current_action ** 2))
+
         terminated = False
-        return (
-            np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32),
-            reward, terminated, False, {}
-        )
+
+        if self.render_mode == "human":
+            self._render_to_window()
+
+        return self._get_obs(), -cost, terminated, False, {}
 
     def render(self):
         if self.render_mode == "rgb_array":
@@ -112,7 +176,6 @@ class FlywheelInvertedPendulumEnv(gym.Env):
             COLOR_BLUE,
             origin.tolist(),
             (rod_end + origin).tolist(), width=3)
-
 
         # red tick
         pygame.draw.line(
