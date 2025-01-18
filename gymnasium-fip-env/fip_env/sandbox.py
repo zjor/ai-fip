@@ -77,11 +77,11 @@ def main():
 
 def sandbox():
     env: FlywheelInvertedPendulumEnv = gymnasium.make('fip_env/FlywheelInvertedPendulum-v0', render_mode="human")
-    env.reset()
+    env.reset(seed=42)
+    _env = env.unwrapped
     for i in range(500):
         # apply LQR regulator for tests
-        # apply LQR regulator for tests
-        action = - (195 * env.theta + 100 * env.theta_dot - 5 * env.phi_dot)
+        action = - (195 * _env.theta + 100 * _env.theta_dot - 2 * _env.phi_dot)
         env.step(np.array([action], dtype=np.float32))
 
 
