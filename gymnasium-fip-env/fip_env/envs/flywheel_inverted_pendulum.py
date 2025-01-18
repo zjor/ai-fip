@@ -181,9 +181,29 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         flipped = pygame.transform.flip(canvas, False, True)
 
         # print time, step and state parameters
-        font = pygame.font.SysFont('Arial', 20)
-        text_surface = font.render(f"Time: {self._t:.2f}", True, COLOR_BLUE)
+        font = pygame.font.SysFont('Courier New', 20)
+        text_surface = font.render(f"Time: {self._t:>6.1f}", True, COLOR_BLUE)
         text_rect = text_surface.get_rect(topleft=(10, 10))
+        flipped.blit(text_surface, text_rect)
+
+        text_surface = font.render(f"Step: {self._step:>6}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topleft=(10, 35))
+        flipped.blit(text_surface, text_rect)
+
+        text_surface = font.render(f"Θ: {self.theta:>6.2f}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topright=(self.window_size - 10, 10))
+        flipped.blit(text_surface, text_rect)
+
+        text_surface = font.render(f"Ω: {self.theta_dot:>6.2f}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topright=(self.window_size - 10, 35))
+        flipped.blit(text_surface, text_rect)
+
+        text_surface = font.render(f"Ω: {self.theta_dot:>6.2f}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topright=(self.window_size - 10, 35))
+        flipped.blit(text_surface, text_rect)
+
+        text_surface = font.render(f"dφ: {self.phi_dot:>6.2f}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topright=(self.window_size - 10, 60))
         flipped.blit(text_surface, text_rect)
 
         return flipped
