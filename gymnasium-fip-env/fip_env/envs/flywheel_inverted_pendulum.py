@@ -206,6 +206,10 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         text_rect = text_surface.get_rect(topright=(self.window_size - 10, 60))
         flipped.blit(text_surface, text_rect)
 
+        text_surface = font.render(f"u: {self._current_action:>6.2f}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topright=(self.window_size - 10, 85))
+        flipped.blit(text_surface, text_rect)
+
         return flipped
 
     def _render_frame(self):
