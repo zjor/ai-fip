@@ -39,8 +39,8 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self.phi: float = 0.0  # angle of the wheel (we don't care about it)
         self.phi_dot: float = 0.0  # angular velocity of the wheel
 
-        self._step: int = 0
-        self._t: float = 0.0
+        self._step: int = 0  # current episode timestamp
+        self._t: float = 0.0  # episode time
         self._current_action: float = 0.0  # applied torque
         self._last_action: float = 0.0
 
@@ -81,16 +81,6 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self.phi_dot = 0.0
 
         return self._get_obs(), {}
-
-    """
-    function derive(state, t, dt) {
-        const [_th, _dth, _phi, _dphi] = state
-        const friction = -b * (_dphi - _dth)
-        ddth = (-friction - (0.5 * m1 + m2) * l * g * sin(-_th)) / (m1 * l ** 2 / 3 + m2 * l ** 2 + J)
-        ddphi = friction / J
-        return [_dth, ddth, _dphi, ddphi]
-    }
-    """
 
     def _derivate(self, state: np.ndarray[float], _step: int, _t: float, _dt: float) -> np.ndarray[float]:
         """
@@ -188,7 +178,15 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
         pygame.draw.circle(canvas, COLOR_BLUE, (rod_end + origin).tolist(), r, width=3)
 
-        return pygame.transform.flip(canvas, False, True)
+        flipped = pygame.transform.flip(canvas, False, True)
+
+        # print time, step and state parameters
+        font = pygame.font.SysFont('Arial', 20)
+        text_surface = font.render(f"Time: {self._t:.2f}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topleft=(10, 10))
+        flipped.blit(text_surface, text_rect)
+
+        return flipped
 
     def _render_frame(self):
         canvas = self._render_to_surface()
