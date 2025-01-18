@@ -19,8 +19,8 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         'render_fps': 24}
 
     def __init__(self, render_mode=None):
-        self.theta_threshold = pi / 24  # rod angle limit exceeding which the episode terminates
-        self.max_torque = 4.0  # maximal torque applied to the wheel
+        self.theta_threshold = pi / 12  # rod angle limit exceeding which the episode terminates
+        self.max_torque = 8.0  # maximal torque applied to the wheel
         self.max_wheel_w = 16.0  # maximal angular velocity of the wheel
         self.max_rod_w = 4.0  # maximal angular velocity of the pendulum
 
@@ -126,6 +126,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
                 0.001 * (self._current_action ** 2))
 
         terminated = False
+        terminated = terminated or abs(self.theta) > self.theta_threshold
 
         if self.render_mode == "human":
             self._render_to_window()

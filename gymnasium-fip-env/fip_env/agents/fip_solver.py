@@ -25,19 +25,18 @@ def play():
         state, _, done, _, _ = env.step(action)
 
 
-if __name__ == "__main__":
+def main():
     env = gym.make(env_id, render_mode=None)
     model = PPO('MlpPolicy', env, verbose=1)
-    model.learn(total_timesteps=10000)
+    model.learn(total_timesteps=50000)
 
     env = gym.make(env_id, render_mode="human")
     state, _ = env.reset()
     done = False
     while not done:
         action, _ = model.predict(state)
-        print(action)
         state, _, done, _, _ = env.step(action)
 
 
-    # train()
-    # play()
+if __name__ == "__main__":
+    main()
