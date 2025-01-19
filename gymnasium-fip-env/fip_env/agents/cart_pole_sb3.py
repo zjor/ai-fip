@@ -1,17 +1,61 @@
 """
 How to run
-    python -m fip_env.agents.cart_pole_sb3
+    python -m fip_env.agents.cart_pole_sb3 --train
 """
+from typing import Any
+
 import gymnasium as gym
 from gymnasium import Env
-from pydantic.v1.utils import truncate
 from stable_baselines3 import PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.callbacks import StopTrainingOnRewardThreshold, EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
-from sympy import trunc
 
 ENV_ID = "CartPole-v1"
+
+
+class CenteredCartPoleEnv(gym.Env):
+    def __init__(self, **kwargs):
+        self.env = gym.make(ENV_ID, **kwargs)  # Original CartPole environment
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+        self.max_steps = 500  # Max steps per episode (same as CartPole-v1)
+        self.current_step = 0
+
+    def reset(self, **kwargs):
+        self.current_step = 0
+        return self.env.reset(**kwargs)
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        # Extract cart position (first element in the observation)
+        cart_position = obs[0]
+
+        # Penalize the cart for being away from the center
+        position_penalty = -abs(cart_position)  # Negative reward for being away from center
+
+        # Combine the original reward with the position penalty
+        reward += position_penalty
+
+        # Increment step counter
+        self.current_step += 1
+
+        # Check if the episode is done
+        if self.current_step >= self.max_steps:
+            truncated = True
+
+        return obs, reward, terminated, truncated, info
+
+    def render(self, **kwargs):
+        return self.env.render(**kwargs)
+
+    def close(self):
+        return self.env.close()
+
+
+def _get_env(**kwargs: Any):
+    return CenteredCartPoleEnv(**kwargs)
 
 
 def _train(env: Env, model: BaseAlgorithm):
@@ -31,7 +75,7 @@ def _train(env: Env, model: BaseAlgorithm):
 def main(should_train: bool = True):
     filename = "ppo_cartpole.pth"
     if should_train:
-        env = gym.make(ENV_ID)
+        env = _get_env()
         model = PPO(
             "MlpPolicy",  # Policy network (Multi-layer Perceptron)
             env,
@@ -55,14 +99,14 @@ def main(should_train: bool = True):
         model.save(filename)
     else:
         model = PPO.load(filename)
-        env = gym.make(ENV_ID, render_mode="human")
+        env = _get_env(render_mode="human")
         obs, _ = env.reset()
         for _ in range(1000):
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, info = env.step(action)
             env.render()
             if terminated or truncated:
-                obs = env.reset()
+                obs, _ = env.reset()
 
 
 if __name__ == '__main__':
