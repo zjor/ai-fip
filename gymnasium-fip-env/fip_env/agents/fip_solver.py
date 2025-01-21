@@ -6,7 +6,6 @@ How to run
 from typing import Any
 
 import gymnasium as gym
-import torch
 from gymnasium import Env
 from stable_baselines3 import PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
