@@ -18,10 +18,21 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         'render_modes': ['human', 'rgb_array'],
         'render_fps': 24}
 
-    def __init__(self, max_steps = 500, render_mode=None):
+    def __init__(self,
+                 kick_probability=0.0,
+                 kick_strength=0.2,
+                 max_steps = 500,
+                 render_mode=None):
+
+        # params for simulating an external disturbance
+        # added to theta_dot
+        self.kick_probability = kick_probability
+        self.kick_strength = kick_strength
+
         self.max_steps = max_steps
+
         self.theta_threshold = pi / 12  # rod angle limit exceeding which the episode terminates
-        self.max_torque = 50.0  # maximal torque applied to the wheel
+        self.max_torque = 500.0  # maximal torque applied to the wheel
         self.max_wheel_w = 16.0  # maximal angular velocity of the wheel
         self.max_rod_w = 4.0  # maximal angular velocity of the pendulum
 
@@ -59,8 +70,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
         # observation limits
         high = np.array([
-            1.0,  # sin(angle of the rod)
-            1.0,  # cos(angle of the rod)
+            self.theta_threshold * 4,
             self.max_rod_w,  # angular velocity of the rod
             self.max_wheel_w,  # angular velocity of the wheel
         ], dtype=np.float32)
@@ -102,8 +112,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
     def _get_obs(self):
         return np.array([
-            sin(self.theta),
-            cos(self.theta),
+            self.theta,
             self.theta_dot,
             self.phi_dot], dtype=np.float32)
 
@@ -113,6 +122,11 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
         state = [self.theta, self.theta_dot, self.phi, self.phi_dot]
         state = integrate_rk4(state, self._step, self._t, self.dt, self._derivate)
+
+        if np.random.random() < self.kick_probability:
+            # apply kick to the pole's angular velocity
+            state[1] += np.random.uniform(-self.kick_strength, self.kick_strength)
+
         self._step += 1
         self._t += self.dt
 
@@ -126,10 +140,10 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         #         0.05 * self.phi_dot ** 2 +
         #         0.001 * (self._current_action ** 2))
 
-        terminated = abs(self.theta) > self.theta_threshold
-        reward = -2.0 if terminated else 0.75
-        reward -= abs(self.theta) * 1e-1
-        reward -= abs(self.phi_dot) * 1e-2
+        terminated = abs(self.theta) > self.theta_threshold * 1.5
+        reward = -10.0 if terminated else 1.0
+        reward -= abs(self.theta) * 2.0
+        reward -= abs(self.phi_dot) * 1e-1
 
         truncated = self._step > self.max_steps
 

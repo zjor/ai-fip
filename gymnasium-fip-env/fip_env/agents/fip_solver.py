@@ -30,7 +30,7 @@ def _train(env: Env, model: BaseAlgorithm):
     )
 
     # Train the model
-    model.learn(total_timesteps=200000, callback=eval_callback)
+    model.learn(total_timesteps=500000, callback=eval_callback)
 
 
 def main(should_train: bool = True):
@@ -46,7 +46,7 @@ def main(should_train: bool = True):
             batch_size=64,  # Batch size for training
             gamma=0.99,  # Discount factor
             gae_lambda=0.95,  # Generalized Advantage Estimation lambda
-            ent_coef=0.01,  # Entropy coefficient for exploration
+            ent_coef=0.02,  # Entropy coefficient for exploration
             max_grad_norm=0.5,  # Gradient clipping
         )
 
@@ -60,7 +60,7 @@ def main(should_train: bool = True):
         model.save(filename)
     else:
         model = PPO.load(filename)
-        env = _get_env(render_mode="human")
+        env = _get_env(kick_probability=0.3, render_mode="human")
         obs, _ = env.reset()
         for _ in range(1000):
             action, _states = model.predict(obs, deterministic=True)
