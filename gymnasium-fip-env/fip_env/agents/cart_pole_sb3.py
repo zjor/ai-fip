@@ -197,5 +197,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(should_train=args.train)
-    # env = _get_env()
-    # print(env.action_space.sample())
