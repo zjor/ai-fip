@@ -84,8 +84,36 @@ def sandbox():
         action = - (195 * _env.theta + 100 * _env.theta_dot - 2 * _env.phi_dot)
         env.step(np.array([action], dtype=np.float32))
 
+def render_logs():
+    filename = "logs/CartPole-v1/evaluations.npz"
+    data = np.load(filename)
+    timesteps = data['timesteps']
+    results = data['results']  # Shape: (n_evaluations, n_eval_episodes)
+    ep_lengths = data['ep_lengths']  # Shape: (n_evaluations, n_eval_episodes)
+
+    # Compute mean reward and mean episode length for each evaluation
+    mean_rewards = results.mean(axis=1)
+    mean_ep_lengths = ep_lengths.mean(axis=1)
+
+    # Print the results
+    print("Timesteps:", timesteps)
+    print("Mean Rewards:", mean_rewards)
+
+    print("Mean Episode Lengths:", mean_ep_lengths)
+
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(timesteps, mean_rewards, label='Mean Reward')
+    plt.xlabel('Timesteps')
+    plt.ylabel('Mean Reward')
+    plt.title('Evaluation Mean Reward Over Time')
+    plt.legend()
+    plt.grid()
+    plt.show()
 
 
 if __name__ == '__main__':
-    sandbox()
+    # sandbox()
     # main()
+    render_logs()

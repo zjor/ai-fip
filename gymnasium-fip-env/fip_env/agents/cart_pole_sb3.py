@@ -146,10 +146,11 @@ def _train(env: Env, model: BaseAlgorithm):
         callback_on_new_best=callback_on_best,
         eval_freq=1000,  # Evaluate every 1000 steps
         verbose=1,
+        log_path=f'logs/{ENV_ID}'
     )
 
     # Train the model
-    model.learn(total_timesteps=200000, callback=eval_callback)
+    model.learn(total_timesteps=50000, callback=eval_callback)
 
 
 def main(should_train: bool = True):
