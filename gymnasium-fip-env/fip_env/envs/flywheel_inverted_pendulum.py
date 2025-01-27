@@ -21,8 +21,12 @@ class FlywheelInvertedPendulumEnv(gym.Env):
     def __init__(self,
                  kick_probability=0.0,
                  kick_strength=0.2,
-                 max_steps = 500,
-                 render_mode=None):
+                 max_steps=500,
+                 theta_threshold=pi / 12,
+                 dtheta_threshold=8,
+                 dphi_threshold=100.0,
+                 render_mode=None,
+                 verbose_termination=False):
 
         # params for simulating an external disturbance
         # added to theta_dot
@@ -31,10 +35,11 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
         self.max_steps = max_steps
 
-        self.theta_threshold = pi / 12  # rod angle limit exceeding which the episode terminates
+        self.theta_threshold = theta_threshold  # rod angle limit exceeding which the episode terminates
+        self.dtheta_threshold = dtheta_threshold  # max angular velocity of the rod
+        self.dphi_threshold = dphi_threshold  # max angular velocity of the wheel
         self.max_torque = 500.0  # maximal torque applied to the wheel
-        self.max_wheel_w = 16.0  # maximal angular velocity of the wheel
-        self.max_rod_w = 4.0  # maximal angular velocity of the pendulum
+        self.verbose_termination = verbose_termination
 
         # physical model parameters
         self.g: float = 9.81  # gravity
@@ -70,9 +75,10 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
         # observation limits
         high = np.array([
-            self.theta_threshold * 4,
-            self.max_rod_w,  # angular velocity of the rod
-            self.max_wheel_w,  # angular velocity of the wheel
+            1.0,  # cos(theta)
+            3 * pi,  # theta
+            self.dtheta_threshold,  # angular velocity of the rod
+            self.dphi_threshold,  # angular velocity of the wheel
         ], dtype=np.float32)
         self.observation_space = spaces.Box(
             low=-high, high=high, dtype=np.float32
@@ -85,7 +91,8 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self._t = 0.0
 
         rand = self.np_random
-        self.theta = rand.uniform(low=-self.theta_threshold, high=self.theta_threshold, size=(1,))[0]
+        # self.theta_threshold
+        self.theta = rand.uniform(low=-pi / 6, high=pi / 6, size=(1,))[0]
         self.theta_dot = 0.0
 
         self.phi = rand.uniform(low=-pi, high=pi, size=(1,))[0]
@@ -112,9 +119,44 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
     def _get_obs(self):
         return np.array([
+            cos(self.theta),
             self.theta,
             self.theta_dot,
             self.phi_dot], dtype=np.float32)
+
+    def _terminated(self) -> bool:
+        if abs(self.phi_dot) > self.dphi_threshold:
+            if self.verbose_termination:
+                print(f"|phi_dot| > {self.dphi_threshold}")
+            return True
+
+        if abs(self.theta_dot) > self.dtheta_threshold:
+            if self.verbose_termination:
+                print(f"|theta_dot| > {self.dtheta_threshold}")
+            return True
+
+        _n = 4
+        if abs(self.theta) > _n * pi:
+            if self.verbose_termination:
+                print(f"|theta| > {_n} * PI")
+            return True
+
+        return False
+
+    def _reward(self):
+        upright_reward = np.cos(self.theta)
+        stability_penalty = np.exp(-0.1 * self.theta_dot ** 2)
+        control_effort_penalty = np.exp(-0.1 * self.phi_dot ** 2)
+        action_penalty = np.exp(-0.1 * self._current_action ** 2)
+
+        reward = -10.0 if self._terminated() else 0.0
+        reward += (
+                0.5 * upright_reward +
+                0.25 * stability_penalty +
+                0.1 * control_effort_penalty +
+                0.01 * action_penalty
+        )
+        return reward
 
     def step(self, action):
         self._last_action = self._current_action
@@ -135,22 +177,12 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self.phi = state[2]
         self.phi_dot = state[3]
 
-        # cost = ((2 * normalize_angle(self.theta)) ** 2 +
-        #         0.1 * self.theta_dot ** 2 +
-        #         0.05 * self.phi_dot ** 2 +
-        #         0.001 * (self._current_action ** 2))
-
-        terminated = abs(self.theta) > self.theta_threshold * 1.5
-        reward = -10.0 if terminated else 1.0
-        reward -= abs(self.theta) * 2.0
-        reward -= abs(self.phi_dot) * 1e-1
-
         truncated = self._step > self.max_steps
 
         if self.render_mode == "human":
             self._render_to_window()
 
-        return self._get_obs(), reward, terminated, truncated, {}
+        return self._get_obs(), self._reward(), self._terminated(), truncated, {}
 
     def render(self):
         if self.render_mode == "rgb_array":
@@ -208,6 +240,10 @@ class FlywheelInvertedPendulumEnv(gym.Env):
 
         text_surface = font.render(f"Step: {self._step:>6}", True, COLOR_BLUE)
         text_rect = text_surface.get_rect(topleft=(10, 35))
+        flipped.blit(text_surface, text_rect)
+
+        text_surface = font.render(f"Reward: {self._reward():>6.2f}", True, COLOR_BLUE)
+        text_rect = text_surface.get_rect(topleft=(10, 60))
         flipped.blit(text_surface, text_rect)
 
         text_surface = font.render(f"Θ: {self.theta:>6.2f}", True, COLOR_BLUE)

@@ -25,7 +25,8 @@ class CenteredCartPoleEnv(gym.Env):
                  kick_probability=0.0,
                  kick_strength=1.0,
                  max_steps=500,
-                 theta_threshold_radians=None, **kwargs):
+                 theta_threshold_radians=None,
+                 **kwargs):
         self.env = gym.make(ENV_ID, **kwargs)  # Original CartPole environment
         self._super_env = self.env.unwrapped
         self.theta_threshold_radians = self._super_env.theta_threshold_radians if theta_threshold_radians is None else theta_threshold_radians
@@ -48,19 +49,19 @@ class CenteredCartPoleEnv(gym.Env):
         x, x_dot, theta, theta_dot = _super_env.state
         # force = _super_env.force_mag if action == 1 else -_super_env.force_mag
         force = np.clip(action[0], self.action_space.low[0], self.action_space.high[0])  # apply continuous force
-        costheta = np.cos(theta)
-        sintheta = np.sin(theta)
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
 
         # For the interested reader:
         # https://coneural.org/florian/papers/05_cart_pole.pdf
         temp = (
-                       force + _super_env.polemass_length * np.square(theta_dot) * sintheta
+                       force + _super_env.polemass_length * np.square(theta_dot) * sin_theta
                ) / _super_env.total_mass
-        thetaacc = (_super_env.gravity * sintheta - costheta * temp) / (
+        thetaacc = (_super_env.gravity * sin_theta - cos_theta * temp) / (
                 _super_env.length
-                * (4.0 / 3.0 - _super_env.masspole * np.square(costheta) / _super_env.total_mass)
+                * (4.0 / 3.0 - _super_env.masspole * np.square(cos_theta) / _super_env.total_mass)
         )
-        xacc = temp - _super_env.polemass_length * thetaacc * costheta / _super_env.total_mass
+        xacc = temp - _super_env.polemass_length * thetaacc * cos_theta / _super_env.total_mass
 
         if _super_env.kinematics_integrator == "euler":
             x = x + _super_env.tau * x_dot
@@ -180,7 +181,8 @@ def main(should_train: bool = True):
         model.save(filename)
     else:
         model = PPO.load(filename)
-        env = _get_env(render_mode="human", kick_probability=0.5, kick_strength=2.0, max_steps=1000, theta_threshold_radians=24 * 2 * np.pi / 360)
+        env = _get_env(render_mode="human", kick_probability=0.5, kick_strength=2.0, max_steps=1000,
+                       theta_threshold_radians=24 * 2 * np.pi / 360)
         obs, _ = env.reset()
         for _ in range(1000):
             action, _states = model.predict(obs, deterministic=True)
