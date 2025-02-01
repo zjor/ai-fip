@@ -21,10 +21,11 @@ class FlywheelInvertedPendulumEnv(gym.Env):
     def __init__(self,
                  kick_probability=0.0,
                  kick_strength=0.2,
-                 max_steps=500,
+                 max_steps=400,
                  theta_threshold=pi / 12,
-                 dtheta_threshold=8,
-                 dphi_threshold=100.0,
+                 dtheta_threshold=10,
+                 dphi_threshold=10.0,
+                 max_torque=50,
                  render_mode=None,
                  verbose_termination=False):
 
@@ -38,15 +39,15 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self.theta_threshold = theta_threshold  # rod angle limit exceeding which the episode terminates
         self.dtheta_threshold = dtheta_threshold  # max angular velocity of the rod
         self.dphi_threshold = dphi_threshold  # max angular velocity of the wheel
-        self.max_torque = 500.0  # maximal torque applied to the wheel
+        self.max_torque = max_torque  # maximal torque applied to the wheel
         self.verbose_termination = verbose_termination
 
         # physical model parameters
         self.g: float = 9.81  # gravity
-        self.m1: float = 0.9  # mass of the rod
-        self.l: float = 1.5  # length of the rod
-        self.m2: float = 3.0  # mass of the wheel
-        self.r: float = 0.6  # radius of the flywheel
+        self.m1: float = 0.1  # mass of the rod
+        self.l: float = 2.0  # length of the rod
+        self.m2: float = 0.5  # mass of the wheel
+        self.r: float = 0.75  # radius of the flywheel
         self.b: float = 0.0  # friction coefficient between the rod and the wheel
         self.dt: float = 1.0 / RENDER_FPS  # timestep
 
@@ -76,7 +77,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         # observation limits
         high = np.array([
             1.0,  # cos(theta)
-            3 * pi,  # theta
+            1.0, # sin(theta)
             self.dtheta_threshold,  # angular velocity of the rod
             self.dphi_threshold,  # angular velocity of the wheel
         ], dtype=np.float32)
@@ -91,8 +92,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self._t = 0.0
 
         rand = self.np_random
-        # self.theta_threshold
-        self.theta = rand.uniform(low=-pi / 6, high=pi / 6, size=(1,))[0]
+        self.theta = rand.uniform(low=-pi, high=pi, size=(1,))[0]
         self.theta_dot = 0.0
 
         self.phi = rand.uniform(low=-pi, high=pi, size=(1,))[0]
@@ -120,7 +120,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
     def _get_obs(self):
         return np.array([
             cos(self.theta),
-            self.theta,
+            sin(self.theta),
             self.theta_dot,
             self.phi_dot], dtype=np.float32)
 
@@ -135,28 +135,29 @@ class FlywheelInvertedPendulumEnv(gym.Env):
                 print(f"|theta_dot| > {self.dtheta_threshold}")
             return True
 
-        _n = 4
+        _n = 6
         if abs(self.theta) > _n * pi:
             if self.verbose_termination:
                 print(f"|theta| > {_n} * PI")
             return True
 
+        angle_threshold = pi # impossible condition
+        if abs(normalize_angle(self.theta)) > angle_threshold :
+            if self.verbose_termination:
+                print(f"|normalized theta| > {angle_threshold}")
+            return True
+
+
         return False
 
     def _reward(self):
-        upright_reward = np.cos(self.theta)
-        stability_penalty = np.exp(-0.1 * self.theta_dot ** 2)
-        control_effort_penalty = np.exp(-0.1 * self.phi_dot ** 2)
-        action_penalty = np.exp(-0.1 * self._current_action ** 2)
-
-        reward = -10.0 if self._terminated() else 0.0
-        reward += (
-                0.5 * upright_reward +
-                0.25 * stability_penalty +
-                0.1 * control_effort_penalty +
-                0.01 * action_penalty
-        )
-        return reward
+        n_theta = normalize_angle(self.theta)
+        termination_penalty = 100.0 if self._terminated() else 0.0
+        return -(
+            n_theta ** 2 +
+            0.1 * self.theta_dot ** 2 +
+            0.001 * self.phi_dot ** 2
+        ) - termination_penalty
 
     def step(self, action):
         self._last_action = self._current_action

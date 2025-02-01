@@ -26,13 +26,13 @@ def _train(env: Env, model: BaseAlgorithm):
     eval_callback = EvalCallback(
         env,
         callback_on_new_best=callback_on_best,
-        eval_freq=1000,  # Evaluate every 1000 steps
+        eval_freq=1500,  # Evaluate every 1000 steps
         verbose=1,
         log_path=f'logs/{ENV_ID}'
     )
 
     # Train the model
-    model.learn(total_timesteps=500000, callback=eval_callback)
+    model.learn(total_timesteps=3_000_000, callback=eval_callback)
 
 
 def render_logs():
@@ -45,12 +45,6 @@ def render_logs():
     # Compute mean reward and mean episode length for each evaluation
     mean_rewards = results.mean(axis=1)
     mean_ep_lengths = ep_lengths.mean(axis=1)
-
-    # Print the results
-    print("Timesteps:", timesteps)
-    print("Mean Rewards:", mean_rewards)
-
-    print("Mean Episode Lengths:", mean_ep_lengths)
 
     import matplotlib.pyplot as plt
 
@@ -81,13 +75,13 @@ def main(should_train: bool = True, render: bool = False):
             batch_size=64,  # Batch size for training
             gamma=0.99,  # Discount factor
             gae_lambda=0.95,  # Generalized Advantage Estimation lambda
-            ent_coef=0.035,  # Entropy coefficient for exploration
+            ent_coef=0.025,  # Entropy coefficient for exploration
             max_grad_norm=0.5,  # Gradient clipping
         )
 
         _train(env, model)
 
-        eval_env = _get_env(theta_threshold=np.pi)
+        eval_env = _get_env()
         # Evaluate the model
         mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10)
         print(f"Mean reward: {mean_reward}, Std reward: {std_reward}")
@@ -95,7 +89,8 @@ def main(should_train: bool = True, render: bool = False):
         model.save(filename)
     else:
         model = PPO.load(filename)
-        env = _get_env(kick_probability=0.3, theta_threshold=np.pi, verbose_termination=True, render_mode="human")
+        env = _get_env(kick_probability=0.0, max_steps=500, dtheta_threshold=20, dphi_threshold=10,
+                       verbose_termination=True, render_mode="human")
         obs, _ = env.reset()
         for _ in range(1000):
             action, _states = model.predict(obs, deterministic=True)
