@@ -3,6 +3,7 @@ How to run
     python -m fip_env.agents.fip_solver --train
 
 """
+import os.path
 from typing import Any
 
 import numpy as np
@@ -32,7 +33,7 @@ def _train(env: Env, model: BaseAlgorithm):
     )
 
     # Train the model
-    model.learn(total_timesteps=3_000_000, callback=eval_callback)
+    model.learn(total_timesteps=700_000, callback=eval_callback)
 
 
 def render_logs():
@@ -65,7 +66,12 @@ def main(should_train: bool = True, render: bool = False):
 
     filename = "fip_solver.pth"
     if should_train:
-        env = _get_env()
+        env = _get_env(
+            max_steps=500,
+            dtheta_threshold=10,
+            dphi_threshold=20.0,
+            max_torque=4
+        )
         model = PPO(
             "MlpPolicy",  # Policy network (Multi-layer Perceptron)
             env,
@@ -79,6 +85,10 @@ def main(should_train: bool = True, render: bool = False):
             max_grad_norm=0.5,  # Gradient clipping
         )
 
+        if os.path.exists(filename):
+            model.set_parameters(filename)
+            print(f"Loaded model from {filename}")
+
         _train(env, model)
 
         eval_env = _get_env()
@@ -89,7 +99,11 @@ def main(should_train: bool = True, render: bool = False):
         model.save(filename)
     else:
         model = PPO.load(filename)
-        env = _get_env(kick_probability=0.0, max_steps=500, dtheta_threshold=20, dphi_threshold=10,
+        env = _get_env(kick_probability=0.3,
+                       max_steps=500,
+                       dtheta_threshold=10,
+                       dphi_threshold=20,
+                       max_torque=4,
                        verbose_termination=True, render_mode="human")
         obs, _ = env.reset()
         for _ in range(1000):

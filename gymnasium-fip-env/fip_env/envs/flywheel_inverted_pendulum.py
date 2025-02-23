@@ -77,7 +77,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         # observation limits
         high = np.array([
             1.0,  # cos(theta)
-            1.0, # sin(theta)
+            1.0,  # sin(theta)
             self.dtheta_threshold,  # angular velocity of the rod
             self.dphi_threshold,  # angular velocity of the wheel
         ], dtype=np.float32)
@@ -92,11 +92,12 @@ class FlywheelInvertedPendulumEnv(gym.Env):
         self._t = 0.0
 
         rand = self.np_random
-        self.theta = rand.uniform(low=-pi, high=pi, size=(1,))[0]
-        self.theta_dot = 0.0
+        deviation = pi / 8
+        self.theta = pi - rand.uniform(low=-deviation, high=deviation, size=(1,))[0]
+        self.theta_dot = rand.uniform(low=-2, high=2, size=(1,))[0]
 
         self.phi = rand.uniform(low=-pi, high=pi, size=(1,))[0]
-        self.phi_dot = 0.0
+        self.phi_dot = rand.uniform(low=-2, high=2, size=(1,))[0]
 
         return self._get_obs(), {}
 
@@ -125,38 +126,37 @@ class FlywheelInvertedPendulumEnv(gym.Env):
             self.phi_dot], dtype=np.float32)
 
     def _terminated(self) -> bool:
-        if abs(self.phi_dot) > self.dphi_threshold:
-            if self.verbose_termination:
-                print(f"|phi_dot| > {self.dphi_threshold}")
-            return True
-
-        if abs(self.theta_dot) > self.dtheta_threshold:
-            if self.verbose_termination:
-                print(f"|theta_dot| > {self.dtheta_threshold}")
-            return True
-
-        _n = 6
-        if abs(self.theta) > _n * pi:
-            if self.verbose_termination:
-                print(f"|theta| > {_n} * PI")
-            return True
-
-        angle_threshold = pi # impossible condition
-        if abs(normalize_angle(self.theta)) > angle_threshold :
-            if self.verbose_termination:
-                print(f"|normalized theta| > {angle_threshold}")
-            return True
-
+        # if abs(self.phi_dot) > self.dphi_threshold:
+        #     if self.verbose_termination:
+        #         print(f"|phi_dot| > {self.dphi_threshold}")
+        #     return True
+        #
+        # if abs(self.theta_dot) > self.dtheta_threshold:
+        #     if self.verbose_termination:
+        #         print(f"|theta_dot| > {self.dtheta_threshold}")
+        #     return True
+        #
+        # _n = 6
+        # if abs(self.theta) > _n * pi:
+        #     if self.verbose_termination:
+        #         print(f"|theta| > {_n} * PI")
+        #     return True
+        #
+        # angle_threshold = pi # impossible condition
+        # if abs(normalize_angle(self.theta)) > angle_threshold :
+        #     if self.verbose_termination:
+        #         print(f"|normalized theta| > {angle_threshold}")
+        #     return True
 
         return False
 
     def _reward(self):
         n_theta = normalize_angle(self.theta)
-        termination_penalty = 100.0 if self._terminated() else 0.0
+        termination_penalty = 0.0  # 100.0 if self._terminated() else 0.0
         return -(
-            n_theta ** 2 +
-            0.1 * self.theta_dot ** 2 +
-            0.001 * self.phi_dot ** 2
+                n_theta ** 2 +
+                0.25 * self.theta_dot ** 2 +
+                0.01 * self.phi_dot ** 2
         ) - termination_penalty
 
     def step(self, action):
