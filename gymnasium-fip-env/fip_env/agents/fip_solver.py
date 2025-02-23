@@ -123,3 +123,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(should_train=args.train, render=args.render)
+
+# TODO: run saved ONNX model

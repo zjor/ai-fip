@@ -179,5 +179,6 @@ pyrightconfig.json
 
 # Saved policy network
 *.pth
+*.onnx
 
 logs
