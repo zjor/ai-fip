@@ -159,7 +159,7 @@ class FlywheelInvertedPendulumEnv(gym.Env):
                 0.01 * self.phi_dot ** 2
         ) - termination_penalty
 
-    def step(self, action):
+    def step(self, action: float):
         self._last_action = self._current_action
         self._current_action = np.clip(action, -self.max_torque, self.max_torque)[0]
 
