@@ -1,113 +1,192 @@
+import sys
+from typing import Tuple
+
 import numpy as np
 import torch as th
 import torch.onnx
 from stable_baselines3 import PPO
-from torch import nn
+from stable_baselines3.common.policies import BasePolicy
+
+import onnx
+from onnx import helper, TensorProto, numpy_helper
 
 
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 
-class ActorCriticWrapper(nn.Module):
-    def __init__(self, policy):
-        super(ActorCriticWrapper, self).__init__()
+class OnnxableSB3Policy(th.nn.Module):
+    def __init__(self, policy: BasePolicy):
+        super().__init__()
         self.policy = policy
 
-    def forward(self, x):
-        action_dist = self.policy.get_distribution(x)
-        action = action_dist.get_actions()
-        value = self.policy.predict_values(x)
-        return action, value
+    def forward(self, observation: th.Tensor) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
+        return self.policy(observation, deterministic=True)[0]
 
 
 def export_model_to_onnx(model: PPO, filename: str):
-    wrapped_model = ActorCriticWrapper(model.policy)
-    wrapped_model.eval()
+    model_to_export = OnnxableSB3Policy(model.policy)
+    model_to_export.eval()
 
     dummy_input = th.rand(1, *model.observation_space.shape)
 
     torch.onnx.export(
-        wrapped_model,
-        dummy_input, f"{filename}.onnx",
-        export_params=True,
-        opset_version=11,
-        do_constant_folding=True,
-        input_names=['input'],
-        output_names=['action_mean', 'value'],
-        dynamic_axes={
-            'input': {0: 'batch_size'},  # Allow dynamic batch size
-            'action_mean': {0: 'batch_size'},  # Allow dynamic batch size
-            'value': {0: 'batch_size'}  # Allow dynamic batch size
-        }
+        model_to_export,  # Model to export
+        dummy_input,  # Example input
+        f"{filename}.onnx",  # Output file path
+        export_params=True,  # Export model parameters (weights)
+        opset_version=11,  # ONNX opset version (e.g., 11)
+        do_constant_folding=True,  # optimization
+        input_names=['observation'],  # the model's input names
+        output_names=['actions'],  # the model's output names
+        dynamic_axes={'observation': {0: 'batch_size'},  # variable length axes
+                      'actions': {0: 'batch_size'}}
     )
     print(f"Exported to {filename}.onnx")
 
 
-def main(filename: str = "fip_solver"):
-    model = PPO.load(f"{filename}.pth")
-    actor = model.policy.mlp_extractor.policy_net
-    actor.eval()
+def build_onnx_manually(model: PPO, filename: str):
+    policy_layer0_weight = model.policy.mlp_extractor.policy_net[0].weight.detach().numpy()
+    policy_layer0_bias = model.policy.mlp_extractor.policy_net[0].bias.detach().numpy()
+    policy_layer2_weight = model.policy.mlp_extractor.policy_net[2].weight.detach().numpy()
+    policy_layer2_bias = model.policy.mlp_extractor.policy_net[2].bias.detach().numpy()
+    action_net_weight = model.policy.action_net.weight.detach().numpy()
+    action_net_bias = model.policy.action_net.bias.detach().numpy()
 
-    batch_size = 64
-    x = torch.randn(batch_size, 4, requires_grad=True)
-    torch_out = actor(x)
+    # Define the ONNX model
+    # Input: observation with 4 features
+    X = helper.make_tensor_value_info('observation', TensorProto.FLOAT, [None, 4])
+    # Output: action
+    Y = helper.make_tensor_value_info('action', TensorProto.FLOAT, [None, 1])
 
-    torch.onnx.export(actor,  # model being run
-                      x,  # model input (or a tuple for multiple inputs)
-                      f"{filename}.onnx",  # where to save the model (can be a file or file-like object)
-                      export_params=True,  # store the trained parameter weights inside the model file
-                      opset_version=10,  # the ONNX version to export the model to
-                      do_constant_folding=True,  # whether to execute constant folding for optimization
-                      input_names=['input'],  # the model's input names
-                      output_names=['output'],  # the model's output names
-                      dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
-                                    'output': {0: 'batch_size'}})
-    print("Exported model to ONNX")
+    # Define the nodes (operations)
+    # First linear layer: y = x * W^T + b
+    policy_layer0_weight_initializer = numpy_helper.from_array(policy_layer0_weight.astype(np.float32),
+                                                               name='policy_layer0_weight')
+    policy_layer0_bias_initializer = numpy_helper.from_array(policy_layer0_bias.astype(np.float32),
+                                                             name='policy_layer0_bias')
+    policy_layer0 = helper.make_node(
+        'Gemm',
+        inputs=['observation', 'policy_layer0_weight', 'policy_layer0_bias'],
+        outputs=['policy_layer0_output'],
+        name='policy_layer0',
+        alpha=1.0,
+        beta=1.0,
+        transB=1
+    )
+
+    # Tanh activation after first layer
+    tanh1 = helper.make_node(
+        'Tanh',
+        inputs=['policy_layer0_output'],
+        outputs=['tanh1_output'],
+        name='tanh1'
+    )
+
+    # Second linear layer: y = x * W^T + b
+    policy_layer2_weight_initializer = numpy_helper.from_array(policy_layer2_weight.astype(np.float32),
+                                                               name='policy_layer2_weight')
+    policy_layer2_bias_initializer = numpy_helper.from_array(policy_layer2_bias.astype(np.float32),
+                                                             name='policy_layer2_bias')
+    policy_layer2 = helper.make_node(
+        'Gemm',
+        inputs=['tanh1_output', 'policy_layer2_weight', 'policy_layer2_bias'],
+        outputs=['policy_layer2_output'],
+        name='policy_layer2',
+        alpha=1.0,
+        beta=1.0,
+        transB=1
+    )
+
+    # Tanh activation after second layer
+    tanh2 = helper.make_node(
+        'Tanh',
+        inputs=['policy_layer2_output'],
+        outputs=['tanh2_output'],
+        name='tanh2'
+    )
+
+    # Action network (final layer): y = x * W^T + b
+    action_net_weight_initializer = numpy_helper.from_array(action_net_weight.astype(np.float32),
+                                                            name='action_net_weight')
+    action_net_bias_initializer = numpy_helper.from_array(action_net_bias.astype(np.float32), name='action_net_bias')
+    action_net = helper.make_node(
+        'Gemm',
+        inputs=['tanh2_output', 'action_net_weight', 'action_net_bias'],
+        outputs=['action'],
+        name='action_net',
+        alpha=1.0,
+        beta=1.0,
+        transB=1
+    )
+
+    # Create the graph
+    graph = helper.make_graph(
+        nodes=[policy_layer0, tanh1, policy_layer2, tanh2, action_net],
+        name='PPO_Policy',
+        inputs=[X],
+        outputs=[Y],
+        initializer=[
+            policy_layer0_weight_initializer,
+            policy_layer0_bias_initializer,
+            policy_layer2_weight_initializer,
+            policy_layer2_bias_initializer,
+            action_net_weight_initializer,
+            action_net_bias_initializer
+        ]
+    )
+
+    # Create the model
+    model_def = helper.make_model(graph, producer_name='sb3_ppo_exporter')
+    model_def.opset_import[0].version = 11
+    onnx.checker.check_model(model_def)
+    print("ONNX model checking passed")
+    onnx.save(model_def, filename)
 
 
-def load_and_check_model(filename: str = "fip_solver"):
-    import onnx
-    onnx_model = onnx.load(f"{filename}.onnx")
-    onnx.checker.check_model(onnx_model)
+class PolicyWithScaling(torch.nn.Module):
+    def __init__(self, policy, action_low, action_high):
+        super().__init__()
+        self.policy = policy
+        self.register_buffer("action_low", torch.tensor(action_low, dtype=torch.float32))
+        self.register_buffer("action_high", torch.tensor(action_high, dtype=torch.float32))
+
+    def forward(self, x):
+        # Get features and latent representation
+        features = self.policy.extract_features(x)
+        latent_pi, _ = self.policy.mlp_extractor(features)
+
+        # Get mean actions
+        mean_actions = self.policy.action_net(latent_pi)
+
+        normalized_actions = torch.tanh(mean_actions)
+
+        scaled_actions = self.action_low + (0.5 * (normalized_actions + 1.0) * (self.action_high - self.action_low))
+
+        return scaled_actions
 
 
-def test_onnx_output(filename: str = "fip_solver"):
-    import time
-    import onnxruntime
+def export_scaled_onnx(model: PPO, filename: str):
+    action_low = model.action_space.low
+    action_high = model.action_space.high
 
-    model = PPO.load(f"{filename}.pth")
-    actor = model.policy.mlp_extractor.policy_net
-    actor.eval()
+    print("Action space low:", action_low)
+    print("Action space high:", action_high)
 
-    batch_size = 64
-    x = torch.randn(batch_size, 4, requires_grad=True)
-    torch_out = actor(x)
+    scaled_model = PolicyWithScaling(model.policy, action_low, action_high)
+    scaled_model.eval()
 
-    ort_session = onnxruntime.InferenceSession(f"{filename}.onnx", providers=["CPUExecutionProvider"])
-
-    # compute ONNX Runtime output prediction
-    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
-    ort_outs = ort_session.run(None, ort_inputs)
-
-    # compare ONNX Runtime and PyTorch results
-    np.testing.assert_allclose(to_numpy(torch_out), ort_outs[0], rtol=1e-03, atol=1e-05)
-    print("Torch output", to_numpy(torch_out)[0])
-    print("ONNX output", ort_outs[0][0])
-
-    print("Exported model has been tested with ONNXRuntime, and the result looks good!")
-
-    # checking time performance
-    start = time.time()
-    actor(x)  # torch run
-    end = time.time()
-    print(f"Inference of Pytorch model used {end - start} seconds")
-
-    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
-    start = time.time()
-    ort_session.run(None, ort_inputs)  # onnx run
-    end = time.time()
-    print(f"Inference of ONNX model used {end - start} seconds")
+    dummy_input = th.rand(1, *model.observation_space.shape)
+    torch.onnx.export(
+        scaled_model,
+        dummy_input,
+        f"{filename}.onnx",
+        export_params=True,
+        opset_version=11,
+        input_names=["input"],
+        output_names=["scaled_action"],
+        dynamic_axes={"input": {0: "batch_size"}, "scaled_action": {0: "batch_size"}}
+    )
 
 
 if __name__ == "__main__":
@@ -117,21 +196,29 @@ if __name__ == "__main__":
 
     """
 
-    # main()
-    # load_and_check_model()
-    # test_onnx_output()
     filename = "fip_solver"
     model = PPO.load(f"{filename}.pth")
-    export_model_to_onnx(model, filename)
 
-    x = th.randn(1, 4, requires_grad=True)
-    print(x)
-    action, states = model.predict(to_numpy(x), deterministic=True)
-    print(action, states)
+    export_scaled_onnx(model, filename)
+
+    # build_onnx_manually(model, f"{filename}.onnx")
+
+    # export_model_to_onnx(model, filename)
+
+    x = np.random.rand(1, 4).astype(np.float32)
+    print(f"Input: {x}")
+
+    with torch.no_grad():
+        torch_input = torch.FloatTensor(x)
+        torch_action, _ = model.predict(torch_input, deterministic=True)
 
     import onnxruntime
-    ort_session = onnxruntime.InferenceSession(f"{filename}.onnx", providers=["CPUExecutionProvider"])
-    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(x)}
-    ort_outs = ort_session.run(None, ort_inputs)
-    print("Torch output", ort_outs)
 
+    ort_session = onnxruntime.InferenceSession(f"{filename}.onnx")
+    print(ort_session.get_inputs()[0].name, ort_session.get_inputs()[0].shape, ort_session.get_inputs()[0].type)
+
+    ort_inputs = {ort_session.get_inputs()[0].name: x}
+    actions = ort_session.run(None, ort_inputs)
+
+    print("PyTorch output:", torch_action)
+    print("ONNX output: ", actions[0])

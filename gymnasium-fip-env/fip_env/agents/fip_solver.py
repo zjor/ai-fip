@@ -1,9 +1,5 @@
-"""
-How to run
-    python -m fip_env.agents.fip_solver --train
-
-"""
 import os.path
+import sys
 from typing import Any
 
 import numpy as np
@@ -99,8 +95,6 @@ def train(model_save_filename: str):
 
 def run_with_sb3(trained_model_filename: str):
     model = PPO.load(trained_model_filename)
-    print(model.observation_space.shape)
-    return
     env = _get_env(kick_probability=0.3,
                    max_steps=500,
                    dtheta_threshold=10,
@@ -120,11 +114,20 @@ def run_with_onnx(trained_model_filename: str):
     import onnxruntime
 
     ort_session = onnxruntime.InferenceSession(f"{trained_model_filename}.onnx", providers=["CPUExecutionProvider"])
-    inputs = {ort_session.get_inputs()[0].name: [[0.5, 0.5, 0.0, 0.0]]}
-    outputs = ort_session.run(None, inputs)
-    # print(len(outputs[0][0]))
-    print(ort_session.get_outputs()[0])
-
+    env = _get_env(kick_probability=0.3,
+                   max_steps=500,
+                   dtheta_threshold=10,
+                   dphi_threshold=20,
+                   max_torque=4,
+                   verbose_termination=True, render_mode="human")
+    obs, _ = env.reset()
+    for _ in range(1000):
+        ort_inputs = {ort_session.get_inputs()[0].name: obs.reshape(1, -1)}
+        actions = ort_session.run(None, ort_inputs)
+        obs, reward, terminated, truncated, info = env.step(actions[0][0])
+        env.render()
+        if terminated or truncated:
+            obs, _ = env.reset()
 
 def main(should_train: bool = True, should_render_logs: bool = False, should_use_onnx: bool = False):
     if should_render_logs:
@@ -142,6 +145,11 @@ def main(should_train: bool = True, should_render_logs: bool = False, should_use
 
 
 if __name__ == '__main__':
+    """
+    How to run
+        python -m fip_env.agents.fip_solver --train
+
+    """
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -152,4 +160,3 @@ if __name__ == '__main__':
 
     main(should_train=args.train, should_render_logs=args.render, should_use_onnx=args.onnx)
 
-# TODO: run saved ONNX model
