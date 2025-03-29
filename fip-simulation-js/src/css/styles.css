@@ -15,8 +15,7 @@ html, body {
 .header {
     min-width: 325px;
     font-size: 2em;
-    padding-bottom: 0.5em;
-    border-bottom: #1a1a1a solid 1px;
+    padding: 0.5em 0.5em 0;
 }
 
 #canvas {

@@ -83,9 +83,9 @@ function getPiePath(): Path2D {
  * @param y {Number}
  */
 export function drawWheel(c: CanvasRenderingContext2D,
-                   lineWidth: number = 2,
-                   strokeColor = DEFAULT_STROKE_COLOR,
-                   fillColor = DEFAULT_FILL_COLOR) {
+                          lineWidth: number = 2,
+                          strokeColor = DEFAULT_STROKE_COLOR,
+                          fillColor = DEFAULT_FILL_COLOR) {
     const scale = 0.65
     c.save()
     c.scale(scale, scale)
@@ -105,6 +105,35 @@ export function drawWheel(c: CanvasRenderingContext2D,
     c.lineWidth = lineWidth / scale
     c.stroke(path)
     c.restore()
+}
 
+export function drawCirclesWithTangentCone(
+    c: CanvasRenderingContext2D,
+    r1: number,
+    r2: number,
+    d: number,
+    fillColor: string = DEFAULT_FILL_COLOR) {
+
+    const _sin = (r2 - r1) / d
+    const _cos = sqrt(1 - _sin ** 2)
+    c.fillStyle = fillColor
+
+    c.beginPath()
+    c.ellipse(0, 0, r1, r1, 0, 0, 2 * pi)
+    c.fill()
+
+    c.beginPath()
+    c.ellipse(d, 0, r2, r2, 0, 0, 2 * pi)
+    c.fill()
+
+    c.beginPath()
+    c.moveTo(-r1 * _sin, r1 * _cos)
+    c.lineTo(-r2 * _sin + d, r2 * _cos)
+    c.lineTo(-r2 * _sin + d, -r2 * _cos)
+
+    c.lineTo(-r1 * _sin, -r1 * _cos)
+    c.closePath()
+
+    c.fill()
 }
 
