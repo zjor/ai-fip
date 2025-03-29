@@ -1,6 +1,9 @@
 const {PI: pi, sqrt, atan} = Math;
 
-export function drawPieCircle(c: CanvasRenderingContext2D, r: number, lineWidth: number, color: string) {
+const DEFAULT_STROKE_COLOR = '#FFA500'
+const DEFAULT_FILL_COLOR = '#000'
+
+export function drawPieCircle(c: CanvasRenderingContext2D, r: number, lineWidth: number, color: string = DEFAULT_STROKE_COLOR) {
     c.fillStyle = color
     c.strokeStyle = color
     c.lineWidth = lineWidth
@@ -27,8 +30,8 @@ export function drawArmLink(
     r2: number,
     l: number,
     lineWidth: number = 2,
-    strokeColor: string = '#FFA500',
-    fillColor: string = '#000') {
+    strokeColor: string = DEFAULT_STROKE_COLOR,
+    fillColor: string = DEFAULT_FILL_COLOR) {
     const r = 1.3 * l
 
     const x = l / 2 + (r1 - r2) * (r1 + r2 + 2 * r) / (2 * l)
@@ -52,5 +55,56 @@ export function drawArmLink(
     c.stroke()
 
     c.restore()
+}
+
+function getPiePath(): Path2D {
+    const path = new Path2D();
+
+    path.moveTo(-10, 45.8257569)
+    path.lineTo(-10, 136.7479433)
+
+    path.arc(-30, 136.747943311, 20, 0, 1.7867568)
+    path.arc(0, 0, 160, 1.7867568, 2.9256321)
+    path.arc(-136.7479433, 30, 20, 2.9256321, 4.7123889)
+
+    path.lineTo(-45.8257569, 10)
+
+    path.arc(-45.8257569, 20, 10, 4.7123889, 5.8716684)
+    path.arc(0, 0, 40, 2.7300758, 1.9823131, true)
+    path.arc(-20, 45.8257569, 10, 5.1239058, 0)
+    path.closePath()
+    return path
+}
+
+/**
+ *
+ * @param c {CanvasRenderingContext2D}
+ * @param x {Number}
+ * @param y {Number}
+ */
+export function drawWheel(c: CanvasRenderingContext2D,
+                   lineWidth: number = 2,
+                   strokeColor = DEFAULT_STROKE_COLOR,
+                   fillColor = DEFAULT_FILL_COLOR) {
+    const scale = 0.65
+    c.save()
+    c.scale(scale, scale)
+    const path = new Path2D()
+    const outerRadius = 180
+    path.ellipse(0, 0, outerRadius, outerRadius, 0, 0, 2 * pi, true)
+    const piePath = getPiePath()
+    path.addPath(piePath)
+    path.addPath(piePath, (new DOMMatrix()).rotate(90))
+    path.addPath(piePath, (new DOMMatrix()).rotate(180))
+    path.addPath(piePath, (new DOMMatrix()).rotate(270))
+
+
+    c.fillStyle = fillColor
+    c.fill(path, 'nonzero')
+    c.strokeStyle = strokeColor
+    c.lineWidth = lineWidth / scale
+    c.stroke(path)
+    c.restore()
+
 }
 
