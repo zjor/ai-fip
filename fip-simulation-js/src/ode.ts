@@ -18,3 +18,12 @@ export function integrateRK4(state, t, dt, deriveFunc) {
     return state.map((v, i) =>
         v + (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) * dt / 6)
 }
+
+export async function integrateRK4Async(state, t, dt, deriveFunc) {
+    const k1 = await deriveFunc(state, t, dt)
+    const k2 = await deriveFunc(state.map((v, i) => v + k1[i] * dt / 2), t, dt)
+    const k3 = await deriveFunc(state.map((v, i) => v + k2[i] * dt / 2), t, dt)
+    const k4 = await deriveFunc(state.map((v, i) => v + k3[i] * dt), t, dt)
+    return state.map((v, i) =>
+        v + (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) * dt / 6)
+}
