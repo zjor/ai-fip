@@ -118,21 +118,17 @@ export function drawCirclesWithTangentCone(
     const _cos = sqrt(1 - _sin ** 2)
     c.fillStyle = fillColor
 
-    c.beginPath()
-    c.ellipse(0, 0, r1, r1, 0, 0, 2 * pi)
-    c.fill()
+    const phi = (r1 < r2) ? Math.acos(_cos) : -Math.acos(_cos)
 
     c.beginPath()
-    c.ellipse(d, 0, r2, r2, 0, 0, 2 * pi)
-    c.fill()
-
-    c.beginPath()
+    c.ellipse(0, 0, r1, r1, 0, pi / 2 + phi, 3 * pi / 2 - phi)
     c.moveTo(-r1 * _sin, r1 * _cos)
     c.lineTo(-r2 * _sin + d, r2 * _cos)
+
+    c.ellipse(d, 0, r2, r2, 0, pi / 2 + phi, 3 * pi / 2 - phi, true)
     c.lineTo(-r2 * _sin + d, -r2 * _cos)
 
     c.lineTo(-r1 * _sin, -r1 * _cos)
-    c.closePath()
 
     c.fill()
 }

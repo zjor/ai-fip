@@ -1,6 +1,11 @@
 import * as ort from 'onnxruntime-web';
 
-import {drawPieCircle, drawArmLink, drawWheel, drawCirclesWithTangentCone} from "./geometry";
+import {
+    drawPieCircle,
+    drawArmLink,
+    drawWheel,
+    drawCirclesWithTangentCone
+} from "./geometry";
 import {integrateRK4, integrateRK4Async} from "./ode";
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement
@@ -42,20 +47,17 @@ const params: Params = {
     length: l * 100
 }
 
-let disturbance = 0
+function getDisturbance(): number {
+    if (externalDisturbance.mouseDown) {
+        let [x, y] = [externalDisturbance.x, externalDisturbance.y]
+        x -= ox
+        y -= oy
 
-function updateDisturbance() {
-    const _disturbance = externalDisturbance.consumeDisturbance()
-    if (_disturbance === undefined) {
-        return
+        const [ex, ey] = [params.length * cos(state.theta), params.length * sin(state.theta)]
+        return 0.05 * ((x * ex + y * ey) / Math.sqrt(ex ** 2 + ey ** 2))
     }
 
-    let [x, y] = _disturbance
-    x -= ox
-    y -= oy
-
-    const [ex, ey] = [params.length * cos(state.theta), params.length * sin(state.theta)]
-    disturbance += ((x * ex + y * ey) / Math.sqrt(ex ** 2 + ey ** 2)) / 10
+    return 0
 }
 
 function derivativeWithFriction(state: number[], t: number, dt: number) {
@@ -68,7 +70,7 @@ function derivativeWithFriction(state: number[], t: number, dt: number) {
 
 async function derivativeWithNNControl(state: number[], t: number, dt: number) {
     const [_th, _dth, _phi, _dphi] = state
-    const u = (await onnxModelRunner.forward(_th, _dth, _dphi)) + disturbance
+    const u = (await onnxModelRunner.forward(_th, _dth, _dphi)) + getDisturbance()
     const ddth = (u - (0.5 * m1 + m2) * l * g * sin(-_th)) / (m1 * l ** 2 / 3 + m2 * l ** 2 + J)
     const ddphi = u / J
     return [_dth, ddth, _dphi, ddphi]
@@ -94,7 +96,7 @@ function renderDisturbance() {
     const d = Math.sqrt((ex - x) ** 2 + (ey - y) ** 2)
     ctx.rotate(Math.atan2(y - ey, x - ex))
     const r2 = 15 + d * 60 / 400
-    drawCirclesWithTangentCone(ctx, 15, r2, d, '#BF0000')
+    drawCirclesWithTangentCone(ctx, 15, r2, d, '#BF00008F')
 
     ctx.restore()
 }
@@ -105,6 +107,7 @@ async function render() {
 
     ctx.save()
     ctx.translate(ox, oy)
+
     ctx.rotate(-pi / 2)
     ctx.rotate(state.theta)
     drawArmLink(ctx, 30, 50, params.length, 2, '#000', '#fff')
@@ -119,8 +122,6 @@ async function render() {
     if (externalDisturbance.mouseDown) {
         renderDisturbance()
     }
-    disturbance *= 0.6
-    updateDisturbance()
 
     const now = Date.now()
     const dt = (now - t) / 1000
