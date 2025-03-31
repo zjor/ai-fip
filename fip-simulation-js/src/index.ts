@@ -7,6 +7,7 @@ import {
     drawCirclesWithTangentCone
 } from "./geometry";
 import {integrateRK4, integrateRK4Async} from "./ode";
+import {Plot} from "./plotting";
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
@@ -101,6 +102,8 @@ function renderDisturbance() {
     ctx.restore()
 }
 
+const plot = Plot({top: 0, left: 0, width: 300, height: 300, title: "Test"})
+
 async function render() {
     ctx.fillStyle = "#fff"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -122,6 +125,9 @@ async function render() {
     if (externalDisturbance.mouseDown) {
         renderDisturbance()
     }
+
+    plot.render(ctx)
+    plot.appendDataPoint(t, state.theta)
 
     const now = Date.now()
     const dt = (now - t) / 1000
