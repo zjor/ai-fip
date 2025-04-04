@@ -6,8 +6,8 @@ import {
     drawWheel,
     drawCirclesWithTangentCone
 } from "./geometry";
-import {integrateRK4, integrateRK4Async} from "./ode";
-import {Plot} from "./plotting";
+import {integrateRK4Async} from "./ode";
+import {Chart, ChartConfiguration} from "chart.js/auto";
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
@@ -102,8 +102,6 @@ function renderDisturbance() {
     ctx.restore()
 }
 
-const plot = Plot({top: 0, left: 0, width: 300, height: 300, title: "Test"})
-
 async function render() {
     ctx.fillStyle = "#fff"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -126,9 +124,6 @@ async function render() {
         renderDisturbance()
     }
 
-    plot.render(ctx)
-    plot.appendDataPoint(t, state.theta)
-
     const now = Date.now()
     const dt = (now - t) / 1000
     state = await integrate(state, t, dt)
@@ -138,11 +133,11 @@ async function render() {
 }
 
 window.onload = async () => {
+    initUI();
     await onnxModelRunner.init();
     [ox, oy] = [canvas.width / 2, canvas.height / 2];
     await render();
 }
-
 
 const externalDisturbance = (() => {
     let mouseDown = false
@@ -236,4 +231,69 @@ const onnxModelRunner = (() => {
         }
     }
 })()
+
+function initUI() {
+    const drawer = document.getElementById('drawer');
+    const handle = document.getElementById('drawer-handle');
+    handle.addEventListener('click', () => drawer.classList.toggle('open'));
+
+    const chartU = (document.getElementById('chart-u') as HTMLCanvasElement).getContext('2d');
+
+    const data = {
+        labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+        datasets: [{
+            label: 'Monthly Sales',
+            data: [65, 59, 80, 81, 56, 55, 72],
+            backgroundColor: 'rgba(52, 152, 219, 0.3)',
+            borderColor: 'rgba(52, 152, 219, 0.7)',
+            borderWidth: 2,
+            tension: 0.3
+        }]
+    };
+
+    const config = {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly Sales Data',
+                    color: '#333'
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#333'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                        color: '#333'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                        color: '#333'
+                    }
+                }
+            },
+            backgroundColor: 'transparent'
+        }
+    };
+
+    new Chart(chartU, config as ChartConfiguration);
+
+}
 
