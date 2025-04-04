@@ -60,7 +60,11 @@ html, body, div, p {
 }
 
 #drawer-content {
-    padding: 30px 20px 20px;
-    text-align: center;
+    padding: 10px;
+    width: 100%;
     height: calc(100% - 60px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 5px;
 }

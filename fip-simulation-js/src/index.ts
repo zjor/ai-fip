@@ -124,6 +124,18 @@ async function render() {
         renderDisturbance()
     }
 
+    if (chartU) {
+        chartU.data.labels.push('')
+        chartU.data.datasets[0].data.push(state.theta)
+
+        if (chartU.data.labels.length > 512) {
+            chartU.data.labels.shift()
+            chartU.data.datasets[0].data.shift()
+        }
+
+        chartU.update('active')
+    }
+
     const now = Date.now()
     const dt = (now - t) / 1000
     state = await integrate(state, t, dt)
@@ -194,14 +206,6 @@ const externalDisturbance = (() => {
         },
         get y() {
             return y
-        },
-        consumeDisturbance(): [number, number] | undefined {
-            if (hasDisturbance) {
-                hasDisturbance = false
-                return [x, y]
-            } else {
-                return undefined
-            }
         }
     }
 })()
@@ -232,60 +236,71 @@ const onnxModelRunner = (() => {
     }
 })()
 
+let chartU: Chart | undefined
+let chartTheta: Chart | undefined
+let chartOmega: Chart | undefined
+let chartPhiDot: Chart | undefined
+
 function initUI() {
     const drawer = document.getElementById('drawer');
     const handle = document.getElementById('drawer-handle');
     handle.addEventListener('click', () => drawer.classList.toggle('open'));
 
-    const chartU = (document.getElementById('chart-u') as HTMLCanvasElement).getContext('2d');
+    chartU = buildChart('chart-u')
+    chartTheta = buildChart('chart-theta')
+    chartOmega = buildChart('chart-omega')
+    chartPhiDot = buildChart('chart-phi-dot')
+}
 
-    const data = {
-        labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+function buildChart(canvasId: string): Chart {
+    const chartUContext = (document.getElementById(canvasId) as HTMLCanvasElement).getContext('2d')
+
+    const initialData = {
+        labels: [],
         datasets: [{
-            label: 'Monthly Sales',
-            data: [65, 59, 80, 81, 56, 55, 72],
-            backgroundColor: 'rgba(52, 152, 219, 0.3)',
-            borderColor: 'rgba(52, 152, 219, 0.7)',
+            data: [],
+            borderColor: 'rgba(0, 0, 0, 0.7)',
             borderWidth: 2,
-            tension: 0.3
+            tension: 0.3,
+            pointRadius: 0,
+            pointStyle: false,
         }]
     };
 
     const config = {
         type: 'line',
-        data: data,
+        data: initialData,
         options: {
+            animation: false,
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 title: {
-                    display: true,
-                    text: 'Monthly Sales Data',
-                    color: '#333'
+                    display: false,
                 },
                 legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: '#333'
-                    }
+                    display: false
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: true,
+                    beginAtZero: false,
                     grid: {
                         color: 'rgba(0, 0, 0, 0.1)'
                     },
                     ticks: {
-                        color: '#333'
+                        display: true,
+                        maxTicksLimit: 5,
+                        callback: (value: number, _index: any, _values: any) => value.toFixed(1)
                     }
                 },
                 x: {
                     grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
+                        color: 'rgba(0, 0, 0, 0.1)',
                     },
                     ticks: {
-                        color: '#333'
+                        display: false,
+                        maxTicksLimit: 10
                     }
                 }
             },
@@ -293,7 +308,6 @@ function initUI() {
         }
     };
 
-    new Chart(chartU, config as ChartConfiguration);
-
+    return new Chart(chartUContext, config as ChartConfiguration)
 }
 
