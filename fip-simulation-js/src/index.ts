@@ -35,6 +35,8 @@ let state: State = {
     phiDot: 0
 }
 
+let control: number = 0.0
+
 const g = 9.81
 
 const m1 = 0.1
@@ -71,7 +73,8 @@ function derivativeWithFriction(state: number[], t: number, dt: number) {
 
 async function derivativeWithNNControl(state: number[], t: number, dt: number) {
     const [_th, _dth, _phi, _dphi] = state
-    const u = (await onnxModelRunner.forward(_th, _dth, _dphi)) + getDisturbance()
+    control = (await onnxModelRunner.forward(_th, _dth, _dphi))
+    const u = control + getDisturbance()
     const ddth = (u - (0.5 * m1 + m2) * l * g * sin(-_th)) / (m1 * l ** 2 / 3 + m2 * l ** 2 + J)
     const ddphi = u / J
     return [_dth, ddth, _dphi, ddphi]
@@ -124,17 +127,10 @@ async function render() {
         renderDisturbance()
     }
 
-    if (chartU) {
-        chartU.data.labels.push('')
-        chartU.data.datasets[0].data.push(state.theta)
-
-        if (chartU.data.labels.length > 512) {
-            chartU.data.labels.shift()
-            chartU.data.datasets[0].data.shift()
-        }
-
-        chartU.update('active')
-    }
+    chartU?.push(control)
+    chartTheta?.push(state.theta)
+    chartOmega?.push(state.thetaDot)
+    chartPhiDot?.push(state.phiDot)
 
     const now = Date.now()
     const dt = (now - t) / 1000
@@ -236,20 +232,49 @@ const onnxModelRunner = (() => {
     }
 })()
 
-let chartU: Chart | undefined
-let chartTheta: Chart | undefined
-let chartOmega: Chart | undefined
-let chartPhiDot: Chart | undefined
+let chartU: DynamicChart | undefined
+let chartTheta: DynamicChart | undefined
+let chartOmega: DynamicChart | undefined
+let chartPhiDot: DynamicChart | undefined
 
 function initUI() {
     const drawer = document.getElementById('drawer');
     const handle = document.getElementById('drawer-handle');
-    handle.addEventListener('click', () => drawer.classList.toggle('open'));
+    const arrowUp = document.getElementById('arrow-up')
+    const arrowDown = document.getElementById('arrow-down')
+    handle.addEventListener('click', () => {
+        drawer.classList.toggle('open')
+        arrowUp.classList.toggle('hidden')
+        arrowDown.classList.toggle('hidden')
+    });
 
-    chartU = buildChart('chart-u')
-    chartTheta = buildChart('chart-theta')
-    chartOmega = buildChart('chart-omega')
-    chartPhiDot = buildChart('chart-phi-dot')
+    chartU = NewDynamicChart('chart-u')
+    chartTheta = NewDynamicChart('chart-theta')
+    chartOmega = NewDynamicChart('chart-omega')
+    chartPhiDot = NewDynamicChart('chart-phi-dot')
+}
+
+interface DynamicChart {
+    push(value: number): void
+}
+
+function NewDynamicChart(canvasId: string): DynamicChart {
+    const maxDataPoints = 512
+    const chart = buildChart(canvasId)
+
+    return {
+        push(value: number) {
+            chart.data.labels.push('')
+            chart.data.datasets[0].data.push(value)
+
+            if (chart.data.labels.length > maxDataPoints) {
+                chart.data.labels.shift()
+                chart.data.datasets[0].data.shift()
+            }
+
+            chart.update('active')
+        }
+    }
 }
 
 function buildChart(canvasId: string): Chart {
