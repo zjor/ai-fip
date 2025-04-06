@@ -15,12 +15,16 @@ html, body, div, p {
 }
 
 .content {
-    /*border: black 1px solid;*/
     position: relative;
     overflow: hidden;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .header {
+    width: 100%;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -43,13 +47,26 @@ html, body, div, p {
 
 .header .title {
     flex-grow: 1;
-    font-size: 1.5em;
     padding: 0 0.5em 0;
     border-left: #333 2px solid;
     border-right: #333 2px solid;
+    display: flex;
+    flex-direction: column;
 }
 
+.title .main-title {
+    font-size: 0.8em;
+}
+
+.title .subtitle {
+    font-size: 0.6em;
+    color: #333;
+}
+
+
 #canvas {
+    width: 100%;
+    height: auto;
 }
 
 #drawer {
@@ -85,11 +102,9 @@ html, body, div, p {
 
 #drawer-content {
     width: 100%;
-    /*height: calc(100% - 60px);*/
 }
 
 .chart-container {
-    padding: 10px 5px 0px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
@@ -118,4 +133,23 @@ html, body, div, p {
 
 .hidden {
     display: none;
+}
+
+/* small phones */
+@media (min-width: 320px) {
+}
+
+/* tablets */
+@media (min-width: 768px) {
+}
+
+/* desktop */
+@media (min-width: 1024px) {
+    .title .main-title {
+        font-size: 1em;
+    }
+
+    .title .subtitle {
+        font-size: 0.8em;
+    }
 }

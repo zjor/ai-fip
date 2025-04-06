@@ -150,7 +150,6 @@ window.onload = async () => {
 const externalDisturbance = (() => {
     let mouseDown = false
     let [x, y] = [0, 0]
-    let hasDisturbance = false
 
     function getScaledCoordinates(event: MouseEvent): [number, number] {
         const rect = canvas.getBoundingClientRect();
@@ -169,29 +168,28 @@ const externalDisturbance = (() => {
         return [canvasX, canvasY]
     }
 
-    canvas.addEventListener('mousedown', (e) => {
+    const mouseDownHandler = (e: MouseEvent) => {
+        e.preventDefault();
         mouseDown = true;
         [x, y] = getScaledCoordinates(e)
-    })
+    }
 
-    canvas.addEventListener('mousemove', (e) => {
+    const mouseMoveHandler = (e: MouseEvent) => {
+        e.preventDefault();
         if (mouseDown) {
             [x, y] = getScaledCoordinates(e)
-            console.log(x, y)
         }
-    })
+    }
 
-    canvas.addEventListener('mouseup', (e) => {
+    const mouseUpHandler = (e: MouseEvent) => {
+        e.preventDefault();
         mouseDown = false;
-        hasDisturbance = true;
         [x, y] = getScaledCoordinates(e)
-    })
+    }
 
-    canvas.addEventListener('mouseleave', (e) => {
-        mouseDown = false;
-        hasDisturbance = true;
-        [x, y] = getScaledCoordinates(e)
-    })
+    ['mousedown', 'pointerdown'].forEach(e => canvas.addEventListener(e, mouseDownHandler));
+    ['mousemove', 'pointermove'].forEach(e => canvas.addEventListener(e, mouseMoveHandler));
+    ['mouseup', 'pointerup'].forEach(e => canvas.addEventListener(e, mouseUpHandler));
 
     return {
         get mouseDown() {
