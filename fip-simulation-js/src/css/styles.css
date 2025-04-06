@@ -43,6 +43,10 @@ html, body, div, p {
     display: block;
     width: 32px;
     height: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .header .title {
