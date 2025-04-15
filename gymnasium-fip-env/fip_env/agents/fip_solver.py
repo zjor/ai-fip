@@ -1,16 +1,23 @@
 import os.path
 import sys
+from enum import Enum
 from typing import Any
 
 import numpy as np
 import gymnasium as gym
 from gymnasium import Env
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.callbacks import StopTrainingOnRewardThreshold, EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.noise import NormalActionNoise
 
 ENV_ID: str = 'fip_env/FlywheelInvertedPendulum-v0'
+
+
+class RLModel(Enum):
+    PPO = 'ppo'
+    SAC = 'sac'
 
 
 def to_numpy(tensor):
@@ -33,7 +40,7 @@ def _train(env: Env, model: BaseAlgorithm):
     )
 
     # Train the model
-    model.learn(total_timesteps=700_000, callback=eval_callback)
+    model.learn(total_timesteps=1000_000, callback=eval_callback)
 
 
 def render_logs():
@@ -59,25 +66,46 @@ def render_logs():
     plt.show()
 
 
-def train(model_save_filename: str):
+def train(model_type: RLModel, model_save_filename: str):
     env = _get_env(
         max_steps=500,
         dtheta_threshold=10,
         dphi_threshold=20.0,
         max_torque=4
     )
-    model = PPO(
-        "MlpPolicy",  # Policy network (Multi-layer Perceptron)
-        env,
-        verbose=1,  # Print training logs
-        learning_rate=3e-4,
-        n_steps=2048,  # Number of steps per update
-        batch_size=64,  # Batch size for training
-        gamma=0.99,  # Discount factor
-        gae_lambda=0.95,  # Generalized Advantage Estimation lambda
-        ent_coef=0.025,  # Entropy coefficient for exploration
-        max_grad_norm=0.5,  # Gradient clipping
-    )
+    if model_type == RLModel.PPO:
+        model = PPO(
+            "MlpPolicy",  # Policy network (Multi-layer Perceptron)
+            env,
+            verbose=1,  # Print training logs
+            learning_rate=3e-4,
+            n_steps=2048,  # Number of steps per update, prev. 2048
+            batch_size=64,  # Batch size for training, prev 64
+            gamma=0.99,  # Discount factor
+            gae_lambda=0.95,  # Generalized Advantage Estimation lambda
+            ent_coef=0.025,  # Entropy coefficient for exploration
+            clip_range=0.1,
+            max_grad_norm=0.5,  # Gradient clipping
+        )
+    elif model_type == RLModel.SAC:
+        n_actions = env.action_space.shape[0]
+        action_noise = NormalActionNoise(
+            mean=np.zeros(n_actions),
+            sigma=0.1 * np.ones(n_actions)
+        )
+        model = SAC(
+            "MlpPolicy",
+            env,
+            learning_rate=3e-4,
+            buffer_size=100000,
+            batch_size=256,
+            tau=0.005,  # Target network update rate
+            gamma=0.99,  # Discount factor
+            action_noise=action_noise,
+            train_freq=(1, "episode"),  # Update the model every episode
+            gradient_steps=1,
+            verbose=1,
+        )
 
     if os.path.exists(model_save_filename):
         model.set_parameters(model_save_filename)
@@ -129,14 +157,15 @@ def run_with_onnx(trained_model_filename: str):
         if terminated or truncated:
             obs, _ = env.reset()
 
-def main(should_train: bool = True, should_render_logs: bool = False, should_use_onnx: bool = False):
+
+def main(model: RLModel, should_train: bool = True, should_render_logs: bool = False, should_use_onnx: bool = False):
     if should_render_logs:
         render_logs()
         return
 
     filename = "fip_solver"
     if should_train:
-        train(filename + ".pth")
+        train(model, filename + ".pth")
     else:
         if should_use_onnx:
             run_with_onnx(filename)
@@ -147,16 +176,20 @@ def main(should_train: bool = True, should_render_logs: bool = False, should_use
 if __name__ == '__main__':
     """
     How to run
-        python -m fip_env.agents.fip_solver --train
+        python -m fip_env.agents.fip_solver --train --model=[PPO,SAC]
 
     """
     import argparse
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--model', type=RLModel, default=RLModel.PPO,
+                        help=f'Supported values: {[m.value for m in RLModel]}')
     parser.add_argument('--train', action='store_true')
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--onnx', action='store_true')
     args = parser.parse_args()
 
-    main(should_train=args.train, should_render_logs=args.render, should_use_onnx=args.onnx)
-
+    main(model=args.model,
+         should_train=args.train,
+         should_render_logs=args.render,
+         should_use_onnx=args.onnx)
