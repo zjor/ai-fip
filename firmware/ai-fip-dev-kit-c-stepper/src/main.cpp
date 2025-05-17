@@ -11,9 +11,9 @@
  * @version 0.1
  * @date 2025-05-17 - ...
  */
-
-#include <Wire.h>
 #include <Arduino.h>
+#include <Wire.h>
+#include <SparkFunMPU9250-DMP.h>
 
 #include <math.h>
 
@@ -36,6 +36,15 @@ hw_timer_t * timer = NULL;
 
 Stepper stepper(PIN_STEPPER_EN, PIN_STEPPER_DIR, PIN_STEPPER_STEP, TICKS_PER_SECOND, PPR, PULSE_WIDTH);
 
+MPU9250_DMP imu;
+volatile bool dmpDataReady = false;
+float roll, pitch, yaw;
+
+void dmpISR();
+void initIMU();
+bool readIMU();
+
+
 void setup() {
   setCpuFrequencyMhz(CPU_FREQ_MHZ);
 
@@ -43,17 +52,21 @@ void setup() {
   Wire.begin();
   Wire.setClock(1000000UL);
 
-  initTimerInterrupt();
+  // initTimerInterrupt();
+  delay(500);
+  initIMU();
 
-  stepper.init();
-  stepper.setEnabled(true);
-  
+  // stepper.init();
+  // stepper.setEnabled(true);
+
+
 }
 
 void loop() {
-  unsigned long nowMicros = micros();
-  updateVelocity(nowMicros);
-  log(nowMicros);
+  // unsigned long nowMicros = micros();
+  // updateVelocity(nowMicros);
+  // readIMU();
+  // log(nowMicros);
 }
 
 float t = 0.0;
@@ -90,7 +103,45 @@ void log(unsigned long nowMicros) {
     return;
   }
 
-  char buf[64];
-  sprintf(buf, "[%ld] %.2f", nowMicros, t);
-  Serial.println(buf);
+  Serial.printf("%.2f\t%.2f\t%.2f\n", roll, pitch, yaw);
+}
+
+void dmpISR() {
+  dmpDataReady = true;
+}
+
+void initIMU() {
+  pinMode(PIN_IMU_INT, INPUT_PULLUP);
+
+  Serial.println("before MPU begin");
+  if (imu.begin() != INV_SUCCESS) {
+    Serial.println("after MPU begin");
+    while (1) {
+      Serial.println("Failed to init IMU");
+      delay(5000);
+    }
+  }
+
+  Serial.println("MPU ready");
+
+  imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | DMP_FEATURE_GYRO_CAL, 100);
+  imu.enableInterrupt();
+  imu.setIntLevel(INT_ACTIVE_LOW);
+  imu.setIntLatched(INT_LATCHED);  
+
+  attachInterrupt(PIN_IMU_INT, dmpISR, FALLING);
+}
+
+bool readIMU() {
+  if (dmpDataReady && imu.fifoAvailable()) {
+    if (imu.dmpUpdateFifo() == INV_SUCCESS) {
+      dmpDataReady = false;
+      imu.computeEulerAngles();
+      roll = imu.roll;
+      pitch = imu.pitch;
+      yaw = imu.yaw;
+      return true;
+    }
+  }
+  return false;
 }
