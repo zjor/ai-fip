@@ -63,10 +63,12 @@ void setup() {
 }
 
 void loop() {
-  // unsigned long nowMicros = micros();
+  unsigned long nowMicros = micros();
   // updateVelocity(nowMicros);
-  // readIMU();
-  // log(nowMicros);
+  if (readIMU()) {
+    log(nowMicros);
+  }
+  
 }
 
 float t = 0.0;
@@ -99,7 +101,7 @@ void initTimerInterrupt() {
 
 void log(unsigned long nowMicros) {
   static unsigned long timestamp = micros();
-  if (nowMicros - timestamp < 100000 /* 10 Hz */) {
+  if (nowMicros - timestamp < 1000000 /* 10 Hz */) {
     return;
   }
 
