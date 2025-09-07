@@ -15,6 +15,7 @@
 #include <Wire.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+#include <Kalman.h>
 
 #include <math.h>
 
@@ -35,13 +36,33 @@ void updateVelocity(unsigned long);
 void updateControl(unsigned long);
 void log(unsigned long);
 
+static inline float accelRollDegFrom(const sensors_event_t&);
+static inline float gyroRollRadFrom(const sensors_event_t&);
+
 hw_timer_t * timer = NULL;
 
 Stepper stepper(PIN_STEPPER_EN, PIN_STEPPER_DIR, PIN_STEPPER_STEP, TICKS_PER_SECOND, PPR, PULSE_WIDTH);
 
 Adafruit_MPU6050 mpu;
+Kalman kRoll;
+
+float gyro_bias_rad = 0.0f;
+unsigned long last_ms = 0;
+
 
 inline float normalizeAngle(float value);
+
+void calibrateGyroRollAxis(size_t samples = 400) {
+  sensors_event_t a, g, t;
+  gyro_bias_rad = 0.0f;
+  delay(200); // settle
+  for (size_t i = 0; i < samples; i++) {
+    mpu.getEvent(&a, &g, &t);
+    gyro_bias_rad += gyroRollRadFrom(g);
+    delay(2);
+  }
+  gyro_bias_rad /= samples;
+}
 
 void setup() {
   setCpuFrequencyMhz(CPU_FREQ_MHZ);
@@ -63,28 +84,25 @@ void loop() {
   updateVelocity(nowMicros);
   updateControl(nowMicros);
 
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
+  sensors_event_t a, g, t;
+  mpu.getEvent(&a, &g, &t);
 
-  Serial.print("Accel (m/s^2): ");
-  Serial.print(a.acceleration.x);
-  Serial.print(", ");
-  Serial.print(a.acceleration.y);
-  Serial.print(", ");
-  Serial.println(a.acceleration.z);
+  unsigned long now = millis();
+  float dt = (now - last_ms) / 1000.0f;
+  last_ms = now;
 
-  Serial.print("Gyro (rad/s): ");
-  Serial.print(g.gyro.x);
-  Serial.print(", ");
-  Serial.print(g.gyro.y);
-  Serial.print(", ");
-  Serial.println(g.gyro.z);
+  float roll_accel_deg = accelRollDegFrom(a);
+  float gyro_roll_deg_s = (gyroRollRadFrom(g) - gyro_bias_rad) * 180.0f / PI;
+  float roll_deg = kRoll.getAngle(roll_accel_deg, gyro_roll_deg_s, dt);
 
-  Serial.print("Temperature (°C): ");
-  Serial.println(temp.temperature);
+  // Optional: wrap to [-180, 180)
+  if (roll_deg >= 180.0f) roll_deg -= 360.0f;
+  else if (roll_deg < -180.0f) roll_deg += 360.0f;
 
-  Serial.println("----");
-  delay(500);  
+  // Output
+  Serial.print("Roll (deg): ");
+  Serial.println(roll_deg, 2);
+
 }
 
 void updateVelocity(unsigned long nowMicros) {
@@ -149,9 +167,28 @@ void initMPU() {
   mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
 
   Serial.println("MPU ready");
+
+  Serial.println("Hold still… calibrating gyro bias");
+  calibrateGyroRollAxis();
+
+  // Initialize Kalman with accel tilt to avoid startup jump
+  sensors_event_t a, g, t;
+  mpu.getEvent(&a, &g, &t);
+  kRoll.setAngle(accelRollDegFrom(a));  // init state
+
+  last_ms = millis();
 }
 
 
 inline float normalizeAngle(float value) {
   return ((value < 180) ? value : value - 360.0f) * DEG_TO_RAD;
+}
+
+static inline float accelRollDegFrom(const sensors_event_t& a) {
+  float roll_rad = atan2f(a.acceleration.y, a.acceleration.z);
+  return roll_rad * RAD_TO_DEG;
+}
+
+static inline float gyroRollRadFrom(const sensors_event_t& g) {
+  return g.gyro.x;
 }
