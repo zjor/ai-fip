@@ -21,6 +21,7 @@
 
 #include "pinout.h"
 #include "stepper/stepper.h"
+#include "FixedRateExecutor.h"
 
 // pulses per revolution
 #define PPR               1600
@@ -34,7 +35,9 @@ void initMPU();
 void initTimerInterrupt();
 void updateVelocity(unsigned long);
 void updateControl(unsigned long);
-void log(unsigned long);
+void log();
+
+FixedRateExecutor logger(10000, log);
 
 static inline float accelRollDegFrom(const sensors_event_t&);
 static inline float gyroRollRadFrom(const sensors_event_t&);
@@ -46,20 +49,23 @@ Stepper stepper(PIN_STEPPER_EN, PIN_STEPPER_DIR, PIN_STEPPER_STEP, TICKS_PER_SEC
 Adafruit_MPU6050 mpu;
 Kalman kRoll;
 
+float roll_accel_deg = 0.0f;
+float roll_deg = 0.0f;
 float gyro_bias_rad = 0.0f;
+// TODO: consider accel bias
 unsigned long last_ms = 0;
 
 
 inline float normalizeAngle(float value);
 
-void calibrateGyroRollAxis(size_t samples = 400) {
+void calibrateGyroRollAxis(size_t samples = 800) {
   sensors_event_t a, g, t;
   gyro_bias_rad = 0.0f;
   delay(200); // settle
   for (size_t i = 0; i < samples; i++) {
     mpu.getEvent(&a, &g, &t);
     gyro_bias_rad += gyroRollRadFrom(g);
-    delay(2);
+    delay(5);
   }
   gyro_bias_rad /= samples;
 }
@@ -72,7 +78,7 @@ void setup() {
   Wire.setClock(1000000UL);
 
   initTimerInterrupt();
-  delay(500);
+  delay(250);
   initMPU();
 
   stepper.init();
@@ -81,8 +87,8 @@ void setup() {
 
 void loop() {
   unsigned long nowMicros = micros();
-  updateVelocity(nowMicros);
-  updateControl(nowMicros);
+  // updateVelocity(nowMicros);
+  // updateControl(nowMicros);
 
   sensors_event_t a, g, t;
   mpu.getEvent(&a, &g, &t);
@@ -91,18 +97,15 @@ void loop() {
   float dt = (now - last_ms) / 1000.0f;
   last_ms = now;
 
-  float roll_accel_deg = accelRollDegFrom(a);
+  roll_accel_deg = accelRollDegFrom(a);
   float gyro_roll_deg_s = (gyroRollRadFrom(g) - gyro_bias_rad) * 180.0f / PI;
-  float roll_deg = kRoll.getAngle(roll_accel_deg, gyro_roll_deg_s, dt);
+  roll_deg = kRoll.getAngle(roll_accel_deg, gyro_roll_deg_s, dt);
 
   // Optional: wrap to [-180, 180)
   if (roll_deg >= 180.0f) roll_deg -= 360.0f;
   else if (roll_deg < -180.0f) roll_deg += 360.0f;
 
-  // Output
-  Serial.print("Roll (deg): ");
-  Serial.println(roll_deg, 2);
-
+  logger.tick(nowMicros);
 }
 
 void updateVelocity(unsigned long nowMicros) {
@@ -142,13 +145,8 @@ void initTimerInterrupt() {
   timerAlarmEnable(timer);
 }
 
-void log(unsigned long nowMicros) {
-  static unsigned long timestamp = micros();
-  if (nowMicros - timestamp < 1000000 /* 10 Hz */) {
-    return;
-  }
-
-  // Serial.printf("%.2f\t%.2f\t%.2f\t%.4f\n", roll, pitch, yaw, angle);
+void log() {
+  Serial.printf("%.2f\t%.2f\n", roll_accel_deg, roll_deg);
 }
 
 
