@@ -22,6 +22,7 @@
 #include "pinout.h"
 #include "stepper/stepper.h"
 #include "FixedRateExecutor.h"
+#include "MPU.h"
 
 // pulses per revolution
 #define PPR               1600
@@ -46,29 +47,14 @@ hw_timer_t * timer = NULL;
 
 Stepper stepper(PIN_STEPPER_EN, PIN_STEPPER_DIR, PIN_STEPPER_STEP, TICKS_PER_SECOND, PPR, PULSE_WIDTH);
 
-Adafruit_MPU6050 mpu;
-Kalman kRoll;
+MPU mpu;
+float last_ms = 0;
 
-float roll_accel_deg = 0.0f;
-float roll_deg = 0.0f;
-float gyro_bias_rad = 0.0f;
-// TODO: consider accel bias
-unsigned long last_ms = 0;
-
+float velocity = 0.0;
+float accel = 0.0;
+float angle_rad = 0.0;
 
 inline float normalizeAngle(float value);
-
-void calibrateGyroRollAxis(size_t samples = 800) {
-  sensors_event_t a, g, t;
-  gyro_bias_rad = 0.0f;
-  delay(200); // settle
-  for (size_t i = 0; i < samples; i++) {
-    mpu.getEvent(&a, &g, &t);
-    gyro_bias_rad += gyroRollRadFrom(g);
-    delay(5);
-  }
-  gyro_bias_rad /= samples;
-}
 
 void setup() {
   setCpuFrequencyMhz(CPU_FREQ_MHZ);
@@ -79,31 +65,22 @@ void setup() {
 
   initTimerInterrupt();
   delay(250);
-  initMPU();
+  mpu.init();
 
   stepper.init();
   stepper.setEnabled(true);
+  last_ms = millis();
 }
 
 void loop() {
   unsigned long nowMicros = micros();
-  // updateVelocity(nowMicros);
-  // updateControl(nowMicros);
-
-  sensors_event_t a, g, t;
-  mpu.getEvent(&a, &g, &t);
+  updateVelocity(nowMicros);
+  updateControl(nowMicros);
 
   unsigned long now = millis();
   float dt = (now - last_ms) / 1000.0f;
+  mpu.updateAngles(dt);
   last_ms = now;
-
-  roll_accel_deg = accelRollDegFrom(a);
-  float gyro_roll_deg_s = (gyroRollRadFrom(g) - gyro_bias_rad) * 180.0f / PI;
-  roll_deg = kRoll.getAngle(roll_accel_deg, gyro_roll_deg_s, dt);
-
-  // Optional: wrap to [-180, 180)
-  if (roll_deg >= 180.0f) roll_deg -= 360.0f;
-  else if (roll_deg < -180.0f) roll_deg += 360.0f;
 
   logger.tick(nowMicros);
 }
@@ -115,9 +92,10 @@ void updateVelocity(unsigned long nowMicros) {
   }
   
   float dt = ((float) (nowMicros - timestamp)) * 1e-6;
-  // velocity += accel * dt;
-  // velocity = angle * 10.0;
-  // stepper.setVelocity(velocity);
+  velocity += accel * dt;
+  angle_rad = mpu.getAngleRad();
+  velocity = angle_rad * 10.0;
+  stepper.setVelocity(velocity);
   timestamp = nowMicros;
 }
 
@@ -146,47 +124,10 @@ void initTimerInterrupt() {
 }
 
 void log() {
-  Serial.printf("%.2f\t%.2f\n", roll_accel_deg, roll_deg);
+  Serial.printf("%.2f\t%.2f\n", mpu.getAngleDeg(), mpu.getAngularVelocityDeg());
 }
 
-
-void initMPU() {
-  Serial.println("before MPU begin");
-  if (!mpu.begin()) {
-    Serial.println("after MPU begin");
-    while (1) {
-      Serial.println("Failed to init IMU");
-      delay(500);
-    }
-  }
-
-  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-
-  Serial.println("MPU ready");
-
-  Serial.println("Hold still… calibrating gyro bias");
-  calibrateGyroRollAxis();
-
-  // Initialize Kalman with accel tilt to avoid startup jump
-  sensors_event_t a, g, t;
-  mpu.getEvent(&a, &g, &t);
-  kRoll.setAngle(accelRollDegFrom(a));  // init state
-
-  last_ms = millis();
-}
-
-
+// TODO: move to headers
 inline float normalizeAngle(float value) {
   return ((value < 180) ? value : value - 360.0f) * DEG_TO_RAD;
-}
-
-static inline float accelRollDegFrom(const sensors_event_t& a) {
-  float roll_rad = atan2f(a.acceleration.y, a.acceleration.z);
-  return roll_rad * RAD_TO_DEG;
-}
-
-static inline float gyroRollRadFrom(const sensors_event_t& g) {
-  return g.gyro.x;
 }
