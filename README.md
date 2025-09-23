@@ -15,8 +15,11 @@ The goal is to build a flywheel inverted pendulum (FIP) model stabilized by a ne
 - [ ] Pre-train a NN in a simulation and use it inside a real device
 - [ ] Allow NN to tune itself in a real device
 
-
 ## References
+
+- [Regular pendulum dumping simulation](https://colab.research.google.com/drive/1u6tl5SG2cvKg8DLndMQ9u2ieP07KyDuc#scrollTo=PbFrm5GsAxk4)
+
+## External References
 
 - [DESIGN AND CONTROL OF A FLYWHEEL INVERTED PENDULUM SYSTEM'16](articles/design_and_control_of_a_flywheel_inverted_pendulum_system.pdf)
 - [Design of a Flywheel-Controlled Inverted Pendulum'19](articles/design_of_a_flywheel-controlled_inverted_pendulum_2019.pdf)
