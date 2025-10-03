@@ -23,6 +23,7 @@
 #include "stepper/stepper.h"
 #include "FixedRateExecutor.h"
 #include "MPU.h"
+#include "MathUtils.h"
 
 // pulses per revolution
 #define PPR               1600
@@ -34,7 +35,7 @@
 
 void initMPU();
 void initTimerInterrupt();
-void updateVelocity(unsigned long);
+void updateStepperVelocity(unsigned long);
 void updateControl(unsigned long);
 void log();
 
@@ -54,8 +55,6 @@ float velocity = 0.0;
 float accel = 0.0;
 float angle_rad = 0.0;
 
-inline float normalizeAngle(float value);
-
 void setup() {
   setCpuFrequencyMhz(CPU_FREQ_MHZ);
 
@@ -74,7 +73,7 @@ void setup() {
 
 void loop() {
   unsigned long nowMicros = micros();
-  updateVelocity(nowMicros);
+  updateStepperVelocity(nowMicros);
   updateControl(nowMicros);
 
   unsigned long now = millis();
@@ -85,7 +84,7 @@ void loop() {
   logger.tick(nowMicros);
 }
 
-void updateVelocity(unsigned long nowMicros) {
+void updateStepperVelocity(unsigned long nowMicros) {
   static unsigned long timestamp = micros();
   if (nowMicros - timestamp < 50 /* 20 kHz */) {
     return;
@@ -93,8 +92,8 @@ void updateVelocity(unsigned long nowMicros) {
   
   float dt = ((float) (nowMicros - timestamp)) * 1e-6;
   velocity += accel * dt;
-  angle_rad = mpu.getAngleRad();
-  velocity = angle_rad * 10.0;
+  // angle_rad = mpu.getAngleRad();
+  // velocity = angle_rad * 10.0;
   stepper.setVelocity(velocity);
   timestamp = nowMicros;
 }
@@ -104,10 +103,10 @@ void updateControl(unsigned long nowMicros) {
   if (nowMicros - timestamp < 1000 /* 1kHz*/) {
     return;
   }
-  // angle = normalizeAngle(roll);
-  // if (abs(angle) < 0.5) {
-  //   accel += angle / 100.0;
-  // }
+  // damping oscillation
+  float k = 100;
+  accel = k * mpu.getAngularVelocityRad();
+  accel = clamp(accel, k * 75);
   timestamp = nowMicros;
 }
 
@@ -127,7 +126,3 @@ void log() {
   Serial.printf("%.2f\t%.2f\n", mpu.getAngleDeg(), mpu.getAngularVelocityDeg());
 }
 
-// TODO: move to headers
-inline float normalizeAngle(float value) {
-  return ((value < 180) ? value : value - 360.0f) * DEG_TO_RAD;
-}
