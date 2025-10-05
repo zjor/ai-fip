@@ -8,9 +8,8 @@ void FixedRateExecutor::tick(unsigned long nowMicros) {
     if (nowMicros - lastExecutionMicros < delayMicros) {
         return;
     }
-    if (func) {  // Check if function is valid
+    if (func) {  
         func();
     }
     lastExecutionMicros = nowMicros;
-
 }

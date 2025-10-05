@@ -39,7 +39,7 @@ void updateStepperVelocity(unsigned long);
 void updateControl(unsigned long);
 void log();
 
-FixedRateExecutor logger(10000, log);
+FixedRateExecutor logger(25000, log);
 
 static inline float accelRollDegFrom(const sensors_event_t&);
 static inline float gyroRollRadFrom(const sensors_event_t&);
