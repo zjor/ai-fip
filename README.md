@@ -18,6 +18,7 @@ The goal is to build a flywheel inverted pendulum (FIP) model stabilized by a ne
 ## References
 
 - [Regular pendulum dumping simulation](https://colab.research.google.com/drive/1u6tl5SG2cvKg8DLndMQ9u2ieP07KyDuc#scrollTo=PbFrm5GsAxk4)
+- [Stabilizing FIP with LQR](https://colab.research.google.com/drive/1kIb0vfg7HsaBy3xPXdWx9-hCGLleFcXF#scrollTo=zqa5uH2bmCwl)
 
 ## External References
 
