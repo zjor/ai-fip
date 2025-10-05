@@ -9,6 +9,22 @@
 #include <Arduino.h>
 #include <math.h>
 
+/**
+ * Returns an angle within (-180, 180] degrees
+ */
+static inline float wrap180(float a_deg) {
+    while (a_deg > 180.0f) a_deg -= 360.0f;
+    while (a_deg < -180.0f) a_deg += 360.0f;
+    return a_deg;
+}
+
+static inline float wrapToRef(float angle_deg, float ref_deg) {
+    // return angle equivalent that is closest to ref
+    float e = angle_deg - ref_deg;
+    e = wrap180(e);
+    return ref_deg + e;
+}
+
 bool MPU::init() {
     Serial.println("Initializing MPU6050...");
     
@@ -49,21 +65,15 @@ void MPU::updateAngles(float dt) {
     mpu.getEvent(&accel, &gyro, &temp);
     
     // Get raw measurements
-    accel_roll_deg = accelRollDegFrom(accel);
+    float accel_roll_raw_deg = accelRollDegFrom(accel);
+    accel_roll_deg = wrapToRef(accel_roll_raw_deg, roll_deg);
     
     // Apply bias correction to gyro and convert to deg/s
     radians gyro_roll_rad_per_s = gyroRollRadFrom(gyro) - gyro_roll_bias_rad;
     gyro_roll_deg_per_s = gyro_roll_rad_per_s * RAD_TO_DEG;
     
-    // Update Kalman filter
     roll_deg = kRoll.getAngle(accel_roll_deg, gyro_roll_deg_per_s, dt);
     
-    // Normalize angle to [-180, 180) degrees
-    if (roll_deg >= 180.0f) {
-        roll_deg -= 360.0f;
-    } else if (roll_deg < -180.0f) {
-        roll_deg += 360.0f;
-    }
 }
 
 void MPU::calibrateGyroRollAxis(size_t samples) {
