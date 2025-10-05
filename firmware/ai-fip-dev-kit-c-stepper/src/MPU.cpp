@@ -20,7 +20,7 @@ bool MPU::init() {
     // Configure sensor ranges and filtering
     mpu.setAccelerometerRange(MPU6050_RANGE_4_G); // previous value: MPU6050_RANGE_8_G
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-    mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+    mpu.setFilterBandwidth(MPU6050_BAND_44_HZ); // previous value: MPU6050_BAND_21_HZ
     
     Serial.println("MPU6050 configured successfully");
     
