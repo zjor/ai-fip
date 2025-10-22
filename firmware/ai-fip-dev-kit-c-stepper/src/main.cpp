@@ -33,6 +33,19 @@
 #define TICKS_PER_SECOND  (200000 * (CPU_FREQ_MHZ / CPU_FREQ_DIVIDER))
 #define PULSE_WIDTH       1
 
+/**
+ * How to calibrate:
+ * - set to zero
+ * - get a settled value
+ */
+#define THETA_BIAS_DEG  -2.00f
+
+// LQR params
+#define K_THETA         40000.0
+#define K_THETA_DOT     250.0
+#define K_PHI           0.0
+#define K_PHI_DOT       -110.0
+
 void initMPU();
 void initTimerInterrupt();
 void updateStepperVelocity(unsigned long);
@@ -48,12 +61,12 @@ hw_timer_t * timer = NULL;
 
 Stepper stepper(PIN_STEPPER_EN, PIN_STEPPER_DIR, PIN_STEPPER_STEP, TICKS_PER_SECOND, PPR, PULSE_WIDTH);
 
-MPU mpu;
+MPU mpu(THETA_BIAS_DEG);
 float last_ms = 0;
 
+// stepper params
 float velocity = 0.0;
 float accel = 0.0;
-float angle_rad = 0.0;
 
 void setup() {
   setCpuFrequencyMhz(CPU_FREQ_MHZ);
@@ -92,8 +105,6 @@ void updateStepperVelocity(unsigned long nowMicros) {
   
   float dt = ((float) (nowMicros - timestamp)) * 1e-6;
   velocity += accel * dt;
-  // angle_rad = mpu.getAngleRad();
-  // velocity = angle_rad * 10.0;
   stepper.setVelocity(velocity);
   timestamp = nowMicros;
 }
@@ -103,10 +114,24 @@ void updateControl(unsigned long nowMicros) {
   if (nowMicros - timestamp < 1000 /* 1kHz*/) {
     return;
   }
-  // damping oscillation
-  float k = 100;
-  accel = k * mpu.getAngularVelocityRad();
-  accel = clamp(accel, k * 75);
+
+  float theta = mpu.getAngleRad();
+  theta = (theta > 0) ? theta - M_PI : theta + M_PI;
+  if (abs(theta) < M_PI / 16) {
+    float theta_dot = mpu.getAngularVelocityRad();
+    float phi = 0; //stepper position
+    float phi_dot = velocity; //TODO: convert to radians/sec
+
+    accel = K_THETA * theta + 
+            K_THETA_DOT * theta_dot + 
+            K_PHI * phi + 
+            K_PHI_DOT * phi_dot;
+
+    accel = clamp(accel, 150);
+  } else {
+    accel = 0;
+    velocity = 0;
+  }
   timestamp = nowMicros;
 }
 
@@ -123,6 +148,6 @@ void initTimerInterrupt() {
 }
 
 void log() {
-  Serial.printf("%.2f\t%.2f\n", mpu.getAngleDeg(), mpu.getAngularVelocityDeg());
+  Serial.printf("%.2f\t%.2f\n", mpu.getAngleDeg(), accel);
 }
 
