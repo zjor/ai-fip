@@ -14,7 +14,7 @@
 - [ ] Подобрать BLDC-мотор: вес, момент (включая момент на скорости, не только stall), KV, наличие места под энкодер — критерии: [hardware.md → Motor selection criteria](docs/hardware/hardware.md#motor-selection-criteria); кандидаты: [motor-candidates.md](docs/hardware/motor-candidates.md) → **выбран mjbots mj5208 + moteus (c1/r4.11)** (2026-08-10, заказ после Phase 0 gate; GL40 KV70 — запасной)
 - [ ] Драйвер / control PCB: FOC-драйвер (SimpleFOC / ODrive-класс), MCU (ESP32?), энкодер на моторе, IMU или угловой энкодер на оси маятника → **драйвер выбран: moteus r4.11** (2026-09-04, c1 не проходит continuous и 20°); хост и сенсор угла — открыты
 - [ ] Питание: батарея vs провод, вес батареи входит в модель → **4S LiPo на оси вращения маятника** (2026-09-04: на верхнем конце +30 % к моменту и энергии swing-up)
-- [ ] Механика: длина стержня, масса/радиус колеса — оптимизировать по результатам Phase 0, а не наоборот
+- [ ] Механика: длина стержня, масса/радиус колеса — оптимизировать по результатам Phase 0, а не наоборот → CAD в OpenSCAD: [cad-spec.md](docs/hardware/cad-spec.md), `hardware/cad/` (2026-09-04); печать после проверки паттерна статора
 
 ## Phase 2 — Honest simulation (gate)
 

@@ -23,8 +23,9 @@ class Phase0Test(unittest.TestCase):
         self.report = build_report(self.config)
         self.c1, self.r4 = self.config.actuators
 
-    def test_nominal_gravity_coefficient_matches_documented_estimate(self):
-        expected = 0.55 * 9.81 * 0.18
+    def test_nominal_gravity_coefficient_matches_cad_mass_model(self):
+        # hardware/cad `make masses` 2026-09-04: m_t 0.7765 kg, l_c 0.1459 m
+        expected = 0.7765 * 9.81 * 0.1459
         self.assertAlmostEqual(self.report["nominal_design"]["gravity_coefficient_nm"], expected)
 
     def test_recoverable_angle_is_capped_at_ninety_degrees(self):

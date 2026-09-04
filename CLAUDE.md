@@ -34,3 +34,4 @@ Rule: `software/` runs on a laptop, `hardware/` runs on the device. Each subproj
 - Plain Markdown only, no Obsidian syntax (wikilinks, callouts). Relative links between docs must resolve.
 - Do not commit `dist/`, `logs/`, `.idea/`, `.pio/`, `node_modules/`; root `.gitignore` covers them.
 - Commits: only when asked. Branch is `master`.
+- Agent process artifacts: implementation plans go to `.claude/plans/YYYY-MM-DD-<topic>.md`; design specs go to `docs/<concept>/<topic>-spec.md` (e.g. `docs/hardware/cad-spec.md`). Never create `docs/superpowers/`; `docs/` is organized by concept only.

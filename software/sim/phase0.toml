@@ -3,14 +3,15 @@
 # is declared passed.
 
 [design]
-# PLANNING ranges (no CAD yet, full redesign allowed — decision 2026-09-04).
-# Nominal reproduces the motor-selection estimate: m_t 0.55 kg, l_c 0.18 m.
-total_mass_kg = [0.45, 0.55, 0.65]
-center_of_mass_m = [0.15, 0.18, 0.21]
+# From hardware/cad (make masses), 2026-09-04. Nominal = CAD + catalogue hardware
+# masses; -10 % / +10 % covers print density, screws and cable. Still no
+# measured parts.
+total_mass_kg = [0.6988, 0.7765, 0.8541]
+center_of_mass_m = [0.1313, 0.1459, 0.1605]
 # Pendulum body inertia about the pivot, wheel counted as a point mass
 # (wheel spin inertia is the separate state below).
-pivot_inertia_kg_m2 = [0.018, 0.025, 0.035]
-flywheel_inertia_kg_m2 = [0.0015, 0.0030, 0.0045]
+pivot_inertia_kg_m2 = [0.02598, 0.02887, 0.03176]
+flywheel_inertia_kg_m2 = [0.002389, 0.002654, 0.00292]
 
 [battery]
 # Placement study only. 4S LiPo, 850–1300 mAh class. Mass is UNSURE (typical

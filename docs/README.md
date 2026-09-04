@@ -14,10 +14,12 @@ Knowledge about the project, organized by concept. Process documents (roadmap, l
 
 - [Hardware](hardware/hardware.md) — parameters, motor selection criteria, moteus driver integration, legacy stepper BOM
 - [BLDC motor candidates](hardware/motor-candidates.md) — 15 motors evaluated, shortlist, buy list, final choice
+- [CAD specification](hardware/cad-spec.md) — wheel, rod and table-clamp stand for OpenSCAD (`hardware/cad/`): frame, parameters, parts, BOM, mass model
 
 ## Deep reinforcement learning
 
 - [DRL outline](drl/outline.md) — problem statement, glossary, model-based vs model-free
+- [Modern simulation and RL stack (2026)](drl/modern-simulation-and-rl-stack-2026.md) — simulator survey, Apple Silicon strategy, policy architecture, parallel training, and sim-to-real plan
 
 ## References
 

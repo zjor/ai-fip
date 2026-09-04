@@ -24,8 +24,8 @@ report stays `NOT READY` until a CAD mass model exists. Results and decisions:
 
 ## Status / Next
 
-- Phase 0 pre-check: replace the planning ranges in `phase0.toml` with a
-  component-level CAD/BOM mass model (battery on the pivot axis, I_w ≈ 0.003 kg m²)
+- Phase 0 pre-check: `phase0.toml` `[design]` now comes from `hardware/cad` (`make masses`);
+  replace the RPi/pi3hat and axle hardware estimates with weighed parts after printing
 - Phase 0 pre-check: confirm `max_voltage_ratio` (moteus `min_pwm` depends on PWM rate)
   and the motor thermal model on the bench; add cogging and friction to the swing-up
 - Swing-up sim: the pendulum model treats the wheel as a point mass in I_p; add the

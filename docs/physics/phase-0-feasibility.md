@@ -21,8 +21,8 @@ Done on 2026-09-04:
 
 Still open before the gate is passed:
 
-- component-level mass, placement and inertia from CAD (all mechanical values
-  below are planning ranges);
+- weighed parts: the CAD mass model is in place, RPi/pi3hat and axle hardware
+  are still catalogue estimates;
 - bench confirmation of the mj5208 thermal model (stall current vs. winding
   temperature);
 - cogging torque before and after moteus anti-cogging;
@@ -52,10 +52,20 @@ with provenance per block.
 
 ## Inputs and provenance
 
-Mechanical nominal values reproduce the estimates used in the
-[motor selection criteria](../hardware/hardware.md#motor-selection-criteria):
-total moving mass 0.55 kg, centre of mass 0.18 m. Ranges and inertias are
-planning assumptions, not CAD.
+**Update 2026-09-04 (evening):** the `[design]` block of `phase0.toml` now comes
+from the OpenSCAD mass model (`hardware/cad`, `make masses`): m_t 0.776 kg,
+l_c 0.146 m, G 1.11 Nm nominal (1.345 Nm pessimistic), I_p 0.029 kg m²,
+I_w 0.0027 kg m² with 8 tuning bolts. The tables below were computed with the
+earlier planning ranges (0.55 kg, 0.18 m, G 0.971 nominal); re-run
+`poetry run phase0` for current numbers. Conclusions are unchanged: the r4.11
+passes peak (7.3× / 3.7×), continuous and torque-capped swing-up (24/24 rows).
+One new caveat: the *uncapped* direct lift at 12 V drives the wheel to 71–79 %
+of no-load speed at I_w 0.0024–0.0027, above the 70 % limit; fit 10 bolts
+(I_w 0.0030) or cap swing-up torque at 0.5 Nm in software.
+
+The mechanical nominal values used in the tables below reproduce the estimates
+from the [motor selection criteria](../hardware/hardware.md#motor-selection-criteria):
+total moving mass 0.55 kg, centre of mass 0.18 m.
 
 Motor and controller constants (verified 2026-09-04):
 
