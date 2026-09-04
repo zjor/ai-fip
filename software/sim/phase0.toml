@@ -1,0 +1,38 @@
+[design]
+# Planning ranges, not measurements. Replace these with CAD/BOM values.
+total_mass_kg = [0.45, 0.55, 0.65]
+center_of_mass_m = [0.15, 0.18, 0.21]
+pivot_inertia_kg_m2 = [0.018, 0.025, 0.035]
+flywheel_inertia_kg_m2 = [0.0015, 0.0030, 0.0045]
+
+[requirements]
+target_recovery_angle_deg = 20.0
+minimum_peak_margin = 1.5
+preferred_peak_margin = 2.0
+minimum_continuous_torque_nm = 0.20
+# Preliminary time-scale rules. Phase 2 must verify these with the controller,
+# estimator, quantization, noise, and delay in the loop.
+maximum_delay_fraction_of_time_constant = 0.10
+maximum_sample_period_fraction_of_time_constant = 0.05
+
+[power]
+# Conservative approximation for a loaded 4S pack.
+minimum_bus_voltage_v = 12.0
+
+[[actuators]]
+name = "mj5208 + moteus-c1 (uncooled)"
+motor_kv_rpm_per_v = 330.0
+motor_kt_nm_per_a = 0.0289
+driver_peak_phase_current_a = 20.0
+driver_continuous_phase_current_a = 5.0
+motor_peak_torque_nm = 1.70
+motor_max_rpm = 7500.0
+
+[[actuators]]
+name = "mj5208 + moteus-r4.11 (uncooled)"
+motor_kv_rpm_per_v = 330.0
+motor_kt_nm_per_a = 0.0289
+driver_peak_phase_current_a = 100.0
+driver_continuous_phase_current_a = 12.0
+motor_peak_torque_nm = 1.70
+motor_max_rpm = 7500.0

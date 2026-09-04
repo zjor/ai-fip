@@ -1,5 +1,11 @@
 # Log
 
+**04.09.2026**
+- добавлен воспроизводимый Phase 0 pre-check (`software/sim/phase0.toml`, `poetry run phase0`) и документ с формулами/критериями (`docs/physics/phase-0-feasibility.md`); все неподтверждённые значения явно оставлены planning ranges или `UNKNOWN`
+- предварительный результат на pessimistic corner (0.65 kg, CoM 0.21 m, $\theta=20°$): mj5208+c1 даёт только 1.26× peak margin → FAIL относительно порога 1.5×; mj5208+r4.11 даёт 3.71× → PASS по peak torque, но это не финальный выбор
+- Phase 0 пока `NOT READY`: нужны CAD/BOM mass model, continuous thermal torque и cogging mj5208, $H_{swingup}$ из constrained simulation, validation выбранного sensor/estimator
+- добавлен provisional sampled-LQR sensor sweep с saturation, torque-speed envelope и command delay; на pessimistic planning corner для r4.11: 75 Hz PASS / 50 Hz FAIL, 10 ms PASS / 15 ms FAIL, noise 1°+10°/s PASS / 2°+20°/s FAIL (5/5 trials, initial angle 10°); повторить после выбора реального sensor/estimator
+
 **11.08.2026**
 - ресёрч mjbots/moteus: компания из США (Cambridge, MA, Josh Pieper, 2019), всё open-source (Apache 2.0). Интерфейс CAN-FD 5 Mbps, библиотеки Python/C++/Rust, GUI tview. Рекомендуемый стек: mj5208 + moteus-c1 + Raspberry Pi + pi3hat (CAN-FD + IMU на борту) → [hardware.md → Driver: moteus](docs/hardware/hardware.md)
 - ⚠️ mjbots: shipping holiday, новые заказы отправляются с 17.08.2026
