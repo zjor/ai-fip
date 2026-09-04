@@ -1,12 +1,28 @@
+# Phase 0 feasibility inputs. Provenance is given per block; anything marked
+# PLANNING or UNSURE has not been measured and must be replaced before the gate
+# is declared passed.
+
 [design]
-# Planning ranges, not measurements. Replace these with CAD/BOM values.
+# PLANNING ranges (no CAD yet, full redesign allowed — decision 2026-09-04).
+# Nominal reproduces the motor-selection estimate: m_t 0.55 kg, l_c 0.18 m.
 total_mass_kg = [0.45, 0.55, 0.65]
 center_of_mass_m = [0.15, 0.18, 0.21]
+# Pendulum body inertia about the pivot, wheel counted as a point mass
+# (wheel spin inertia is the separate state below).
 pivot_inertia_kg_m2 = [0.018, 0.025, 0.035]
 flywheel_inertia_kg_m2 = [0.0015, 0.0030, 0.0045]
 
+[battery]
+# Placement study only. 4S LiPo, 850–1300 mAh class. Mass is UNSURE (typical
+# 100–130 g); the top-end radius is the rod length from the planning range.
+mass_kg = 0.12
+top_end_radius_m = 0.25
+
 [requirements]
-target_recovery_angle_deg = 20.0
+# Decision 2026-09-04: the device must survive a finger poke; anything larger
+# is allowed to fall, flip, and swing back up.
+target_recovery_angle_deg = 10.0
+preferred_recovery_angle_deg = 20.0
 minimum_peak_margin = 1.5
 preferred_peak_margin = 2.0
 minimum_continuous_torque_nm = 0.20
@@ -14,25 +30,62 @@ minimum_continuous_torque_nm = 0.20
 # estimator, quantization, noise, and delay in the loop.
 maximum_delay_fraction_of_time_constant = 0.10
 maximum_sample_period_fraction_of_time_constant = 0.05
+# Swing-up gate: wheel speed at the catch must stay below this fraction of the
+# no-load speed so that torque is still available for the catch.
+maximum_wheel_speed_fraction_at_catch = 0.7
 
 [power]
-# Conservative approximation for a loaded 4S pack.
+# 4S LiPo (decision 2026-09-04). Minimum = loaded pack near empty.
 minimum_bus_voltage_v = 12.0
+nominal_bus_voltage_v = 14.8
 
-[[actuators]]
-name = "mj5208 + moteus-c1 (uncooled)"
-motor_kv_rpm_per_v = 330.0
-motor_kt_nm_per_a = 0.0289
-driver_peak_phase_current_a = 20.0
-driver_continuous_phase_current_a = 5.0
-motor_peak_torque_nm = 1.70
-motor_max_rpm = 7500.0
+[moteus]
+# Verified in moteus firmware (fw/bldc_servo.cc, fw/bldc_servo_control.h):
+#   Kt = (3/2)(1/sqrt3)(60/2pi) / Kv           -> 8.27 / Kv
+#   v_per_hz = 60 / (sqrt3 * Kv)              (phase volts per rotor Hz)
+#   V_eff = 0.5 * V_bus * max_voltage_ratio * (1 - modulation_margin)
+#   (v_per_hz f + R iq)^2 + (pi poles L iq f)^2 <= V_eff^2   (voltage circle)
+modulation_margin = 0.15
+# UNSURE (0.85-0.95): max_voltage_ratio = (max_pwm - 0.5) * 2, max_pwm = 1 - min_pwm,
+# and min_pwm depends on the PWM rate. Confirm on the real controller.
+max_voltage_ratio = 0.94
 
-[[actuators]]
-name = "mj5208 + moteus-r4.11 (uncooled)"
-motor_kv_rpm_per_v = 330.0
-motor_kt_nm_per_a = 0.0289
-driver_peak_phase_current_a = 100.0
-driver_continuous_phase_current_a = 12.0
-motor_peak_torque_nm = 1.70
-motor_max_rpm = 7500.0
+[motor]
+name = "mjbots mj5208"
+# Product page (2026-09-04): Kv 330, peak 1.7 Nm, 600 W, 7500 rpm, 193 g, 63x25 mm.
+kv_rpm_per_v = 330.0
+# mjbots blog 2025-04-24 "Improving motor constant calibration": measured on a
+# devkit motor. R and L are line-to-center.
+kv_measured_rpm_per_v = 304.0
+phase_resistance_ohm = 0.047
+phase_inductance_h = 28.6e-6
+# moteus documentation example configuration for the mj5208 (motor.poles = 14).
+poles = 14
+peak_torque_nm = 1.7
+max_rpm = 7500.0
+mass_kg = 0.193
+# UNSURE thermal model: winding-to-ambient thermal resistance for a 63 mm
+# outrunner with no airflow, and the allowed steady-state winding rise.
+# Copper loss for peak phase current I is P = 1.5 * I^2 * R.
+thermal_resistance_k_per_w = [3.0, 4.5, 6.0]
+allowed_winding_rise_k = 60.0
+
+[[drivers]]
+# mjbots product page (2026-09-04).
+name = "moteus-c1"
+peak_phase_current_a = 20.0
+continuous_phase_current_a = 5.0
+continuous_phase_current_cooled_a = 14.0
+max_bus_voltage_v = 51.0
+mass_kg = 0.0089
+price_usd = 69.0
+
+[[drivers]]
+# mjbots product page (2026-09-04).
+name = "moteus-r4.11"
+peak_phase_current_a = 100.0
+continuous_phase_current_a = 12.0
+continuous_phase_current_cooled_a = 32.0
+max_bus_voltage_v = 44.0
+mass_kg = 0.0142
+price_usd = 94.0

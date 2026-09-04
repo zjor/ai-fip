@@ -69,7 +69,9 @@ Dropping the SimpleFOC/5 A driver assumption reopened the low-K_t/high-current c
 
 | Motor | K_t, Nm/A | τ peak | ω_nl@4S | Mass | Price | Buy |
 |---|---|---|---|---|---|---|
-| **mjbots mj5208** (Kv 330) | ~0.029 | 0.58 Nm w/ moteus-c1 (20 A); **1.7 Nm** w/ r4.11 | ~4900 rpm | 193 g | $74 (657 in stock) | [mjbots.com](https://mjbots.com/products/mj5208) |
+| **mjbots mj5208** (Kv 330) | 0.025 (moteus 8.27/Kv; 0.027 at measured Kv 304) | 0.50 Nm w/ moteus-c1 (20 A); **1.7 Nm** w/ r4.11 (62–68 A) | 2740 rpm @ 12 V, 3380 @ 14.8 V under moteus (voltage circle) | 193 g | $74 (657 in stock) | [mjbots.com](https://mjbots.com/products/mj5208) |
+
+*Corrected 2026-09-04: K_t and no-load speed now follow the moteus firmware conventions; the earlier 0.029 Nm/A, 0.58 Nm and 4900 rpm were the hobby formulas. Measured R_ph 0.047 Ω, L 28.6 µH, 14 poles. Driver decision: r4.11 — see [phase-0-feasibility.md](../physics/phase-0-feasibility.md).*
 
 Pair with [moteus-c1](https://mjbots.com/products/moteus-c1) ($69, 20 A peak / 5 A cont bare, onboard encoder, CAN-FD, 8.9 g) or [moteus r4.11](https://mjbots.com/products/moteus-r4-11) ($94, 100 A peak, 12/32 A cont). Devkit-matched pair: board mounts over the rotor's rear diametric magnet. Bundle ≈ $143 — same as GL40+driver, with 1.2–3.5× the torque and no momentum ceiling. Caveats: US shipping + ~25–30% CZ VAT/duty; Ø63 mm; cogging character unverified (not a gimbal winding — check mjbots anti-cogging before ordering). GL40 KV70 stays as EU-stock fallback.
 

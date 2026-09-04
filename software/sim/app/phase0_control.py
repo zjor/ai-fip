@@ -11,6 +11,7 @@ import numpy as np
 from scipy.linalg import solve_continuous_are
 
 from app.phase0 import Actuator, DesignPoint, actuator_result, load_config, nominal_point
+from app.phase0 import pessimistic_point as _pessimistic_point
 
 
 @dataclass(frozen=True)
@@ -59,10 +60,8 @@ def lqr_gain(point: DesignPoint) -> np.ndarray:
 def available_peak_torque_nm(
     actuator: Actuator, bus_voltage_v: float, wheel_speed_rad_s: float
 ) -> float:
-    """Conservative linear torque-speed envelope until resistance is known."""
-    no_load_rad_s = actuator.no_load_rpm(bus_voltage_v) * 2.0 * math.pi / 60.0
-    speed_fraction = min(abs(wheel_speed_rad_s) / no_load_rad_s, 1.0)
-    return actuator.peak_torque_nm() * (1.0 - speed_fraction)
+    """Torque available at this wheel speed: moteus voltage circle + current limit."""
+    return actuator.available_torque_nm(bus_voltage_v, wheel_speed_rad_s)
 
 
 def simulate(
@@ -182,13 +181,7 @@ def simulate(
 
 
 def pessimistic_point() -> DesignPoint:
-    design = load_config().design
-    return DesignPoint(
-        design.total_mass_kg.high,
-        design.center_of_mass_m.high,
-        design.pivot_inertia_kg_m2.low,
-        design.flywheel_inertia_kg_m2.low,
-    )
+    return _pessimistic_point(load_config().design)
 
 
 def sweep_sensor_budget(

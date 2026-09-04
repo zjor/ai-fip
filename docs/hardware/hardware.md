@@ -66,7 +66,9 @@ No composite score — rank candidates by specific torque among those passing al
 
 **Электрика (из [electrical-setup](https://github.com/mjbots/moteus/blob/main/docs/guides/electrical-setup.md)):** питание XT30, полярность не защищена; hot-plug запрещён (inrush в конденсаторы — подключить всё, потом подавать питание / использовать mjpower-ss); фазы A/B/C припаиваются в любом порядке; терминатор CAN на конце шины.
 
-**Рекомендуемый стек для маятника:** mj5208 + moteus-c1 + Raspberry Pi с pi3hat (CAN-FD и IMU одним устройством) — Python-контур для LQR/NN; fdcanusb для настольной отладки и tview.
+**Рекомендуемый стек для маятника:** mj5208 + **moteus r4.11** (решение 2026-09-04: c1 даёт лишь 0.50 Nm peak и 0.125 Nm continuous без обдува — не проходит 20° и continuous-gate; см. [phase-0-feasibility.md](../physics/phase-0-feasibility.md)) + Raspberry Pi с pi3hat (CAN-FD и IMU одним устройством) — Python-контур для LQR/NN; fdcanusb для настольной отладки и tview.
+
+**Константы moteus (проверено по прошивке, 2026-09-04):** K_t = 8.27/Kv (не 60/(2π·Kv)); фазное напряжение ограничено ≈0.4·V_bus, поэтому холостая скорость ≈ 0.7·Kv·V_bus (mj5208 при 12 V: 2740 rpm). Питание: 4S LiPo на оси вращения маятника.
 
 ## Legacy — 2025 stepper plan
 

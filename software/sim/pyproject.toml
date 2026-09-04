@@ -16,6 +16,7 @@ scipy = "^1.16.2"
 app = "app.main:main"
 phase0 = "app.phase0:main"
 phase0-control = "app.phase0_control:main"
+phase0-swingup = "app.phase0_swingup:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
