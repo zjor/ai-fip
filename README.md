@@ -1,34 +1,68 @@
-# AI-controlled Flywheel Inverted Pendulum
+# AI-FIP — AI-controlled Flywheel Inverted Pendulum
 
-The goal is to build a flywheel inverted pendulum (FIP) model stabilized by a neural network trained by deep reinforcement learning method. Literally, the network will not know anything about the physics of the phenomena and about it's own physical "body", it will use a method of trial and error in order to figure out how to get to upright position.
+A flywheel (reaction wheel) inverted pendulum stabilized by a neural network trained with deep reinforcement learning. The network knows nothing about the physics or its own "body"; it learns by trial and error in simulation how to swing up and hold the upright position, and is then transferred to a real device.
 
+## Overview
 
-## Milestones
+Digital soul aka AI-FIP (flywheel inverted pendulum) — обратный маятник, реакционное колесо. Само-стабилизирующаяся система, управляемая нейронной сетью. НС обучается в виртуальном пространстве, ничего не зная про устройство механизма и аналитические законы. Методом проб и ошибок (DRL) она должна научиться сама управлять двигателем и считывать угол, чтобы удерживать вертикальное положение.
 
-- [ ] Get enough understanding of a physics model
-- [ ] Simulate free-fall system with spontaneous rotation of a wheel
-- [ ] Implement a balancing algorithm in a simulation
-- [ ] Implement a swing-up algorithm in a simulation
-- [ ] Build a physical model with stepper motor for rotating a wheel
-- [ ] Try other controller to stabilize the system (TBD)
-- [ ] Learn DRL enough to apply to the system
-- [ ] Pre-train a NN in a simulation and use it inside a real device
-- [ ] Allow NN to tune itself in a real device
+### Motivation
 
-## References
+Это модельная задача обучения НС, ничего не знающей о природе своего тела; потом она сможет обучиться управлять телом любой сложности. Для меня — проектирование механической системы, устройства, изучение текущего состояния нейронных сетей и механизмов обучения с подкреплением.
 
-- [Documentation](docs/README.md)
+### Goal
 
-- [Regular pendulum dumping simulation](https://colab.research.google.com/drive/1u6tl5SG2cvKg8DLndMQ9u2ieP07KyDuc#scrollTo=PbFrm5GsAxk4)
+Сделать устройство, из которого можно будет сделать DIY-kit, записать курс, классное промо-видео, сделать стенд на фестиваль света подобный Signal, походить по школам и институтам, показывать для вдохновления будущих поколений.
+
+### Definition of done
+
+- DIY-kit
+- YouTube promo-video
+- Участие в выставках (Signal, Maker Faire)
+- Попробовать разные алгоритмы стабилизации
+- Статья на Хабр и на аналогичном популярном зарубежном портале
+- Прочитать >3 лекций для общественности
+- Записать видео-интервью
+
+## Process
+
+| Time scale | Where | What |
+|---|---|---|
+| Rarely | this README | vision and Definition of done |
+| Per phase | [ROADMAP.md](ROADMAP.md) | phases, gates, milestone checkboxes |
+| Weekly | `Status / Next` section of each component README | fine-grained todo items |
+| Daily | [LOG.md](LOG.md) | dated progress and decisions with rationale |
+
+## Repository map
+
+Organized by concept. `software/` runs on a laptop, `hardware/` runs on the device.
+
+```
+docs/                  knowledge: physics, hardware, DRL notes, reference papers
+software/
+  sim/                 Python dynamics (RK4), LQR and PID regulators
+  rl/                  Gymnasium environment, SB3/PPO training, ONNX export, trained models
+  web/                 browser demo running the exported ONNX policy
+hardware/
+  firmware/
+    esp32-stepper/     legacy 2025 build: ESP32 + MPU6050 + stepper
+    moteus-host/       2026 build: Raspberry Pi + pi3hat + moteus driver (planned)
+  cad/                 mechanics (planned)
+  tools/mpu-renderer/  serial → WebSocket bridge for IMU angles
+```
+
+Trained policies are produced by `software/rl` into `software/rl/models/`. Consumers copy them at build or deploy time: the web build copies the ONNX file, the device firmware will do the same.
+
+## Documentation
+
+- [Documentation index](docs/README.md)
+- [Physics: equations of motion and controllability](docs/physics/equations-of-motion.md)
+- [Physics primer](docs/physics/primer.md)
+- [Hardware and motor selection criteria](docs/hardware/hardware.md)
+- [BLDC motor candidates](docs/hardware/motor-candidates.md)
+- [Reference papers](docs/references/README.md)
+
+## Notebooks
+
+- [Regular pendulum damping simulation](https://colab.research.google.com/drive/1u6tl5SG2cvKg8DLndMQ9u2ieP07KyDuc#scrollTo=PbFrm5GsAxk4)
 - [Stabilizing FIP with LQR](https://colab.research.google.com/drive/1kIb0vfg7HsaBy3xPXdWx9-hCGLleFcXF#scrollTo=zqa5uH2bmCwl)
-
-## External References
-
-- [DESIGN AND CONTROL OF A FLYWHEEL INVERTED PENDULUM SYSTEM'16](articles/design_and_control_of_a_flywheel_inverted_pendulum_system.pdf)
-- [Design of a Flywheel-Controlled Inverted Pendulum'19](articles/design_of_a_flywheel-controlled_inverted_pendulum_2019.pdf)
-- [Flywheel Inverted Pendulum Design for Evaluation of Swing-Up Energy-Based Strategies'20](articles/flywheel_inverted_pendulum_design_for_evaluation_of_swing-up_energy-based_strategies_2020.pdf)
-- [Global Stabilization of a Reaction Wheel Pendulum'20](articles/global_stabilization_of_a_reaction_wheel_pendulum_2020.pdf)
-- [Inertia Wheel Inverted Pendulum'19](articles/inertia_wheel_inverted_pendulum_2019.pdf)
-- [Nonlinear control of the Reaction Wheel Pendulum'01](articles/nonlinear_control_of_the_reaction_wheel_pendulum_2001.pdf)
-- [Robust Control of the FIP System Considering Parameter Uncertainty'21](articles/robust_control_of_the_fip_system_considering_parameter_uncertainty_2021.pdf)
-- [Two-Axis Reaction Wheel Inverted Pendulum'17](articles/two-axis_reaction_wheel_inverted_pendulum_2017.pdf)

@@ -1,0 +1,1 @@
+from fip_env.envs.flywheel_inverted_pendulum import FlywheelInvertedPendulumEnv

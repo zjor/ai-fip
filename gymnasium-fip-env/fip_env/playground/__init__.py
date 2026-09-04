@@ -1,3 +1,0 @@
-"""
-General NN playground
-"""

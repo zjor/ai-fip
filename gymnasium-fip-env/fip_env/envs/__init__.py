@@ -1,3 +1,0 @@
-from fip_env.envs.grid_world import GridWorldEnv
-from fip_env.envs.ball_catcher import BallCatcherEnv
-from fip_env.envs.flywheel_inverted_pendulum import FlywheelInvertedPendulumEnv
