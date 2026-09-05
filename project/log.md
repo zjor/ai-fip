@@ -1,5 +1,15 @@
 # Log
 
+**05.09.2026 (2) — единая система управления проектом**
+- process-файлы собраны в `project/`: [README](README.md), [tasks](tasks.md), [roadmap](roadmap.md), [log](log.md)
+- **решение:** `project/tasks.md` — единственный источник состояния всех незавершённых действий и открытых решений, с одной глобальной очередью `Now / Waiting / Next / Later`; component README и учебные документы содержат только контекст и ссылки на task ID
+- roadmap оставлен для milestones/gates, log — только для завершённого прогресса и решений; исторические записи не переписываются, даже если в старых записях были будущие задачи
+
+**05.09.2026 — заказ mjbots подтверждён; требования к батарее**
+- **Order MJ5921 confirmed:** mjbots mj5208 + moteus r4.11 developer kit; ожидаемая доставка 10–11 сентября 2026. Мотор в Phase 1 отмечен выбранным и заказанным; kit нужен как измерительный инструмент для закрытия теплового предела, cogging и реальной torque-speed envelope в Phase 0/2
+- **Батарея:** обычный 4S LiPo, 14.8 V nominal / 16.8 V full, 1000–1300 mAh; разряд ≥40 A continuous (для 1000 mAh выбирать ≥45C); XT30 power + JST-XH 5-pin balance lead; габариты ≤75 × 35 × 25 mm, целевая масса 100–130 g. Предпочтение — 1000 mAh как соответствующий текущей CAD/mass model. Нужен 4S balance charger со storage mode; для рекуперативных тестов не начинать с полностью заряженной батареи
+- **Учебный трек:** curriculum MuJoCo → validated digital twin → classical-control gate → Gymnasium/PPO → robustness/sim-to-real хранится в [docs/drl/README.md](../docs/drl/README.md); состояние работы — только в [tasks](tasks.md). `.claude/plans/` остаётся только для временных implementation plans агентов
+
 **04.09.2026 (4) — заказ mjbots: план и открытые вопросы на следующую сессию**
 - **Рекомендация: заказывать мотор + драйвер сейчас.** Roadmap Phase 2 формально запрещает покупку железа до прохождения честной симуляции, но sampled-LQR с шумом, задержкой и реальной огибающей момент/скорость уже проходит (`phase0-control`), а два оставшихся входа Phase 2 — тепловой предел mj5208 и cogging — измеряются только на реальном моторе. Трактовка: kit = измерительный инструмент для закрытия Phase 0/2, а не прыжок через gate. **Печать механики — держать** до проверки паттерна статора по чертежу mjbots
 - **Что заказывать** (цены с сайта mjbots, 04.09.2026):
@@ -13,10 +23,10 @@
   3. Согласен ли с трактовкой roadmap выше (kit до Phase 2 gate)? Если да — отметить в ROADMAP Phase 1 строку мотора как «заказано» при размещении заказа
   4. Паттерн статора mj5208: открыть 2D-чертёж с страницы продукта (Google Drive), проставить `stator_pitch`/геометрию в `hardware/cad/params.scad`, перепечатать только `motor_flange`
   5. Подстройка инерции: 8 болтов M6 (I_w 0.0027) + программный лимит момента при swing-up ≤0.5 Nm, или 10 болтов (0.0030) без лимита
-- **Не из mjbots:** 4S LiPo 1000 mAh ≥30C, RPi 4B, вал Ø8×120, 2× 608ZZ, 2 стопорных кольца Ø8, метизы M3/M2.5/M6/M8 — см. BOM в [hardware/cad/README.md](hardware/cad/README.md)
+- **Не из mjbots:** 4S LiPo 1000 mAh ≥30C, RPi 4B, вал Ø8×120, 2× 608ZZ, 2 стопорных кольца Ø8, метизы M3/M2.5/M6/M8 — см. BOM в [hardware/cad/README.md](../hardware/cad/README.md)
 
 **04.09.2026 (3)**
-- **CAD-спецификация утверждена** ([cad-spec.md](docs/hardware/cad-spec.md)): вращающаяся ось Ø8 в двух 608-подшипниках стойки (A), стойка — струбцина на край стола с консольной подшипниковой балкой (C), ось перпендикулярна краю; угол — IMU pi3hat на маятнике; батарея 4S и RPi на оси; FDM, стол 220 мм
+- **CAD-спецификация утверждена** ([cad-spec.md](../docs/hardware/cad-spec.md)): вращающаяся ось Ø8 в двух 608-подшипниках стойки (A), стойка — струбцина на край стола с консольной подшипниковой балкой (C), ось перпендикулярна краю; угол — IMU pi3hat на маятнике; батарея 4S и RPi на оси; FDM, стол 220 мм
 - колесо Ø280 из 4 одинаковых сегментов + ступица; обод 8×8 мм, 8 спиц 4×8, 16 отверстий под болты M6 для подстройки инерции (обод тонкий намеренно: пластик на ободе и болт на ободе дают одинаковую инерцию на грамм, спицы и ступица — почти ничего). По рендеру: пластик 127 g, I_w 0.0027 kg·m² с 8 болтами (0.0030 с 10)
 - OpenSCAD-модели в `hardware/cad/` (`make parts|masses|check|test`): `stl_props.py` считает объём/центроид/инерцию из STL (проверено на кубе и цилиндре), 20 тестов на массы, габариты и посадку на стол печати, проверка пересечений маятника со стойкой и столом на 0/90/180/270°
 - массовая модель из CAD → `phase0.toml`: m_t 0.776 kg, l_c 0.146 m, G 1.11 Nm, I_p 0.029, I_w 0.0027 (между nominal и pessimistic Phase 0). Peak/continuous и swing-up с ограничением ≤0.5 Nm проходят (24/24); прямой подъём на 1.7 Nm при 12 V раскручивает колесо до 71–79 % холостой скорости при I_w 0.0027 → 10 болтов (0.0030) или программный лимит момента. Тест `test_nominal_gravity_coefficient…` в `software/sim` переведён на CAD-значения
@@ -24,13 +34,13 @@
 
 **04.09.2026 (3)**
 - **решение: обучение будет выполняться на Apple Silicon**; CUDA-only стек не является допустимой локальной зависимостью
-- сохранён обзор современного стека симуляции и DRL → [modern-simulation-and-rl-stack-2026.md](docs/drl/modern-simulation-and-rl-stack-2026.md)
+- сохранён обзор современного стека симуляции и DRL → [modern-simulation-and-rl-stack-2026.md](../docs/drl/modern-simulation-and-rl-stack-2026.md)
 - основная рекомендация: сохранить аналитический RK4 как проверяемый oracle, построить честный 3D digital twin в MuJoCo, сначала проверить CPU MuJoCo + Gymnasium/PPO; MJX-JAX CPU/experimental Metal и Genesis Metal сравнить отдельным benchmark до выбора ускоренного backend
 - нейросетевая гипотеза: маленький actor MLP 2x64, затем frame stacking/GRU только при необходимости; asymmetric critic с simulator-only параметрами; сравнить LQR+energy shaping, pure PPO и residual PPO
 
 **04.09.2026 (2)**
 - **решения:** swing-up обязателен; устройство должно держать «тычок пальцем» (θ_target = 10°, preferred 20°), сильнее — падение, флип и раскачка; механика проектируется с нуля; батарея 4S на движущейся части
-- **решение: драйвер = moteus r4.11** ($94, 100 A peak / 12 A cont, 14.2 g). c1 проходит только peak-gate на 10° (2.2×), на 20° — 1.09× FAIL, continuous 0.125 Nm FAIL без обдува. r4.11: 7.3× / 3.7×, continuous 0.30 Nm, ограничен уже мотором (1.7 Nm при 62–68 A) → [phase-0-feasibility.md](docs/physics/phase-0-feasibility.md)
+- **решение: драйвер = moteus r4.11** ($94, 100 A peak / 12 A cont, 14.2 g). c1 проходит только peak-gate на 10° (2.2×), на 20° — 1.09× FAIL, continuous 0.125 Nm FAIL без обдува. r4.11: 7.3× / 3.7×, continuous 0.30 Nm, ограничен уже мотором (1.7 Nm при 62–68 A) → [phase-0-feasibility.md](../docs/physics/phase-0-feasibility.md)
 - **поправка K_t:** прошивка moteus считает K_t = (3/2)(1/√3)(60/2π)/Kv ≈ 8.27/Kv, а не 60/(2π·Kv). Для mj5208 (Kv 330) K_t = 0.0251 Nm/A (было 0.029, −15 %); измеренный Kv devkit-мотора 304 → 0.0272. Peak c1 = 0.50 Nm (было 0.58). Измеренные R_ph = 0.047 Ω, L = 28.6 µH, 14 полюсов (mjbots blog 2025-04-24)
 - **поправка скорости:** moteus ограничивает фазное напряжение до ≈0.4·V_bus (voltage circle с margin 0.15), холостая скорость при 12 V — 2740 rpm, при 14.8 V — 3380 rpm, а не 4900 rpm по правилу Kv·V. Колено 1.7 Nm у r4.11 при 12 V — уже на 830 rpm
 - **swing-up (`poetry run phase0-swingup --sweep`):** требуемый момент импульса H = I_w·ω_max не зависит от I_w: 0.19–0.28 Nms при раскачке с ограничением ≤0.5 Nm (1–2 качания, 1.1–1.3 s), 0.44 Nms при прямом подъёме на 1.7 Nm (0.3–0.4 s). Окно: I_w ≥ 0.0014 (раскачка) / 0.0022 kg·m² (прямой подъём) при 12 V; рекомендация I_w ≈ 0.003 kg·m² (колесо 2025 г. с 0.0008 не проходит). RMS ток при раскачке 5–11 A ~1 s — термически несущественно
@@ -46,7 +56,7 @@
 - добавлен provisional sampled-LQR sensor sweep с saturation, torque-speed envelope и command delay; на pessimistic planning corner для r4.11: 75 Hz PASS / 50 Hz FAIL, 10 ms PASS / 15 ms FAIL, noise 1°+10°/s PASS / 2°+20°/s FAIL (5/5 trials, initial angle 10°); повторить после выбора реального sensor/estimator
 
 **11.08.2026**
-- ресёрч mjbots/moteus: компания из США (Cambridge, MA, Josh Pieper, 2019), всё open-source (Apache 2.0). Интерфейс CAN-FD 5 Mbps, библиотеки Python/C++/Rust, GUI tview. Рекомендуемый стек: mj5208 + moteus-c1 + Raspberry Pi + pi3hat (CAN-FD + IMU на борту) → [hardware.md → Driver: moteus](docs/hardware/hardware.md)
+- ресёрч mjbots/moteus: компания из США (Cambridge, MA, Josh Pieper, 2019), всё open-source (Apache 2.0). Интерфейс CAN-FD 5 Mbps, библиотеки Python/C++/Rust, GUI tview. Рекомендуемый стек: mj5208 + moteus-c1 + Raspberry Pi + pi3hat (CAN-FD + IMU на борту) → [hardware.md → Driver: moteus](../docs/hardware/hardware.md)
 - ⚠️ mjbots: shipping holiday, новые заказы отправляются с 17.08.2026
 
 **10.08.2026 (4)**
@@ -61,11 +71,11 @@
 **10.08.2026 (2)**
 - решение: батарея на оси вращения → почти не добавляет m·l; порог момента снижен до ~0.45 Nm @ 4S — у GL40 KV70 появился реальный запас
 - swing-up: разгон-реверс колеса = стандартный energy pumping; сила «кика» ограничена K_t·I_max независимо от RPM — метрика — momentum capacity I_w·ω, добирать инерцией колеса и многотактовой раскачкой, не высоким Kv
-- второй ресёрч: +8 новых кандидатов (SteadyWin, MyActuator/LK-TECH) → top-7 buy list с URL в [motor-candidates.md](docs/hardware/motor-candidates.md); новый класс: сервоприводы со встроенным FOC-драйвером и энкодером (CAN) — RMD-L-5015 (0.82 Nm, 174 g, ~€72)
+- второй ресёрч: +8 новых кандидатов (SteadyWin, MyActuator/LK-TECH) → top-7 buy list с URL в [motor-candidates.md](../docs/hardware/motor-candidates.md); новый класс: сервоприводы со встроенным FOC-драйвером и энкодером (CAN) — RMD-L-5015 (0.82 Nm, 174 g, ~€72)
 
 **10.08.2026**
-- сформулированы критерии выбора BLDC-мотора ([hardware.md](docs/hardware/hardware.md#motor-selection-criteria)): parametric torque budget, desktop DIY-kit, батарея на борту (3S–4S), мотор ≤ €120
-- ресёрч кандидатов завершён: 15 моторов оценено → [motor-candidates.md](docs/hardware/motor-candidates.md). Shortlist: CubeMars GL40 KV70 (€85–110, 0.49 Nm@4S — ровно на пороге), iPower GM5208-24 (€52, риск по swing-up), CubeMars G60 KV55 (€132, 1.0 Nm — stretch). Выводы: 4S обязателен; в бюджете рынок упирается в ~0.5 Nm; драйвер нужен ≥5 A FOC
+- сформулированы критерии выбора BLDC-мотора ([hardware.md](../docs/hardware/hardware.md#motor-selection-criteria)): parametric torque budget, desktop DIY-kit, батарея на борту (3S–4S), мотор ≤ €120
+- ресёрч кандидатов завершён: 15 моторов оценено → [motor-candidates.md](../docs/hardware/motor-candidates.md). Shortlist: CubeMars GL40 KV70 (€85–110, 0.49 Nm@4S — ровно на пороге), iPower GM5208-24 (€52, риск по swing-up), CubeMars G60 KV55 (€132, 1.0 Nm — stretch). Выводы: 4S обязателен; в бюджете рынок упирается в ~0.5 Nm; драйвер нужен ≥5 A FOC
 
 **09.08.2026**
 Проект воскрешён: перенесён из `archive/projects/` обратно в `projects/`. Состояние на момент заморозки: в симуляции всё работает (SB3/PPO, swing-up, ONNX + браузерная визуализация), железо упёрлось в узкий диапазон рабочих параметров (момент двигателя, точность измерений). LQR посчитан, но колесо не останавливалось.

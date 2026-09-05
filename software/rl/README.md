@@ -27,8 +27,8 @@ poetry run python -m train.fip_solver --render               # plot evaluation l
 poetry run python -m export.export_model_to_onnx             # models/fip_solver.pth → models/fip_solver.onnx
 ```
 
-## Status / Next
+## Project tracking
 
-- introduce episode termination condition by angle and wheel rotation speed
-- limit number of steps when rendering
-- two-phase training: swing-up, then stabilize and stop the wheel (different reward per phase)
+New RL work is intentionally deferred until the honest-simulation gate passes.
+It is tracked centrally as T-015–T-018 in
+[project/tasks.md](../../project/tasks.md).

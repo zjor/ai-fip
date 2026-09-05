@@ -26,18 +26,17 @@ Digital soul aka AI-FIP (flywheel inverted pendulum) — обратный мая
 
 ## Process
 
-| Time scale | Where | What |
-|---|---|---|
-| Rarely | this README | vision and Definition of done |
-| Per phase | [ROADMAP.md](ROADMAP.md) | phases, gates, milestone checkboxes |
-| Weekly | `Status / Next` section of each component README | fine-grained todo items |
-| Daily | [LOG.md](LOG.md) | dated progress and decisions with rationale |
+- [Current tasks](project/tasks.md) — single prioritized list of unfinished work
+- [Roadmap](project/roadmap.md) — phases, milestones and gates
+- [Progress log](project/log.md) — completed work and decisions
+- [Project-management process](project/README.md) — ownership and update rules
 
 ## Repository map
 
 Organized by concept. `software/` runs on a laptop, `hardware/` runs on the device.
 
 ```
+project/               tasks, roadmap, log and project-management process
 docs/                  knowledge: physics, hardware, DRL notes, reference papers
 software/
   sim/                 Python dynamics (RK4), LQR and PID regulators

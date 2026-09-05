@@ -16,7 +16,7 @@
 
 ## Motor selection criteria
 
-*Approved 2026-08-10. Scope: desktop DIY-kit scale, onboard battery (3S–4S), direct-drive BLDC + FOC, motor budget ≤ €120. Parametric — numbers are current estimates (m_t ≈ 0.55 kg incl. battery, l_c ≈ 0.18 m); Phase 0 of the [roadmap](../../ROADMAP.md) iterates them.*
+*Approved 2026-08-10. Scope: desktop DIY-kit scale, onboard battery (3S–4S), direct-drive BLDC + FOC, motor budget ≤ €120. Parametric — numbers are current estimates (m_t ≈ 0.55 kg incl. battery, l_c ≈ 0.18 m); Phase 0 of the [roadmap](../../project/roadmap.md) iterates them.*
 
 ### Operating regimes
 
@@ -69,6 +69,10 @@ No composite score — rank candidates by specific torque among those passing al
 **Рекомендуемый стек для маятника:** mj5208 + **moteus r4.11** (решение 2026-09-04: c1 даёт лишь 0.50 Nm peak и 0.125 Nm continuous без обдува — не проходит 20° и continuous-gate; см. [phase-0-feasibility.md](../physics/phase-0-feasibility.md)) + Raspberry Pi с pi3hat (CAN-FD и IMU одним устройством) — Python-контур для LQR/NN; fdcanusb для настольной отладки и tview.
 
 **Константы moteus (проверено по прошивке, 2026-09-04):** K_t = 8.27/Kv (не 60/(2π·Kv)); фазное напряжение ограничено ≈0.4·V_bus, поэтому холостая скорость ≈ 0.7·Kv·V_bus (mj5208 при 12 V: 2740 rpm). Питание: 4S LiPo на оси вращения маятника.
+
+### Battery requirement
+
+Обычный **4S LiPo**: 14.8 V nominal / 16.8 V full, 1000–1300 mAh, разряд не менее 40 A continuous (для 1000 mAh — рейтинг ≥45C), силовой разъём XT30 и балансировочный JST-XH 5-pin. Ограничения CAD: не более 75 × 35 × 25 mm, целевая масса 100–130 g; предпочтительный вариант — 1000 mAh. Нужен 4S balance charger со storage mode. При торможении moteus возвращает энергию в DC bus, поэтому рекуперативные тесты нельзя начинать с полностью заряженной батареей.
 
 ## Legacy — 2025 stepper plan
 

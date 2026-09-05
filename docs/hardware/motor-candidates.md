@@ -65,7 +65,7 @@ Torque floor relaxed to **≥ 0.45 Nm @ 4S** after the battery-at-pivot decision
 
 ### Late addition — the winner: mjbots mj5208 + moteus (2026-08-10)
 
-Dropping the SimpleFOC/5 A driver assumption reopened the low-K_t/high-current class ([details in log](../../LOG.md)):
+Dropping the SimpleFOC/5 A driver assumption reopened the low-K_t/high-current class ([details in log](../../project/log.md)):
 
 | Motor | K_t, Nm/A | τ peak | ω_nl@4S | Mass | Price | Buy |
 |---|---|---|---|---|---|---|

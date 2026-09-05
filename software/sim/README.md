@@ -22,13 +22,9 @@ Mechanical low/nominal/high values are planning ranges, not measurements; the
 report stays `NOT READY` until a CAD mass model exists. Results and decisions:
 [docs/physics/phase-0-feasibility.md](../../docs/physics/phase-0-feasibility.md).
 
-## Status / Next
+## Project tracking
 
-- Phase 0 pre-check: `phase0.toml` `[design]` now comes from `hardware/cad` (`make masses`);
-  replace the RPi/pi3hat and axle hardware estimates with weighed parts after printing
-- Phase 0 pre-check: confirm `max_voltage_ratio` (moteus `min_pwm` depends on PWM rate)
-  and the motor thermal model on the bench; add cogging and friction to the swing-up
-- Swing-up sim: the pendulum model treats the wheel as a point mass in I_p; add the
-  wheel's own inertia to the pendulum equation and add sensor noise to the pumping phase
-- LQR stabilizes the upright position but the wheel does not stop; add wheel-speed weight to the cost function
-- Roadmap Phase 2 (honest simulation): add motor torque/speed curve, current limit, sensor noise, loop delay, friction
+Simulation work is tracked centrally in
+[project/tasks.md](../../project/tasks.md), currently T-001 and T-005–T-012.
+The associated curriculum and mastery criteria are in
+[docs/drl/README.md](../../docs/drl/README.md).

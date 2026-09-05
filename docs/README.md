@@ -18,6 +18,7 @@ Knowledge about the project, organized by concept. Process documents (roadmap, l
 
 ## Deep reinforcement learning
 
+- [DRL and simulation learning track](drl/README.md) — ordered curriculum, mastery criteria and resources
 - [DRL outline](drl/outline.md) — problem statement, glossary, model-based vs model-free
 - [Modern simulation and RL stack (2026)](drl/modern-simulation-and-rl-stack-2026.md) — simulator survey, Apple Silicon strategy, policy architecture, parallel training, and sim-to-real plan
 

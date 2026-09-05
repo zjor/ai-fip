@@ -64,11 +64,10 @@ G = 1.11 Nm, I_p = 0.029 kg m², I_w = 0.0027 kg m². These are the
 | M6 × 20 bolt + nut (tuning) | 8–12 |
 | M8 × 60 thumb screw + M8 nut | 1 |
 | Velcro strap 12 mm | 2 |
-| mjbots mj5208, moteus r4.11, pi3hat, Raspberry Pi 4, 4S 1000 mAh LiPo | 1 each |
+| mjbots mj5208, moteus r4.11, pi3hat, Raspberry Pi 4 | 1 each |
+| 4S LiPo, 1000 mAh preferred (1000–1300 mAh), ≥40 A continuous / ≥45C at 1000 mAh, XT30 + JST-XH 5-pin, ≤75 × 35 × 25 mm, 100–130 g | 1 |
 
-## Status / Next
+## Project tracking
 
-- Verify the mj5208 stator hole pattern (`stator_pitch`, square assumed) against the mjbots 2D drawing before printing `motor_flange`.
-- Confirm `bolt_fit` after the first wheel print by weighing the quadrants; adjust to hit I_w ≈ 0.003 kg m² (rendered: 0.0027 with 8 bolts; 10 bolts give 0.0030).
-- Add cable routing (CAN from r4.11 to pi3hat, battery leads), a power switch pocket and an encoder seat at the axle end.
-- Replace the RPi 4 + pi3hat mass estimate (85 g) and the axle hardware estimate (60 g) with measured values.
+CAD and mechanical work is tracked centrally as T-002, T-003 and T-008 in
+[project/tasks.md](../../project/tasks.md).
