@@ -1,6 +1,13 @@
 # Documentation
 
-Knowledge about the project, organized by concept. Process documents (roadmap, log) live at the repository root.
+Project knowledge and process, organized by concept.
+
+## Project management
+
+- [Current tasks](project/tasks.md) — single prioritized list of unfinished work
+- [Roadmap](project/roadmap.md) — phases, milestones and gates
+- [Progress log](project/log.md) — completed work and decisions
+- [Process](project/README.md) — ownership and update rules
 
 ## Physics
 

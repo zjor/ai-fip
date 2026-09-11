@@ -1,4 +1,4 @@
-# Tasks
+# Project tasks
 
 Single source of truth for all unfinished AI-FIP work.
 
@@ -8,11 +8,21 @@ gate. Task order is global across hardware, software and learning.
 ## Now
 
 - [ ] **T-001 [SIM, LEARN] Build and understand the minimal MuJoCo model.**
-  Create a primitive-geometry MJCF model with a pendulum hinge and reaction-wheel
-  hinge; step, actuate, render and log it from Python. Compare free fall, a fixed
-  torque pulse and LQR trajectories with the analytical RK4 model.
+  MuJoCo 3.13 is installed and exercises 01–03 cover a static scene, free-body
+  contact and a passive hinge pendulum. Next, step and log the pendulum from
+  Python; add torque actuation and feedback control; import a simple CAD mesh and
+  compare its geometry and inertia with primitives; then build the two-hinge
+  pendulum and reaction wheel. Compare free fall, a fixed torque pulse and LQR
+  trajectories with the analytical RK4 model.
   **Done when:** the comparison is reproducible, every dynamic parameter can be
   explained, and discrepancies have explicit bounds or documented causes.
+
+## Next
+
+- [ ] **T-004 [HW] Inventory delivered mjbots order MJ5921.**
+  Delivery was reported on 2026-09-10. Inventory the motor, controller, tools,
+  cables and accessories, and record any discrepancy.
+  **Done when:** contents are inventoried and any discrepancies are recorded.
 - [ ] **T-002 [HW, CAD] Verify the mj5208 stator mounting pattern.**
   Read the official 2D drawing and replace the assumed square `stator_pitch`
   geometry in `hardware/cad/params.scad` if necessary.
@@ -23,15 +33,6 @@ gate. Task order is global across hardware, software and learning.
   mass model, including gravity coefficient, pendulum inertia and clearances.
   **Done when:** one placement is selected and propagated to the CAD specification
   and Phase 0 parameters.
-
-## Waiting
-
-- [ ] **T-004 [HW] Receive mjbots order MJ5921.**
-  Expected delivery: 2026-09-10–11. This blocks measured motor/controller inputs.
-  **Done when:** contents are inventoried and any discrepancies are recorded.
-
-## Next
-
 - [ ] **T-005 [HW, SIM] Characterize mj5208 + moteus r4.11 on the bench.**
   Measure/confirm the torque-speed envelope, effective voltage limit, cogging,
   friction, continuous thermal limit and relevant current behavior.

@@ -1,7 +1,7 @@
 # Project management
 
-This directory is the operational home of AI-FIP. It separates project state
-from technical documentation and keeps unfinished work in one place.
+This directory is the operational section of the AI-FIP documentation. It
+keeps project state and unfinished work in one place.
 
 - [Tasks](tasks.md) — the single prioritized list of all unfinished work
 - [Roadmap](roadmap.md) — phases, milestones and go/no-go gates
@@ -25,4 +25,3 @@ from technical documentation and keeps unfinished work in one place.
 The current governing principle is **hardware feasibility first**: no new policy
 training until an honest simulation with real motor limits demonstrates that
 classical control can stabilize the pendulum and stop the wheel.
-

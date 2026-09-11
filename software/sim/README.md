@@ -22,9 +22,14 @@ Mechanical low/nominal/high values are planning ranges, not measurements; the
 report stays `NOT READY` until a CAD mass model exists. Results and decisions:
 [docs/physics/phase-0-feasibility.md](../../docs/physics/phase-0-feasibility.md).
 
+## Learning exercises
+
+The numbered, self-contained [MuJoCo exercises](learning/mujoco/) are kept
+separate from the `app` package while sharing this Poetry environment.
+
 ## Project tracking
 
 Simulation work is tracked centrally in
-[project/tasks.md](../../project/tasks.md), currently T-001 and T-005–T-012.
+[docs/project/tasks.md](../../docs/project/tasks.md), currently T-001 and T-005–T-012.
 The associated curriculum and mastery criteria are in
 [docs/drl/README.md](../../docs/drl/README.md).

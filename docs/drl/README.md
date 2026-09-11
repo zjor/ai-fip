@@ -2,8 +2,8 @@
 
 This is the curriculum for mastering deep reinforcement learning and 3D
 simulation through AI-FIP. Project progress and current learning actions are
-tracked only in [project/tasks.md](../../project/tasks.md); the project phases
-and gates live in [project/roadmap.md](../../project/roadmap.md).
+tracked only in [project/tasks.md](../project/tasks.md); the project phases
+and gates live in [project/roadmap.md](../project/roadmap.md).
 
 Principle: learn each concept by building, explaining, and measuring it in the
 project. Do not start new policy training until the honest-simulation gate is
@@ -34,18 +34,20 @@ passed with a classical controller.
   ranges, use held-out worst-case evaluation, compare pure PPO with residual PPO,
   export the actor and measure end-to-end latency on the target host.
 
-## First practical exercise
+## Practical MuJoCo track
 
-1. Build a minimal MJCF model with one pendulum hinge and one wheel hinge using
-   boxes and cylinders.
-2. Step it from Python, apply wheel torque, render it, and log `qpos`, `qvel`
-   and actuator torque.
-3. Compare MuJoCo with the existing RK4 simulator for free fall, a fixed torque
-   pulse and the same LQR controller.
+The self-contained exercises live in
+[`software/sim/learning/mujoco/`](../../software/sim/learning/mujoco/). Their
+progression is: viewer and static geometry; free-body contact; passive hinge
+pendulum; Python stepping and logging; torque actuation and feedback; simple CAD
+mesh import and mass-property comparison; and finally the two-DOF pendulum and
+reaction wheel.
 
-The exercise is complete when the model structure and every physical parameter
-can be explained, the comparison is reproducible, and discrepancies have explicit
-error bounds or documented causes.
+The final model starts with primitive dynamic geometry and explicit inertial
+parameters. CAD meshes can then be compared against it and used where their
+added geometric detail is useful. The track is complete when free fall, a fixed
+torque pulse and the same LQR controller agree with the analytical RK4 model
+within explicit error bounds or documented discrepancies.
 
 ## Resources
 

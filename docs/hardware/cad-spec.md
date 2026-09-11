@@ -3,7 +3,7 @@
 Status: approved design, 2026-09-04. Source of truth for `hardware/cad/`.
 Dimensions here are defaults; `hardware/cad/params.scad` is the single place
 they live in code. When the two disagree, fix the one that is wrong and say so
-in [project/log.md](../../project/log.md).
+in [project/log.md](../project/log.md).
 
 ## 1. Purpose and inputs
 
@@ -11,7 +11,7 @@ Printable mechanics for the 2026 build: a reaction-wheel pendulum on a
 table-edge stand, driven by an mjbots mj5208 + moteus r4.11, sensed by the IMU
 on a pi3hat riding on the pendulum, powered by a 4S pack on the pivot axis.
 
-Decisions this spec implements (see [project/log.md](../../project/log.md), 04.09.2026):
+Decisions this spec implements (see [project/log.md](../project/log.md), 04.09.2026):
 
 | Decision | Value |
 |---|---|

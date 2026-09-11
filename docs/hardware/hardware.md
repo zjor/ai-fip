@@ -16,7 +16,7 @@
 
 ## Motor selection criteria
 
-*Approved 2026-08-10. Scope: desktop DIY-kit scale, onboard battery (3S–4S), direct-drive BLDC + FOC, motor budget ≤ €120. Parametric — numbers are current estimates (m_t ≈ 0.55 kg incl. battery, l_c ≈ 0.18 m); Phase 0 of the [roadmap](../../project/roadmap.md) iterates them.*
+*Approved 2026-08-10. Scope: desktop DIY-kit scale, onboard battery (3S–4S), direct-drive BLDC + FOC, motor budget ≤ €120. Parametric — numbers are current estimates (m_t ≈ 0.55 kg incl. battery, l_c ≈ 0.18 m); Phase 0 of the [roadmap](../project/roadmap.md) iterates them.*
 
 ### Operating regimes
 

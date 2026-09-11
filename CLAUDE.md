@@ -6,6 +6,7 @@ AI-FIP: a flywheel (reaction wheel) inverted pendulum, to be stabilized by a neu
 
 | Path | Concept | Stack |
 |---|---|---|
+| `docs/project/` | tasks, roadmap, progress log, process rules | Markdown |
 | `docs/physics/` | equations of motion, controllability, torque budget | Markdown + LaTeX |
 | `docs/hardware/` | motor selection criteria, candidates, moteus driver notes, BOM | Markdown |
 | `docs/drl/`, `docs/references/` | DRL notes, reference papers (numbered PDFs, index in README) | |
@@ -21,10 +22,10 @@ Rule: `software/` runs on a laptop, `hardware/` runs on the device. Each subproj
 ## Project management (read these first for context)
 
 - `README.md` — vision and Definition of done. Rarely changes.
-- `project/tasks.md` — single source of truth for every unfinished action or open decision. Keep one globally ordered queue across hardware, software, learning and content; do not duplicate task state elsewhere.
-- `project/roadmap.md` — phases 0–4 with milestones and gates, not fine-grained tasks. The 2026 principle is *hardware feasibility first*: no training code until an honest simulation with real motor limits shows LQR stabilizes the system and stops the wheel.
-- `project/log.md` — dated, append-only journal of completed progress and decisions with rationale. Newest entry on top. Do not add future task lists; put them in `project/tasks.md`.
-- `project/README.md` — process ownership and update rules.
+- `docs/project/tasks.md` — single source of truth for every unfinished action or open decision. Keep one globally ordered queue across hardware, software, learning and content; do not duplicate task state elsewhere.
+- `docs/project/roadmap.md` — phases 0–4 with milestones and gates, not fine-grained tasks. The 2026 principle is *hardware feasibility first*: no training code until an honest simulation with real motor limits shows LQR stabilizes the system and stops the wheel.
+- `docs/project/log.md` — dated, append-only journal of completed progress and decisions with rationale. Newest entry on top. Do not add future task lists; put them in `docs/project/tasks.md`.
+- `docs/project/README.md` — process ownership and update rules.
 - Component READMEs and technical notes provide context only. Link to task IDs instead of maintaining `Status / Next` lists or progress checkboxes.
 
 ## Conventions
