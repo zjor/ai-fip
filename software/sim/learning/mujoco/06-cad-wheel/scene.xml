@@ -1,0 +1,33 @@
+<mujoco model="CAD reaction wheel">
+  <!-- Onshape exported unitless STL coordinates in millimetres. -->
+  <compiler angle="degree" meshdir="assets" inertiafromgeom="true"/>
+
+  <visual>
+    <headlight ambient="0.4 0.4 0.4" diffuse="0.9 0.8 0.8"/>
+  </visual>
+
+  <asset>
+    <texture name="checker" type="2d" builtin="checker"
+             rgb1="0.15 0.15 0.15" rgb2="0.85 0.85 0.85"
+             width="256" height="256"/>
+    <material name="checker-floor" texture="checker"
+              texrepeat="2 2" texuniform="true" reflectance="0.1"/>
+    <!-- Classic MuJoCo viewer uses specular/shininess for a polished-metal look. -->
+    <material name="polished-metal" rgba="0.62 0.66 0.72 1"
+              specular="0.95" shininess="0.85"/>
+    <mesh name="wheel-mesh" file="wheel.stl"
+          scale="0.001 0.001 0.001" inertia="exact"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="1 1 0.1"
+          material="checker-floor"/>
+
+    <!-- The STL axle is X. Its 92.8 mm radius rests just above the floor. -->
+    <body name="wheel" pos="0 0 0.093">
+      <geom name="wheel-visual" type="mesh" mesh="wheel-mesh"
+            density="1250" contype="0" conaffinity="0"
+            material="polished-metal"/>
+    </body>
+  </worldbody>
+</mujoco>

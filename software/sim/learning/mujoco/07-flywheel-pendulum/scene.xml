@@ -1,0 +1,63 @@
+<mujoco model="flywheel pendulum">
+  <compiler angle="degree" meshdir="assets" inertiafromgeom="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <statistic center="0 0 0.4" extent="0.8"/>
+
+  <visual>
+    <headlight ambient="0.35 0.35 0.35" diffuse="0.8 0.8 0.8"/>
+  </visual>
+
+  <asset>
+    <texture name="checker" type="2d" builtin="checker"
+             rgb1="0.15 0.15 0.15" rgb2="0.85 0.85 0.85"
+             width="256" height="256"/>
+    <material name="checker-floor" texture="checker"
+              texrepeat="2 2" texuniform="true" reflectance="0.1"/>
+    <material name="stand-metal" rgba="0.38 0.42 0.48 1"
+              specular="0.50" shininess="0.40"/>
+    <material name="beam-material" rgba="0.85 0.35 0.15 1"/>
+    <material name="motor-metal" rgba="0.28 0.30 0.34 1"
+              specular="0.75" shininess="0.65"/>
+    <material name="wheel-metal" rgba="0.62 0.66 0.72 1"
+              specular="0.95" shininess="0.85"/>
+    <mesh name="wheel-mesh" file="wheel.stl"
+          scale="0.001 0.001 0.001" inertia="exact"/>
+  </asset>
+
+  <worldbody>
+    <light name="key-light" pos="-0.4 -0.5 1.2" directional="true"
+           dir="0.3 0.4 -1" diffuse="0.75 0.75 0.75"/>
+    <geom name="floor" type="plane" size="1 1 0.1"
+          material="checker-floor"/>
+
+    <!-- Static support, offset from the pendulum's X-Z motion plane. -->
+    <geom name="support-post" type="box" pos="0 0.18 0.24"
+          size="0.04 0.04 0.24" material="stand-metal"/>
+    <geom name="support-axle" type="cylinder"
+          fromto="0 0 0.45 0 0.14 0.45" size="0.01"
+          material="stand-metal"/>
+    <geom name="pivot-cap" type="cylinder"
+          fromto="0 -0.012 0.45 0 0.012 0.45" size="0.018"
+          contype="0" conaffinity="0" material="stand-metal"/>
+
+    <!-- q_p = 0 is upright; both hinges rotate around the world/local Y axis. -->
+    <body name="pendulum" pos="0 0 0.45">
+      <joint name="pivot" type="hinge" axis="0 1 0" damping="0.0002"/>
+      <geom name="beam" type="capsule" fromto="0 0 0 0 0 0.25"
+            size="0.012" mass="0.064" contype="0" conaffinity="0"
+            material="beam-material"/>
+      <geom name="motor-housing" type="cylinder" pos="0 0 0.25"
+            euler="90 0 0" size="0.0315 0.0125" mass="0.193"
+            contype="0" conaffinity="0" material="motor-metal"/>
+
+      <!-- The wheel hinge is relative to the pendulum body. -->
+      <body name="wheel" pos="0 0 0.25">
+        <joint name="wheel-hinge" type="hinge" axis="0 1 0" damping="0.005"/>
+        <!-- Source STL axle X -> model axle Y; offset places it outside the housing. -->
+        <geom name="wheel-visual" type="mesh" mesh="wheel-mesh"
+              pos="0 -0.027 0" euler="0 0 90" density="1250"
+              contype="0" conaffinity="0" material="wheel-metal"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
