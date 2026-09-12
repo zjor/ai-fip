@@ -15,6 +15,8 @@ Poetry environment.
    contact, free-joint state, and mouse perturbations.
 3. [`03-pendulum`](03-pendulum/) — constrain a compound body to one hinge and
    explore joint axes, local coordinates, inertia, and damping.
+4. [`04-periodic-kicks`](04-periodic-kicks/) — step the model from Python and
+   apply periodic torque pulses through a hinge motor actuator.
 
 Add later exercises as new numbered directories instead of rewriting earlier
 ones. Keep observations that are specific to an exercise in that exercise's

@@ -8,9 +8,9 @@ gate. Task order is global across hardware, software and learning.
 ## Now
 
 - [ ] **T-001 [SIM, LEARN] Build and understand the minimal MuJoCo model.**
-  MuJoCo 3.13 is installed and exercises 01–03 cover a static scene, free-body
-  contact and a passive hinge pendulum. Next, step and log the pendulum from
-  Python; add torque actuation and feedback control; import a simple CAD mesh and
+  MuJoCo 3.13 is installed and exercises 01–04 cover a static scene, free-body
+  contact, a passive hinge pendulum, and Python stepping/logging with periodic
+  torque actuation. Next, add feedback control; import a simple CAD mesh and
   compare its geometry and inertia with primitives; then build the two-hinge
   pendulum and reaction wheel. Compare free fall, a fixed torque pulse and LQR
   trajectories with the analytical RK4 model.
