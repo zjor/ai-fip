@@ -6,7 +6,9 @@ cylinder occupying the same outer envelope.
 
 The STL format does not store units. The source coordinates are millimetres,
 so the MJCF mesh asset applies `scale="0.001 0.001 0.001"`. The wheel's axle is
-the source X axis. The mesh is closed and centred at its origin.
+the source X axis. The mesh is closed and centred at its origin. Its canonical
+copy is [`../assets/wheel.stl`](../assets/wheel.stl), shared with later
+exercises instead of duplicated in each directory.
 
 From `software/sim`, inspect the compiled model without opening a GUI:
 

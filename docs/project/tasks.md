@@ -8,14 +8,15 @@ gate. Task order is global across hardware, software and learning.
 ## Now
 
 - [ ] **T-001 [SIM, LEARN] Build and understand the minimal MuJoCo model.**
-  MuJoCo 3.13 is installed and exercises 01–07 cover a static scene, free-body
+  MuJoCo 3.13 is installed and exercises 01–08 cover a static scene, free-body
   contact, a passive hinge pendulum, and Python stepping/logging with periodic
   torque actuation followed by saturated upright PD feedback. The CAD
   reaction-wheel mesh is imported with explicit units and its exact compiled
   inertia is compared with a same-envelope primitive. A passive two-hinge world
-  now validates the nested body tree and damped wheel coupling. Next, actuate
-  the wheel hinge and stabilize the pendulum upright with feedback; compare free
-  fall, a fixed torque pulse and LQR trajectories with the analytical RK4 model.
+  validates the nested body tree and damped wheel coupling; an ideal wheel-hinge
+  actuator with saturated LQR feedback now stabilizes the nonlinear model from
+  10 degrees and despins the wheel. Next, compare free fall, a diagnostic fixed
+  pulse and LQR trajectories with the analytical RK4 model.
   **Done when:** the comparison is reproducible, every dynamic parameter can be
   explained, and discrepancies have explicit bounds or documented causes.
 

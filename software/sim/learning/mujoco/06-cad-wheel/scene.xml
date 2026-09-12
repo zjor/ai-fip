@@ -1,6 +1,6 @@
 <mujoco model="CAD reaction wheel">
   <!-- Onshape exported unitless STL coordinates in millimetres. -->
-  <compiler angle="degree" meshdir="assets" inertiafromgeom="true"/>
+  <compiler angle="degree" meshdir="../assets" inertiafromgeom="true"/>
 
   <visual>
     <headlight ambient="0.4 0.4 0.4" diffuse="0.9 0.8 0.8"/>

@@ -4,6 +4,10 @@ Small, cumulative exercises for learning MuJoCo while working toward
 [T-001](../../../../docs/project/tasks.md). Each numbered directory is a runnable
 snapshot and should remain understandable on its own.
 
+Assets reused by multiple exercises live in [`assets/`](assets/). Exercise MJCF
+files reference that directory with paths relative to their own location, so a
+mesh has one canonical copy without depending on another numbered exercise.
+
 Run commands from `software/sim` so every exercise uses this subproject's
 Poetry environment.
 
@@ -24,6 +28,9 @@ Poetry environment.
 7. [`07-flywheel-pendulum`](07-flywheel-pendulum/) — assemble the passive
    flywheel pendulum with a world-fixed support, motor housing and independently
    hinged CAD wheel, without actuation or contacts.
+8. [`08-actuated-wheel`](08-actuated-wheel/) — drive the wheel hinge with a
+   bounded ideal torque and stabilize the nonlinear two-joint model using LQR
+   feedback derived from a MuJoCo linearization.
 
 Add later exercises as new numbered directories instead of rewriting earlier
 ones. Keep observations that are specific to an exercise in that exercise's
