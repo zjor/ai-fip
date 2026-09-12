@@ -1,44 +1,95 @@
 # Project roadmap — resurrection 2026
 
-Принцип: **hardware feasibility first**. Проект умер в 2025 из-за разрыва симуляция↔железо. В этот раз ни одной строчки кода обучения, пока честная симуляция с реальными параметрами железа не покажет, что хотя бы LQR стабилизирует систему.
+Принцип: **hardware feasibility first**. Проект умер в 2025 из-за разрыва
+симуляция↔железо. Теперь порядок определяется проверяемыми gates:
 
-Единая очередь конкретных действий: [tasks.md](tasks.md).
+```text
+MuJoCo ↔ RK4
+      ↓
+bench skills + measurements
+      ↓
+honest simulation + classical-control gate
+      ↓
+final design + physical build + real LQR
+      ↓
+PPO baseline → residual PPO → sim-to-real
+```
 
-## Phase 0 — Feasibility math (go/no-go)
+Policy training не начинается, пока honest simulation с измеренными
+ограничениями не пройдёт classical-control gate. Основной RL этап начинается
+после проверки этой модели на реальном устройстве с LQR и swing-up: иначе policy
+будет учиться использовать ошибки симулятора, а не управлять маятником.
 
-- [ ] Собрать реальные параметры: масса и длина маятника, положение центра масс, момент инерции колеса, кривая момент/скорость мотора-кандидата
-- [x] Посчитать максимальный восстанавливаемый угол (torque budget): при каком отклонении момента мотора ещё хватает → [phase-0-feasibility.md](../physics/phase-0-feasibility.md) (2026-09-04): mj5208 + r4.11 держит 20° с запасом 3.7× на пессимистичном углу; swing-up требует H ≈ 0.2–0.45 Nms → I_w ≥ 0.0015–0.0022 kg·m², рекомендация 0.003
-- [ ] Посчитать бюджет по сенсорам: допустимые шум угла и задержка контура при требуемой полосе управления
-- [ ] Итог: границы окна параметров (масса колеса / длина стержня / момент мотора), внутри которого баланс достижим
+Единая очередь конкретных действий и dependencies: [tasks.md](tasks.md).
 
-## Phase 1 — Component selection
+## Phase 0 — Simulation foundations and feasibility math
 
-- [x] Подобрать BLDC-мотор: вес, момент (включая момент на скорости, не только stall), KV, наличие места под энкодер — критерии: [hardware.md → Motor selection criteria](../hardware/hardware.md#motor-selection-criteria); кандидаты: [motor-candidates.md](../hardware/motor-candidates.md) → **mjbots mj5208 + moteus r4.11 заказаны** (order MJ5921, 2026-09-05; доставка ожидается 10–11 сентября; GL40 KV70 — запасной)
-- [ ] Драйвер / control PCB: FOC-драйвер (SimpleFOC / ODrive-класс), MCU (ESP32?), энкодер на моторе, IMU или угловой энкодер на оси маятника → **драйвер выбран: moteus r4.11** (2026-09-04, c1 не проходит continuous и 20°); хост и сенсор угла — открыты
-- [ ] Питание: батарея vs провод, вес батареи входит в модель → **4S LiPo на оси вращения маятника**: 1000–1300 mAh, ≥40 A continuous (для 1000 mAh — ≥45C), XT30, JST-XH 5-pin balance lead, ≤75 × 35 × 25 mm, целевая масса 100–130 g (2026-09-05)
-- [ ] Механика: длина стержня, масса/радиус колеса — оптимизировать по результатам Phase 0, а не наоборот → CAD в OpenSCAD: [cad-spec.md](../hardware/cad-spec.md), `hardware/cad/` (2026-09-04); печать после проверки паттерна статора
+- [ ] Завершить минимальную MuJoCo-модель: free fall, diagnostic torque pulse и
+  LQR trajectories воспроизводимо совпадают с analytical RK4 в явных пределах
+- [x] Предварительный torque/momentum budget: mj5208 + r4.11 держит 20° с
+  запасом 3.7× на пессимистичном углу; swing-up требует H ≈ 0.2–0.45 Nms →
+  I_w ≥ 0.0015–0.0022 kg·m², рекомендация 0.003 →
+  [phase-0-feasibility.md](../physics/phase-0-feasibility.md)
+- [ ] Закрыть предварительное feasible window и sensor timing budget настолько,
+  насколько это возможно до bench measurements
+- [ ] **Gate:** структура модели, координаты, знаки actuation и numerical
+  integration проверены; неизвестные hardware parameters явно помечены
 
-## Phase 2 — Honest simulation (gate)
+## Phase 1 — Hardware bring-up and measured inputs
 
-Симуляция обязана включать: реальную кривую момент/скорость мотора, ограничение по току, шум и частоту IMU/энкодера, задержку контура, дискретизацию по времени, трение.
+- [x] Выбраны mjbots mj5208 и moteus r4.11; order MJ5921 доставлен
+- [ ] Освоить безопасную bench-работу с hardware: питание и emergency stop,
+  calibration, torque/velocity/position commands, telemetry и fault handling
+- [ ] Измерить motor/controller envelope: torque-speed, current/voltage behavior,
+  cogging, friction, latency и continuous thermal limit
+- [ ] Выбрать host, pendulum-angle sensor, battery и charger; измерить noise,
+  sample rate, latency, размеры и массы
+- [ ] Закрыть влияющие на физику design inputs: stator mounting, battery offset,
+  mass distribution, flywheel inertia и clearances; допускаются bench fixtures и
+  fit prototypes, но не final manufacture
+- [ ] **Gate:** simulator inputs имеют измеренный или datasheet-backed nominal
+  value, диапазон неопределённости и provenance
 
-- [ ] Обновить модель в симуляторе под выбранные компоненты
-- [ ] LQR стабилизирует верхнее положение и останавливает колесо (вес на скорость колеса в функции стоимости)
-- [ ] Swing-up + catch с реальными ограничениями момента
-- [ ] **Gate:** если LQR не держит систему в честной симуляции — назад в Phase 1, железо не покупаем/не печатаем
+## Phase 2 — Honest simulation and classical-control gate
 
-## Phase 3 — Build & classical control
+Симуляция включает measured torque-speed envelope, current and voltage limits,
+flywheel contribution to pendulum inertia, friction/cogging, sensor sampling,
+noise/quantization, estimator behavior, command delay и battery voltage range.
 
-- [ ] Спроектировать и изготовить механику (по параметрам из Phase 1/2)
-- [ ] Собрать электронику, прошивка: чтение угла, FOC-контур момента
-- [ ] Стабилизация LQR на реальном железе
-- [ ] Swing-up на реальном железе
+- [ ] Sampled LQR стабилизирует верхнее положение и останавливает колесо во всём
+  объявленном parameter range
+- [ ] Energy swing-up + LQR catch проходят с реальными torque и wheel-speed
+  limits
+- [ ] Worst-case runs воспроизводимо проходят balance, disturbance recovery,
+  swing-up и sensor-timing criteria
+- [ ] **Gate:** если classical control не проходит honest simulation, вернуться
+  в Phase 1 и изменить components/design; final mechanics не изготавливать
 
-## Phase 4 — NN / DRL + content
+## Phase 3 — Final build and real classical-control validation
 
-- [ ] Перенести обученную в симуляции политику на устройство (sim-to-real)
-- [ ] Статьи: экспорт в ONNX, кейс проекта (Хабр + англоязычный портал)
-- [ ] Промо-видео / выставки — см. [цели в README](../README.md)
+- [ ] После Phase 2 gate завершить printable mechanics и изготовить детали
+- [ ] Собрать механику и электронику; реализовать sensor/estimator pipeline и
+  real-time torque command path
+- [ ] Стабилизировать и despin wheel с LQR на реальном устройстве
+- [ ] Выполнить swing-up + catch на реальном устройстве
+- [ ] Сопоставить recorded hardware telemetry с honest simulation и обновить
+  модель по измеренным discrepancies
+- [ ] **Gate:** реальный classical controller работает, а residual model error
+  измерен и достаточно ограничен для domain randomization
+
+## Phase 4 — RL, sim-to-real and content
+
+- [ ] Освоить необходимые RL foundations и зафиксировать deployable observation
+  и action interfaces
+- [ ] Построить Gymnasium environment из validated honest model с deterministic
+  evaluation, measured domain randomization и held-out parameter corners
+- [ ] Обучить небольшой PPO baseline и сравнить с LQR по physical success,
+  angle, wheel speed, saturation, current и energy metrics
+- [ ] Проверить residual PPO: `motor command = LQR command + learned correction`;
+  сравнить pure PPO, residual PPO и classical controller
+- [ ] Экспортировать actor в ONNX, измерить target-host latency и выполнить
+  staged sim-to-real deployment
+- [ ] Статьи, промо-видео и выставки — см. [цели в README](../README.md)
 
 ## Log
 

@@ -2,7 +2,8 @@
 
 Single source of truth for all unfinished AI-FIP work.
 
-Current objective: close Phase 0 inputs and pass the Phase 2 honest-simulation
+Current objective: finish the simulation foundations, turn the delivered
+hardware into measured Phase 0/1 inputs, and pass the Phase 2 honest-simulation
 gate. Task order is global across hardware, software and learning.
 
 ## Now
@@ -14,9 +15,12 @@ gate. Task order is global across hardware, software and learning.
   reaction-wheel mesh is imported with explicit units and its exact compiled
   inertia is compared with a same-envelope primitive. A passive two-hinge world
   validates the nested body tree and damped wheel coupling; an ideal wheel-hinge
-  actuator with saturated LQR feedback now stabilizes the nonlinear model from
-  10 degrees and despins the wheel. Next, compare free fall, a diagnostic fixed
-  pulse and LQR trajectories with the analytical RK4 model.
+  actuator now supports energy-shaping swing-up, saturated LQR catch/despin and
+  seeded lateral-poke recovery in the nonlinear model. Its viewer shows aligned
+  rolling plots for control, wheel speed, motor torque and normalized rod angle
+  at the rendering viewport's top-right.
+  Next, compare free fall, a diagnostic fixed pulse and LQR trajectories with
+  the analytical RK4 model.
   **Done when:** the comparison is reproducible, every dynamic parameter can be
   explained, and discrepancies have explicit bounds or documented causes.
 
@@ -80,19 +84,25 @@ gate. Task order is global across hardware, software and learning.
 ## Later
 
 - [ ] **T-013 [BUILD] Manufacture and assemble the final mechanics and electronics.**
+  **Depends on:** T-012.
 - [ ] **T-014 [CONTROL, HW] Run LQR stabilization and swing-up on real hardware.**
+  Compare recorded telemetry with the honest simulator and bound the remaining
+  model error. **Depends on:** T-013.
 - [ ] **T-015 [LEARN, RL] Master the RL foundations used here.**
   Explain and calculate MDPs, returns, value functions, Bellman equations, policy
   gradients, actor-critic, GAE and PPO clipping; see `docs/drl/README.md`.
 - [ ] **T-016 [RL] Build the validated Gymnasium environment.**
   Define deployable observations/actions, termination versus truncation, reward
   components, normalization, deterministic seeding and vectorized evaluation.
+  **Depends on:** T-014.
 - [ ] **T-017 [RL] Train and evaluate a small PPO baseline.**
   Start with a 2×64 actor; bound rendering steps and compare against LQR using
   physical success, angle, wheel-speed, saturation, current and energy metrics.
+  **Depends on:** T-016.
 - [ ] **T-018 [RL] Evaluate robustness and sim-to-real.**
   Use measured domain randomization and held-out corners; compare pure PPO with
   residual PPO; export the actor and measure target-host latency.
+  **Depends on:** T-017.
 - [ ] **T-019 [CONTENT] Produce articles, demonstrations and project media.**
 - [ ] **T-020 [WEB] Improve the browser demonstration.**
   Add useful state/control graphs and make the interface mobile-friendly after

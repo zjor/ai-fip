@@ -28,9 +28,9 @@ Poetry environment.
 7. [`07-flywheel-pendulum`](07-flywheel-pendulum/) — assemble the passive
    flywheel pendulum with a world-fixed support, motor housing and independently
    hinged CAD wheel, without actuation or contacts.
-8. [`08-actuated-wheel`](08-actuated-wheel/) — drive the wheel hinge with a
-   bounded ideal torque and stabilize the nonlinear two-joint model using LQR
-   feedback derived from a MuJoCo linearization.
+8. [`08-actuated-wheel`](08-actuated-wheel/) — swing up with energy shaping,
+   catch and despin with LQR, then reject seeded random force pulses applied
+   perpendicular to the rod.
 
 Add later exercises as new numbered directories instead of rewriting earlier
 ones. Keep observations that are specific to an exercise in that exercise's

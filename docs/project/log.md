@@ -1,5 +1,67 @@
 # Project log
 
+**12.09.2026 (20) — согласован путь от MuJoCo к real hardware и RL**
+- roadmap теперь явно фиксирует sequence: MuJoCo↔RK4 → безопасный bench bring-up
+  и measurements → honest simulation/classical gate → final build и real LQR →
+  PPO baseline и residual PPO
+- full policy training отложен не только до honest-simulation gate, но и до
+  проверки модели на реальном устройстве с classical controller; это снижает
+  риск обучения policy на exploitable simulation errors
+- в tasks добавлены dependencies T-013→T-014→T-016→T-017→T-018; Phase 3
+  включает сравнение recorded telemetry с simulator до создания RL environment
+
+**12.09.2026 (19) — telemetry UI переведён на fixed pixel-space panels**
+- `MjvFigure` заменён на Pillow-rendered panels: каждый состоит из отдельного
+  header и chart body, поэтому dynamic Y scale больше не пересчитывает layout
+- ширина увеличена на 20% с 480 до 576 px; header имеет 14 px top/left padding,
+  chart — фиксированный 72 px gutter и одинаковую рамку у всех четырёх signals
+- при изменении диапазона меняется только transform values→pixels; размеры и
+  положение frame остаются неизменными, grid lines отсутствуют
+
+**12.09.2026 (18) — зафиксирована геометрия plots и заменён caption font**
+- Greek captions теперь рендерятся DejaVu Sans из Matplotlib вместо compact
+  Pillow default font; добавлены 8 px top padding и 10 px left padding
+- одинаковые `yformat`, `minwidth` и grid size резервируют одну ширину подписей
+  оси для всех фигур, поэтому data frames имеют одинаковые pixel width/height и
+  не меняют геометрию при обновлении vertical range
+
+**12.09.2026 (17) — улучшены frame и captions telemetry plots**
+- requested panel height увеличен ещё на 50%, с 260 до 390 px; при недостатке
+  высоты четыре панели равномерно уменьшаются, сохраняя stack внутри viewport
+- встроенный MuJoCo font atlas не поддерживает Greek и не заменяется через
+  `MjvFigure`; `u`, `ω_w`, `τ_m`, `θ` теперь рендерятся Pillow в Unicode image
+  overlays и выровнены влево с padding 10 px
+- тёмная pane получила явную светлую рамку по границам data range; grid lines
+  по-прежнему скрыты
+
+**12.09.2026 (16) — telemetry plots увеличены и перенесены вправо**
+- четыре панели exercise 08 теперь имеют requested height 260 px и привязаны к
+  правому верхнему углу rendering viewport
+- длинные titles заменены на компактные `u`, `ω_w`, `τ_m`, `θ`
+
+**12.09.2026 (15) — исправлена передача нескольких plots в MuJoCo viewer**
+- `viewer.set_figures` различает один tuple `(viewport, figure)` и list таких
+  пар; layout helper теперь возвращает list, поэтому четыре overlays передаются
+  отдельно, а не как один вложенный аргумент
+
+**12.09.2026 (14) — добавлены четыре telemetry plots в exercise 08**
+- viewer показывает отдельные графики requested control, absolute wheel speed,
+  actual motor torque и wrapped rod angle (0° наверху), сложенные сверху вниз у
+  левого верхнего угла rendering viewport
+- все графики синхронизированы по скользящему времени −10…0 s; Y range следует
+  видимым данным с 20% margin с каждой стороны, grid lines скрыты
+- Backspace очищает controller, kicks и всю историю графиков
+
+**12.09.2026 (13) — добавлены swing-up и случайные боковые удары**
+- exercise 08 теперь стартует возле нижнего положения: energy-shaping controller
+  раскачивает маятник с torque cap 0.5 N·m и передаёт управление LQR внутри 30°
+  при достаточно малой ошибке энергии; предусмотрен fallback при выходе за 45°
+- после catch seeded generator прикладывает через `mj_applyFT` импульсы 2–4 N
+  длительностью 40 ms к центру маховика строго по касательной, перпендикулярно
+  стержню; disturbance отделён от motor actuator
+- deterministic run ловит верхнее положение за 2.274 s, выдерживает пять ударов
+  за 18 s и заканчивает в LQR внутри границ 2° / 100 rpm
+
 **12.09.2026 (12) — exercise 08 переведён с импульса на LQR**
 - стартовый torque pulse в viewer заменён непрерывной обратной связью: перед
   каждым шагом 2 ms считается `u = clip(-Kx, -1.7, 1.7)` для состояния angle,
