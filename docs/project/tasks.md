@@ -24,12 +24,20 @@ gate. Task order is global across hardware, software and learning.
   **Done when:** the comparison is reproducible, every dynamic parameter can be
   explained, and discrepancies have explicit bounds or documented causes.
 
+## Waiting
+
+- [ ] **T-005 [HW, SIM] Characterize mj5208 + moteus r4.11 on the bench.**
+  The mounted motor/controller assembly, encoder magnet, bracket, desk stand and
+  24 V supply are present. Bench communication is blocked pending replacement
+  of the missing mjcanfd-usb-1x adapter and JST PH-3 CAN cable; a USB-C data
+  cable is already available.
+  Measure/confirm the torque-speed envelope, effective voltage limit, cogging,
+  friction, continuous thermal limit and relevant current behavior.
+  **Done when:** measured ranges and provenance replace planning assumptions in
+  the feasibility and simulation inputs.
+
 ## Next
 
-- [ ] **T-004 [HW] Inventory delivered mjbots order MJ5921.**
-  Delivery was reported on 2026-09-10. Inventory the motor, controller, tools,
-  cables and accessories, and record any discrepancy.
-  **Done when:** contents are inventoried and any discrepancies are recorded.
 - [ ] **T-002 [HW, CAD] Verify the mj5208 stator mounting pattern.**
   Read the official 2D drawing and replace the assumed square `stator_pitch`
   geometry in `hardware/cad/params.scad` if necessary.
@@ -40,11 +48,6 @@ gate. Task order is global across hardware, software and learning.
   mass model, including gravity coefficient, pendulum inertia and clearances.
   **Done when:** one placement is selected and propagated to the CAD specification
   and Phase 0 parameters.
-- [ ] **T-005 [HW, SIM] Characterize mj5208 + moteus r4.11 on the bench.**
-  Measure/confirm the torque-speed envelope, effective voltage limit, cogging,
-  friction, continuous thermal limit and relevant current behavior.
-  **Depends on:** T-004. **Done when:** measured ranges and provenance replace
-  planning assumptions in the feasibility and simulation inputs.
 - [ ] **T-006 [SENSOR, HW] Select the host and pendulum-angle sensor.**
   Check available Raspberry Pi hardware; evaluate RPi 4 + pi3hat versus another
   host/CAN-FD interface, and validate the pi3hat IMU versus an axle encoder for

@@ -1,5 +1,13 @@
 # Project log
 
+**13.09.2026 (1) — инвентаризация mjbots kit завершена, bench tests ждут CAN-FD parts**
+- в наличии собранный узел mj5208 + moteus r4.11, bracket, encoder magnet,
+  desk stand и блок питания 24 V; USB-C data cable также доступен
+- отсутствуют mjcanfd-usb-1x, JST PH-3 CAN cable, USB STM32 programmer и запасные
+  XT30/JST PHR-3 connector parts из developer kit; для первого bench bring-up
+  обязательны только CAN-FD adapter и CAN cable
+- T-004 закрыта; T-005 перенесена в Waiting до получения недостающих деталей
+
 **12.09.2026 (20) — согласован путь от MuJoCo к real hardware и RL**
 - roadmap теперь явно фиксирует sequence: MuJoCo↔RK4 → безопасный bench bring-up
   и measurements → honest simulation/classical gate → final build и real LQR →
