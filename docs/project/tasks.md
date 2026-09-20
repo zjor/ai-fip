@@ -8,6 +8,35 @@ gate. Task order is global across hardware, software and learning.
 
 ## Now
 
+- [ ] **T-005 [HW, SIM] Characterize mj5208 + moteus r4.11 on the bench.**
+  Bench communication and motor operation are working. The first programmable
+  position-control exercise is the one-minute clock in
+  `hardware/firmware/moteus-host`. The shared recorder/safety layer, stopped
+  `bench inspect` and bidirectional `bench position-step` are implemented from
+  the [bench characterization spec](../hardware/motor-bench-spec.md). Physical
+  inspection and the first position-step run passed. The Tier-A slow
+  friction/cogging experiment safely exposed both a stick-slip transient and a
+  configured position-bound collision; it now selects a full-revolution
+  direction from the captured controller bounds, rejects an out-of-bounds
+  origin, and reserves endpoint margin. The measurement trajectory is centered
+  between −0.5 and +0.5 rev so both directions cover exactly one identical
+  mechanical period. Centered physical run `20260920T180715Z_friction` completed
+  both directions without faults; reproducible offline analysis records 0.00581
+  Nm mean directional friction, 0.00807 Nm RMS position-periodic torque and
+  dominant 14/rev and 7/rev harmonics. The official moteus utility produced and
+  persistently stored a 1024-entry anticogging table; stopped inspection
+  `20260920T202920Z_inspect` verified fault 0, scale 0.00879017 and unchanged
+  bounds. Identical compensated run `20260920T203223Z_friction` completed without
+  faults and reduced peak stick-slip speed by 52% forward / 36% reverse while
+  leaving the required periodic applied counter-torque largely intact. The
+  baseline comparison is complete. Next, progress through independently
+  instrumented torque calibration and guarded tests for the torque-speed
+  envelope, effective voltage limit and continuous thermal behavior. The first
+  fixture is specified in the
+  [static torque fixture design](../hardware/motor-torque-fixture-spec.md): a
+  balanced ±100 mm lever, 3 kg compression scale and short ±8 A plateaus.
+  **Done when:** measured ranges and provenance replace planning assumptions in
+  the feasibility and simulation inputs.
 - [ ] **T-001 [SIM, LEARN] Build and understand the minimal MuJoCo model.**
   MuJoCo 3.13 is installed and exercises 01–08 cover a static scene, free-body
   contact, a passive hinge pendulum, and Python stepping/logging with periodic
@@ -23,18 +52,6 @@ gate. Task order is global across hardware, software and learning.
   the analytical RK4 model.
   **Done when:** the comparison is reproducible, every dynamic parameter can be
   explained, and discrepancies have explicit bounds or documented causes.
-
-## Waiting
-
-- [ ] **T-005 [HW, SIM] Characterize mj5208 + moteus r4.11 on the bench.**
-  The mounted motor/controller assembly, encoder magnet, bracket, desk stand and
-  24 V supply are present. Bench communication is blocked pending replacement
-  of the missing mjcanfd-usb-1x adapter and JST PH-3 CAN cable; a USB-C data
-  cable is already available.
-  Measure/confirm the torque-speed envelope, effective voltage limit, cogging,
-  friction, continuous thermal limit and relevant current behavior.
-  **Done when:** measured ranges and provenance replace planning assumptions in
-  the feasibility and simulation inputs.
 
 ## Next
 

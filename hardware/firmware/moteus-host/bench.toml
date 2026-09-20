@@ -1,0 +1,42 @@
+[common]
+controller_id = 1
+watchdog_timeout_s = 0.10
+output_root = "logs/bench"
+
+[safety]
+min_bus_voltage_v = 10.0
+max_bus_voltage_v = 30.0
+max_controller_temperature_c = 65.0
+max_motor_temperature_c = 70.0
+max_phase_current_a = 8.0
+max_abs_velocity_rev_s = 1.0
+max_torque_nm = 0.15
+max_position_excursion_rev = 0.25
+max_friction_velocity_rev_s = 0.35
+max_friction_excursion_rev = 1.10
+
+[inspect]
+duration_s = 5.0
+sample_rate_hz = 20.0
+
+[position_step]
+sample_rate_hz = 200.0
+step_rev = 0.08333333333333333
+hold_s = 1.0
+settle_s = 0.5
+cycles = 2
+max_torque_nm = 0.10
+velocity_limit_rev_s = 0.50
+accel_limit_rev_s2 = 4.0
+
+[friction]
+sample_rate_hz = 200.0
+travel_rev = 1.0
+sweep_center_rev = 0.0
+velocity_limit_rev_s = 0.02
+accel_limit_rev_s2 = 0.20
+max_torque_nm = 0.05
+settle_s = 1.0
+turnaround_s = 0.5
+move_timeout_s = 65.0
+position_bound_margin_rev = 0.02

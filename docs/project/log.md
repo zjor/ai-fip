@@ -1,5 +1,233 @@
 # Project log
 
+**20.09.2026 (18) — спроектирован static torque-constant fixture**
+- отдельный [hardware spec](../hardware/motor-torque-fixture-spec.md) фиксирует
+  balanced metal crossbar с ±100.0 mm effective radius, общий stiff baseplate,
+  rounded compression contacts, 3 kg / 0.1 g scale и independent hard stop
+- initial Tier-C boundary ограничен short 0/1/2/4/6/8 A Q-current plateaus;
+  ожидаемый 8 A point ≈0.20 Nm / 204 g, хотя scale nominally покрывает published
+  1.7 Nm peak. Peak и thermal tests этим design ещё не разрешены
+- spec определяет bidirectional repetitions, manual-reading workflow без
+  blocking watchdog, формулу torque, $K_t$ regression, uncertainty budget,
+  acceptance criteria и требования к будущему `bench torque-constant`
+
+**20.09.2026 (17) — before/after anticogging sweep завершён**
+- post-compensation run `20260920T203223Z_friction` завершил 25,573 samples,
+  centered reverse+forward sweep и final hold без faults; captured config
+  подтвердил `motor.cogging_dq_scale 0.00879017`
+- anticogging заметно сгладил stick-slip: peak speed снизился forward
+  0.236→0.114 rev/s (−51.6%), reverse 0.178→0.115 rev/s (−35.7%); samples выше
+  |0.10| rev/s сократились 32→2 и 27→2, velocity-error RMS относительно ±0.02
+  rev/s снизился 21.5% forward и 12.6% reverse
+- estimated directional friction снизился 0.00581→0.00474 Nm (−18.4%); это
+  полезный closed-loop effective result, но не независимое изменение bearing
+  friction
+- applied position-periodic torque RMS изменился только 0.00807→0.00781 Nm
+  (−3.2%), а 14/rev amplitude 0.00798→0.00795 Nm; это не означает failure:
+  reported torque включает position-dependent counter-torque, необходимый для
+  компенсации physical cogging. Primary success metric здесь — smoother velocity
+- baseline и compensated raw runs и generated summaries приняты; следующий
+  T-005 stage требует independent torque fixture либо guarded inertia assembly
+
+**20.09.2026 (16) — moteus anticogging table измерена и сохранена**
+- official upstream `compensate_cogging.py` revision
+  `b734185f376bf3d91a9ec30d55f633a7c1a35adc` измерил unloaded rotor в обоих
+  направлениях при ±0.142857 rev/s; source artifact содержит 1024 finite samples
+  на direction и сохранён в ignored `logs/bench/anticogging/source.json`
+- до изменения сохранён полный controller snapshot с `motor.cogging_dq_scale 0`;
+  validated source записан отдельным `--input ... --store`, без повторного motion
+- post-write stopped run `20260920T202920Z_inspect` завершил 100/100 samples с
+  fault 0; persistent config содержит `motor.cogging_dq_scale 0.00879017`, 1010
+  nonzero entries из 1024 и неизменные position bounds ±1.1 rev
+- следующий controlled comparison — повторить тот же centered friction sweep с
+  тем же arrow/setup и сравнить generated summaries с baseline
+
+**20.09.2026 (15) — baseline friction/cogging analysis воспроизводим**
+- реализован `bench analyze <run-directory>` без новых runtime dependencies:
+  команда принимает только completed friction run, не меняет raw files и пишет
+  deterministic `summary.json`, `friction-map.csv` и три standalone SVG plot
+- 100 matched position bins используют median torque; half-sum оценивает
+  position-periodic component, half-difference — directional friction; summary
+  включает phase statistics, spatial harmonics, currents, voltage, temperature,
+  faults и host/CAN timing с явной model-derived torque provenance
+- analysis run `20260920T180715Z_friction` дал mean directional friction 0.00581
+  Nm, periodic RMS 0.00807 Nm и peak-to-peak 0.0344 Nm; dominant harmonics 14/rev
+  0.00798 Nm и 7/rev 0.00593 Nm при `motor.poles=14`, anticogging scale 0
+- SVG проверен визуально, synthetic known-signal coverage и полный suite дают
+  20 passing tests; baseline готов к controlled before/after anticogging compare
+
+**20.09.2026 (14) — centered bidirectional friction sweep завершён**
+- run `20260920T180715Z_friction` завершён штатно: 25,586 samples, все phases,
+  fault 0; после отдельного setup measurement прошёл reverse +0.501→−0.498 rev
+  и forward −0.498→+0.501 rev по одному и тому же mechanical period
+- reverse/forward заняли 50.19/50.20 s; peak measured velocity 0.178/0.236
+  rev/s, peak reported torque 0.0393/0.0381 Nm при command limits 0.02 rev/s и
+  0.05 Nm; новый friction safety envelope 0.35 rev/s не нарушен
+- bus 24.2–24.3 V, controller 24.2–30.4 °C, peak measured |Iq|/|Id| 1.4/1.7 A;
+  CAN max RTT 40.1 ms и max schedule lateness 48.5 ms сохраняются как raw timing
+  evidence для последующего анализа
+- Tier-A friction/cogging acquisition принята; следующий шаг T-005 — offline
+  directional/position-periodic analysis перед более энергичными bench tests
+
+**20.09.2026 (13) — friction trajectory центрирована на один rotor period**
+- прежний arbitrary-origin plan заменён на fixed endpoints −0.5 и +0.5 rev:
+  setup идёт к ближайшему endpoint, measurement проходит полный mechanical
+  revolution до второго endpoint и возвращается по тем же positions
+- forward/reverse samples теперь всегда лежат в `[-0.5, +0.5]`; это покрывает
+  полный период cogging и direction-dependent friction, не расходуя controller
+  position range из-за случайного origin; setup записывается отдельной phase
+- preflight проверяет оба endpoint с 0.02 rev margin и ограничивает staging
+  travel; controller bounds ±1.1 и все torque/velocity/excursion limits
+  сохраняются; 18 tests проходят
+
+**20.09.2026 (12) — outbound friction sweep завершён, return поймал второй release**
+- run `20260920T175905Z_friction` подтвердил новые controller bounds ±1.1 rev и
+  полностью прошёл forward от +0.0043 до +1.0033 rev за 50.19 s; peak measured
+  speed 0.204 rev/s и peak reported torque 0.0343 Nm, faults не было
+- через 1.44 s reverse phase около position +0.985 rev произошёл второй
+  stick-slip release: за ≈20 ms velocity выросла по модулю 0.051→0.064→0.091→
+  0.137→0.186→0.252 rev/s, пока torque снизилась с 0.026 до ≈0 Nm; live safety
+  остановила run на 0.002 rev/s выше friction limit
+- friction-only measured-velocity limit поднят 0.25→0.35 rev/s; commanded speed
+  остаётся 0.02 rev/s, torque cap 0.05 Nm, global Tier-A velocity limit 1.0
+  rev/s и excursion limit 1.10 rev не изменены
+
+**20.09.2026 (11) — fault 39 перенесён в friction preflight**
+- run `20260920T174828Z_friction` остановился через 4 samples в initial settle:
+  origin +1.0021 rev уже был выше `servopos.position_max 1`, поэтому первая
+  попытка войти в position mode вернула fault 39 `outside limit`; motion sweep
+  не начался
+- friction preflight теперь до operator confirmation отклоняет origin вне
+  controller bounds и требует 0.02 rev margin у outbound endpoint; в tracked
+  setup задокументированы finite bounds `[-1.1, +1.1]`, которые сохраняют
+  аппаратную защиту и дают full-revolution sweep запас относительно границы
+- bench не меняет persistent moteus config автоматически; host live limits
+  остаются независимым вторым слоем защиты
+
+**20.09.2026 (10) — friction sweep сохранил position bounds и стал bound-aware**
+- run `20260920T174110Z_friction` штатно остановлен с moteus code 103
+  `position_bounds`: из origin +0.217 rev прежний всегда-positive target +1.217
+  rev упёрся в настроенный `servopos.position_max 1` на +0.783 rev outbound;
+  turnaround и return не начались, поэтому run не считается завершённым
+- planner теперь читает `servopos.position_min/max` из captured controller config,
+  выбирает направление, в котором весь one-revolution sweep помещается, и
+  записывает выбор в events; для текущей позиции это target −0.783 rev
+- controller bounds не отключались и fault 103 не игнорируется; если полный sweep
+  не помещается ни в одном направлении, preflight останавливает experiment до
+  подтверждения движения; 17 tests проходят
+
+**20.09.2026 (9) — первый friction sweep безопасно поймал stick-slip transient**
+- run `20260920T172909Z_friction` штатно остановлен live safety на forward phase
+  после 2469 samples: measured velocity за ≈20 ms выросла 0.049→0.056→0.086→
+  0.104 rev/s при среднем travel ≈0.02 rev/s, torque 0.0054 Nm, bus 24.3 V и
+  fault 0; данные согласуются с кратким release из cogging/static friction, а не
+  runaway
+- friction-only hard velocity limit поднят 0.10→0.25 rev/s, чтобы не вырезать
+  измеряемый stick-slip; commanded trajectory остаётся 0.02 rev/s, torque cap
+  0.05 Nm, position excursion cap 1.10 rev
+- ожидаемый `SafetyStop` теперь завершает CLI коротким сообщением и exit code 2
+  без Python traceback; run metadata получает status `safety_stop`
+
+**20.09.2026 (8) — реализован Tier-A friction/cogging sweep**
+- `bench friction` делает один slow revolution от исходной позиции и возвращается
+  по тем же rotor positions: 0.02 rev/s, accel limit 0.20 rev/s², torque limit
+  0.05 Nm, ожидаемое motion time ≈100 s
+- перед движением CLI показывает полный envelope и требует literal `SWEEP`; во
+  время каждого направления раз в 5 s печатает travelled position и torque
+- отдельные live limits ограничивают measured speed до 0.10 rev/s и excursion
+  до 1.10 rev, сохраняя общие voltage/temperature/current/torque/fault checks
+- raw forward/reverse samples позволят отделить direction-dependent friction от
+  position-periodic cogging; 14 tests проходят с fake controller, physical
+  friction run не запускался агентом
+
+**20.09.2026 (7) — physical `bench position-step` прошёл**
+- run `20260920T172343Z_position-step` завершил 1700/1700 samples и два полных
+  bidirectional ±30° cycle без faults; все восемь moves вернулись к центру
+- каждый step вошёл в ±0.005 rev и ±0.02 rev/s за 0.265–0.340 s; target overshoot
+  не наблюдался, peak reported torque 0.0497 Nm при limit 0.10 Nm
+- peak measured velocity 0.739 rev/s превысил trajectory velocity limit 0.5
+  rev/s: limit относится к internal trajectory, а physical rotor/velocity
+  estimate может transiently опережать её; independent live limit 1.0 rev/s не
+  нарушен
+- peak measured |Iq|/|Id| = 1.6/1.2 A, bus 24.2–24.3 V, controller 24.3–27.0 °C
+- CAN RTT median/p95/p99 = 1.94/2.40/2.75 ms; единичный max 30.1 ms дал schedule
+  lateness max 25.8 ms, хотя median/p95 остались 0.41/0.53 ms; будущий real-time
+  loop должен учитывать tail latency, а не только среднее
+- следующий Tier-A experiment: slow bidirectional friction/cogging sweep
+
+**20.09.2026 (6) — первый physical `bench inspect` прошёл**
+- run `20260920T172137Z_inspect` завершён штатно: 100/100 samples за 5 s,
+  controller всё время в stopped mode, home state 1, faults 0
+- bus voltage 24.2–24.3 V, controller temperature 25.4–26.4 °C; motor temperature
+  ожидаемо отсутствует, потому что thermistor disabled
+- CAN command/query round-trip 0.97–2.43 ms, host schedule lateness 0.005–1.62 ms
+  при 20 Hz; это хороший первый baseline, но не замена будущему high-rate test
+- stopped q/d readings стабильно около −1.0/+1.1…1.2 A при reported torque/power 0;
+  сохранить как измерительный offset/baseline и не трактовать как реальный
+  mechanical load без отдельной проверки
+- следующий physical step: guarded bidirectional `bench position-step`
+
+**20.09.2026 (5) — bench CLI показывает progress во время каждой стадии**
+- долгий controller config snapshot больше не выглядит зависшим: CLI печатает
+  elapsed time каждые 5 s до завершения diagnostic transfer
+- `inspect` раз в секунду показывает elapsed/duration, bus voltage, controller
+  temperature и fault; `position-step` объявляет каждый phase, target и duration
+
+**20.09.2026 (4) — исправлен первый physical `bench inspect`**
+- acquisition успешно записал 100/100 samples за 5 s и остановил controller, но
+  слишком большой F32 query response не вместил последние voltage, controller
+  temperature и fault fields; финальный console summary упал на missing voltage
+- current/power/voltage/temperature переведены на достаточный INT16 resolution,
+  а disabled motor-temperature channel исключён до установки thermistor; это
+  освобождает CAN-FD response budget без потери нужной bench точности
+- отсутствие любого safety-critical telemetry field теперь немедленно завершает
+  run через safety stop с перечислением полей вместо продолжения с `None`
+
+**20.09.2026 (3) — реализован первый Tier-A slice bench suite**
+- добавлен единый `bench` CLI с no-motion `inspect` и подтверждаемым оператором
+  `position-step`; второй тест делает два bidirectional ±30° цикла и каждый раз
+  возвращается в исходную позицию
+- `bench.toml` разделяет рабочие setpoints и независимые hard limits; live safety
+  checks останавливают run при fault, voltage/temperature/current/torque/speed
+  или position excursion вне Tier-A envelope
+- каждый run атомарно ведёт `run.json`, controller config snapshot, raw
+  `telemetry.csv` и `events.csv`; samples включают intended/request/response
+  timestamps для последующего latency/jitter analysis
+- acquisition clock начинается только с первого command после config snapshot
+  и operator confirmation, чтобы setup time не вызывал burst догоняющих команд
+- 9 unit/integration tests проходят без обращения к реальному мотору; physical
+  запуск намеренно оставлен оператору
+
+**20.09.2026 (2) — спроектирован воспроизводимый bench suite для T-005**
+- определены три safety tier и порядок от no-motion inspection/position steps к
+  guarded coast-down/speed tests и отдельно instrumented torque/thermal tests
+- raw telemetry разделена на host timing, фактически отправленные commands и
+  moteus response: position, velocity, estimated torque, q/d current, bus
+  voltage, electrical power, controller/motor temperature, mode/fault и homing
+- независимые force/temperature observations не смешиваются с moteus telemetry;
+  reported torque нельзя использовать для проверки K_t, потому что он сам
+  вычисляется из current и motor model, а motor temperature без thermistor невалидна
+- зафиксирован run layout: immutable CSV/JSON raw data + controller config
+  snapshot, отдельные derived summary/plots, локальные `logs/` ignored by Git
+  → [motor-bench-spec.md](../hardware/motor-bench-spec.md)
+
+**20.09.2026 (1) — добавлен первый программный bench exercise для moteus**
+- связь с mj5208 + moteus r4.11 и вращение мотора заработали; T-005 больше не
+  заблокирована отсутствовавшими CAN-FD adapter/cable и возвращена в Now
+- в `hardware/firmware/moteus-host` создан отдельный Python 3.12 / Poetry
+  subproject с официальной библиотекой `moteus` 1.1.1
+- `minute-clock` двигает стрелку на 30° каждые 5 s, обновляет position command
+  каждые 20 ms, ограничивает torque/velocity/acceleration, использует watchdog
+  100 ms и отправляет `set_stop()` при выходе; `--calibrate` оставляет мотор в
+  stop mode, пока пользователь вручную не выставит стрелку на 12 часов, затем
+  сохраняет encoder angle modulo one revolution в локальный ignored JSON
+- последующие запуски выбирают ближайший эквивалент сохранённого zero, сначала
+  возвращают стрелку на 12 часов с теми же motion limits и только после settling
+  начинают отсчитывать пятисекундные шаги
+- знак физического clockwise оставлен явной калибровкой `--clockwise-sign`, так
+  как он зависит от стороны наблюдения, монтажа и настройки направления мотора;
+  проверка на реальном узле остаётся частью T-005
+
 **13.09.2026 (1) — инвентаризация mjbots kit завершена, bench tests ждут CAN-FD parts**
 - в наличии собранный узел mj5208 + moteus r4.11, bracket, encoder magnet,
   desk stand и блок питания 24 V; USB-C data cable также доступен
