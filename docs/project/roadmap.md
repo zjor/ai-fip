@@ -24,7 +24,7 @@ Policy training не начинается, пока honest simulation с изм�
 
 ## Phase 0 — Simulation foundations and feasibility math
 
-- [ ] Завершить минимальную MuJoCo-модель: free fall, diagnostic torque pulse и
+- [x] Завершить минимальную MuJoCo-модель: free fall, diagnostic torque pulse и
   LQR trajectories воспроизводимо совпадают с analytical RK4 в явных пределах
 - [x] Предварительный torque/momentum budget: mj5208 + r4.11 держит 20° с
   запасом 3.7× на пессимистичном углу; swing-up требует H ≈ 0.2–0.45 Nms →

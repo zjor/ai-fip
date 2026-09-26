@@ -30,7 +30,8 @@ Poetry environment.
    hinged CAD wheel, without actuation or contacts.
 8. [`08-actuated-wheel`](08-actuated-wheel/) — swing up with energy shaping,
    catch and despin with LQR, then reject seeded random force pulses applied
-   perpendicular to the rod.
+   perpendicular to the rod; compare free fall, fixed-pulse and LQR trajectories
+   with an analytical RK4 model.
 
 Add later exercises as new numbered directories instead of rewriting earlier
 ones. Keep observations that are specific to an exercise in that exercise's

@@ -1,5 +1,31 @@
 # Project log
 
+**25.09.2026 (20) — T-005 разделена по bench setup и измерительным gates**
+- единая T-005 разложена на T-005.A–F: desk-stand timing, guarded rotating
+  losses, static torque calibration, loaded torque-speed/voltage, thermal limit
+  и публикация measured inputs; порядок и dependencies теперь заданы в
+  [tasks.md](tasks.md)
+- physical inspection, bidirectional position-step и centered friction/cogging
+  before/after anticogging остаются завершёнными результатами из записей
+  20.09.2026; открытая T-005.A требует отдельно ограничить command-to-motion
+  delay, tail latency и tracking по существующим данным или повторному run
+- static ±8 A fixture уже спроектирован, поэтому его calibration идёт рядом с
+  timing analysis; torque-speed и thermal работы ждут соответствующих
+  guarded/load и temperature setups, а T-005.F объединяет результаты перед
+  honest simulation
+
+**25.09.2026 (19) — T-001: MuJoCo ↔ analytical RK4 comparison завершён**
+- в `software/sim/learning/mujoco/08-actuated-wheel/` добавлены collocated
+  analytical dynamics, RK4 step и воспроизводимый comparison runner для free
+  fall, fixed torque pulse и closed-loop LQR; параметры извлекаются из compiled
+  scene, а equations, units, state mapping и error bounds описаны в README
+- при общем 2 ms шаге MuJoCo RK4 и analytical RK4 совпадают до выводимых
+  8 decimal places; при scene-default Euler maximum angle error 0.68834° в
+  free fall, maximum LQR wheel-rate error 0.15936 rad/s; оба в явных пределах
+- различие Euler/RK4 объясняет остаточную trajectory error, а совпадение RK4
+  подтверждает структуру минимальной модели, знаки actuation и wheel coupling;
+  дальнейшее добавление measured motor/sensor limits остаётся в T-005/T-009
+
 **20.09.2026 (18) — спроектирован static torque-constant fixture**
 - отдельный [hardware spec](../hardware/motor-torque-fixture-spec.md) фиксирует
   balanced metal crossbar с ±100.0 mm effective radius, общий stiff baseplate,

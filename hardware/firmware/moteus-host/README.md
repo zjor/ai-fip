@@ -58,7 +58,7 @@ emergency stop.
 
 ## Bench characterization
 
-The T-005 bench suite stores raw runs under the ignored `logs/bench/` directory.
+The T-005.A–F bench suite stores raw runs under the ignored `logs/bench/` directory.
 Tracked safety and experiment defaults are in `bench.toml`; the measurement
 design and later experiments are documented in
 [`docs/hardware/motor-bench-spec.md`](../../../docs/hardware/motor-bench-spec.md).

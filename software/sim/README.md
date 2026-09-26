@@ -30,6 +30,7 @@ separate from the `app` package while sharing this Poetry environment.
 ## Project tracking
 
 Simulation work is tracked centrally in
-[docs/project/tasks.md](../../docs/project/tasks.md), currently T-001 and T-005–T-012.
+[docs/project/tasks.md](../../docs/project/tasks.md), currently T-005.A–F and
+T-009–T-012.
 The associated curriculum and mastery criteria are in
 [docs/drl/README.md](../../docs/drl/README.md).

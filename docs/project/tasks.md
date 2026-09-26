@@ -8,58 +8,61 @@ gate. Task order is global across hardware, software and learning.
 
 ## Now
 
-- [ ] **T-005 [HW, SIM] Characterize mj5208 + moteus r4.11 on the bench.**
-  Bench communication and motor operation are working. The first programmable
-  position-control exercise is the one-minute clock in
-  `hardware/firmware/moteus-host`. The shared recorder/safety layer, stopped
-  `bench inspect` and bidirectional `bench position-step` are implemented from
-  the [bench characterization spec](../hardware/motor-bench-spec.md). Physical
-  inspection and the first position-step run passed. The Tier-A slow
-  friction/cogging experiment safely exposed both a stick-slip transient and a
-  configured position-bound collision; it now selects a full-revolution
-  direction from the captured controller bounds, rejects an out-of-bounds
-  origin, and reserves endpoint margin. The measurement trajectory is centered
-  between −0.5 and +0.5 rev so both directions cover exactly one identical
-  mechanical period. Centered physical run `20260920T180715Z_friction` completed
-  both directions without faults; reproducible offline analysis records 0.00581
-  Nm mean directional friction, 0.00807 Nm RMS position-periodic torque and
-  dominant 14/rev and 7/rev harmonics. The official moteus utility produced and
-  persistently stored a 1024-entry anticogging table; stopped inspection
-  `20260920T202920Z_inspect` verified fault 0, scale 0.00879017 and unchanged
-  bounds. Identical compensated run `20260920T203223Z_friction` completed without
-  faults and reduced peak stick-slip speed by 52% forward / 36% reverse while
-  leaving the required periodic applied counter-torque largely intact. The
-  baseline comparison is complete. Next, progress through independently
-  instrumented torque calibration and guarded tests for the torque-speed
-  envelope, effective voltage limit and continuous thermal behavior. The first
-  fixture is specified in the
-  [static torque fixture design](../hardware/motor-torque-fixture-spec.md): a
-  balanced ±100 mm lever, 3 kg compression scale and short ±8 A plateaus.
-  **Done when:** measured ranges and provenance replace planning assumptions in
-  the feasibility and simulation inputs.
-- [ ] **T-001 [SIM, LEARN] Build and understand the minimal MuJoCo model.**
-  MuJoCo 3.13 is installed and exercises 01–08 cover a static scene, free-body
-  contact, a passive hinge pendulum, and Python stepping/logging with periodic
-  torque actuation followed by saturated upright PD feedback. The CAD
-  reaction-wheel mesh is imported with explicit units and its exact compiled
-  inertia is compared with a same-envelope primitive. A passive two-hinge world
-  validates the nested body tree and damped wheel coupling; an ideal wheel-hinge
-  actuator now supports energy-shaping swing-up, saturated LQR catch/despin and
-  seeded lateral-poke recovery in the nonlinear model. Its viewer shows aligned
-  rolling plots for control, wheel speed, motor torque and normalized rod angle
-  at the rendering viewport's top-right.
-  Next, compare free fall, a diagnostic fixed pulse and LQR trajectories with
-  the analytical RK4 model.
-  **Done when:** the comparison is reproducible, every dynamic parameter can be
-  explained, and discrepancies have explicit bounds or documented causes.
-
-## Next
-
+- [ ] **T-005.A [HW, SIM] Bound response timing on the current desk stand.**
+  Stopped inspection, a physical bidirectional position-step run, and centered
+  friction/cogging runs before and after anticogging are complete; results and
+  run IDs are in [log.md](log.md). Analyze the recorded position-step timestamps,
+  tracking and repeatability to bound command-to-motion delay and tail latency;
+  repeat the same Tier-A run only if the existing data cannot support the bound.
+  **Setup:** current desk stand and light arrow.
+  **Done when:** timing and tracking bounds, uncertainty and run provenance are
+  documented for the simulator.
+- [ ] **T-005.C [HW, SIM] Measure the static torque constant.**
+  Build and check the [specified ±100 mm lever and scale fixture](../hardware/motor-torque-fixture-spec.md),
+  then implement and run guarded short bidirectional 0–8 A current plateaus.
+  Fit physical torque against measured Q-axis current; moteus-reported torque is
+  a comparison channel, not the reference.
+  **Setup:** fixed motor, balanced lever, compression scale and hard stop.
+  **Done when:** independent $K_t$ estimates in both directions, fit uncertainty
+  and run provenance meet the fixture spec's acceptance criteria.
 - [ ] **T-002 [HW, CAD] Verify the mj5208 stator mounting pattern.**
   Read the official 2D drawing and replace the assumed square `stator_pitch`
   geometry in `hardware/cad/params.scad` if necessary.
   **Done when:** the source and dimensions are recorded and `motor_flange` is
   ready for its first print.
+
+## Next
+
+- [ ] **T-005.B [HW, SIM] Measure rotating losses and acceleration.**
+  Build a balanced, retained flywheel assembly with known inertia and a guard;
+  no clock arrow. Run guarded coast-down and acceleration tests to estimate
+  speed-dependent losses and check torque-to-acceleration behavior.
+  **Done when:** loss-versus-speed and acceleration estimates have uncertainty,
+  assembly inertia and run provenance.
+  **Depends on:** a qualified retained rotating assembly and guard.
+- [ ] **T-005.D [HW, SIM] Measure the torque-speed and voltage envelope.**
+  Use a guarded rotating assembly with known inertia or external load to measure
+  reachable torque and current versus speed across the 12.0–16.8 V design range.
+  An unloaded speed sweep alone is not a torque-at-speed measurement.
+  **Done when:** effective current/voltage limits and a torque-speed envelope
+  with uncertainty and run provenance are usable by the simulator.
+  **Depends on:** T-005.C and a qualified rotating load or known-inertia setup
+  with a guarded supply. T-005.B can provide the known-inertia assembly.
+- [ ] **T-005.E [HW, SIM] Measure the continuous thermal limit.**
+  Add a winding thermistor or external temperature probe and a torque-rated
+  restraint; run supervised thermal plateaus with temperature, rise-rate, board,
+  voltage and time stop conditions. The initial ±8 A lever fixture is not
+  qualified for this test.
+  **Done when:** continuous torque/current versus temperature has explicit
+  conditions, uncertainty and run provenance.
+  **Depends on:** T-005.C and a qualified thermal restraint/instrument.
+- [ ] **T-005.F [SIM, HW] Publish measured motor inputs.**
+  Fit and review the bench results, then transfer parameter ranges, uncertainty
+  and run IDs into `docs/physics/phase-0-feasibility.md` and
+  `software/sim/phase0.toml`; keep raw runs uncommitted.
+  **Done when:** all A–E results are transferred with measured values, declared
+  uncertainty and provenance; any unmeasurable input is explicitly identified.
+  **Depends on:** T-005.A–E.
 - [ ] **T-003 [HW, SIM, CAD] Decide the battery offset below the pivot.**
   Evaluate the current centred placement and practical negative-Z offsets in the
   mass model, including gravity coefficient, pendulum inertia and clearances.
@@ -81,17 +84,19 @@ gate. Task order is global across hardware, software and learning.
   Add power/CAN cable routing, a switch pocket and an optional axle-encoder seat;
   print and weigh the parts; replace RPi/pi3hat and axle-hardware mass estimates;
   select the M6 bolt count to reach flywheel inertia near 0.003 kg·m².
-  **Depends on:** T-002, T-003 and the physical parts needed for fit checks.
+  **Depends on:** T-002, T-003, T-006, T-007 and the physical parts needed for
+  fit checks.
 - [ ] **T-009 [SIM] Make the MuJoCo model honest.**
   Add the measured motor envelope and current limits, flywheel contribution to
   pendulum inertia, friction/cogging, sensor sampling/noise/quantization, estimator
   behavior, command delay and battery voltage range.
-  **Depends on:** T-001, T-005 and T-006.
+  **Depends on:** T-005.F, T-006, T-007 and T-008.
 - [ ] **T-010 [CONTROL, SIM] Stabilize and despin with LQR.**
   Tune and verify sampled LQR in the honest model, including torque saturation
   and wheel-speed cost.
   **Done when:** it holds the required recovery envelope and brings wheel speed
   back toward zero across the declared parameter range.
+  **Depends on:** T-009.
 - [ ] **T-011 [CONTROL, SIM] Demonstrate swing-up and catch.**
   Validate energy pumping, LQR handoff and the wheel-speed-at-catch constraint
   with real actuator limits.
@@ -99,7 +104,7 @@ gate. Task order is global across hardware, software and learning.
 - [ ] **T-012 [PHYSICS, SIM] Close the feasibility and honest-simulation gates.**
   Publish the final feasible parameter window and run reproducible worst-case
   checks for balance, disturbance recovery, swing-up and sensor timing.
-  **Depends on:** T-005–T-011.
+  **Depends on:** T-005.F, T-009, T-010 and T-011.
 
 ## Later
 

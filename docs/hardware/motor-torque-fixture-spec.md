@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This fixture independently measures the mj5208 torque constant for T-005. A
+This fixture independently measures the mj5208 torque constant for T-005.C. A
 rigid lever attached to the rotor presses vertically on a compression scale
 while moteus commands short Q-axis current plateaus. The scale is the force
 reference; moteus-reported torque is recorded only for comparison.

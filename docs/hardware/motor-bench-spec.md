@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This bench suite turns T-005 into reproducible measurements for the Phase 0
+This bench suite turns T-005.A–F into reproducible measurements for the Phase 0
 feasibility model and the later honest MuJoCo actuator model. It is not a single
 maximum-power test. Work progresses from low-energy checks to mechanically
 contained tests, and every run preserves raw commands, responses, configuration
@@ -222,6 +222,6 @@ without changing the raw acquisition format.
    `docs/physics/phase-0-feasibility.md` and `software/sim/phase0.toml`; keep raw
    logs local and uncommitted.
 
-Tier A is the immediate implementation target. Tier B starts only after the
-retained rotating assembly and guard exist. Tier C starts only after its fixture
-and independent instrumentation are documented and checked.
+Tier B starts only after the retained rotating assembly and guard exist.
+Tier C starts only after its fixture and independent instrumentation are
+documented and checked.

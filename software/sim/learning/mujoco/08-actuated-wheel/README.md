@@ -21,6 +21,12 @@ poetry run mjpython learning/mujoco/08-actuated-wheel/view.py
 Press **Backspace** to restart near the hanging position. Controller mode
 changes and kick events are printed in the terminal.
 
+Compare the same model against an analytical RK4 integrator:
+
+```shell
+poetry run python learning/mujoco/08-actuated-wheel/compare_rk4.py
+```
+
 ## Viewer plots
 
 Four synchronized plots are stacked from the rendering viewport's top-right:
@@ -121,9 +127,45 @@ those axes remain perpendicular as the pendulum rotates. This models an actual
 lateral poke rather than injecting torque through the motor actuator. Seed 7
 makes checks and viewer resets reproducible.
 
-## Next
+## Analytical RK4 comparison
 
-The remaining T-001 work is a numerical trajectory comparison between MuJoCo
-and the analytical RK4 model for free fall, a diagnostic fixed torque pulse,
-and the LQR trajectory. Swing-up and kick recovery are now available as extra
-scenarios for the later honest-model validation.
+`rk4.py` uses the reduced state `x = [θ, θ̇, ω]`, where `ω` is absolute wheel
+speed. For applied wheel torque `u`, carrier inertia `I`, axial wheel inertia
+`J`, gravity coefficient `G`, pivot damping `b_p` and relative wheel-hinge
+damping `b_w`, its equations are:
+
+```text
+τ_w = u − b_w (ω − θ̇)
+θ̈ = (G sin θ − b_p θ̇ − τ_w) / I
+ω̇ = τ_w / J
+```
+
+The constants come from the compiled `scene.xml` mass matrix, gravity bias at
+90°, and joint damping. For the current scene they are `I = 0.028399817 kg·m²`,
+`J = 0.001464308 kg·m²`, `G = 1.134974359 N·m`, `b_p = 0.0002 N·m·s/rad`, and
+`b_w = 0.005 N·m·s/rad`. This avoids a second, drifting set of physical inputs
+while keeping the differential equations and RK4 step independent of MuJoCo's
+dynamics solver. Torque is held constant over each 2 ms step. LQR uses the same
+gain but computes its own torque from each model's state, with ±1.7 N·m clipping.
+
+`compare_rk4.py` checks free fall from 10° for 0.7 s, a +0.2 N·m pulse for
+0.1 s from upright followed by 0.4 s of coasting, and LQR from 5° for 2 s.
+The maximum trajectory errors must stay below these limits:
+
+| MuJoCo integrator | Scenario | Angle | Pivot rate | Wheel rate | Torque |
+|---|---|---:|---:|---:|---:|
+| Euler (scene default) | Free fall | 0.8° | 0.02 rad/s | 0.05 rad/s | 0 N·m |
+| Euler (scene default) | Fixed pulse | 0.2° | 0.02 rad/s | 0.05 rad/s | 0 N·m |
+| Euler (scene default) | LQR | 0.2° | 0.02 rad/s | 0.2 rad/s | 0.02 N·m |
+| RK4 | Each scenario | 0.00001° | 0.00001 rad/s | 0.00001 rad/s | 0.00001 N·m |
+
+The Euler bounds cover integration error at the scene's 2 ms step. In the
+current comparison, the largest Euler angle error is 0.68834° during free fall;
+the largest LQR wheel-rate error is 0.15936 rad/s. Switching MuJoCo to RK4 for
+the same checks reduces all printed differences below 0.00000001 in their
+respective units. The runner executes both integrators and exits nonzero if a
+bound is exceeded. Angle differences are wrapped to ±π before comparison. The
+RK4 result checks the equations, parameter extraction, actuation signs and
+state mapping; the Euler result bounds the numerical
+discrepancy of the scene as normally run. Swing-up and kick recovery remain
+separate scenarios for later honest-model validation.
