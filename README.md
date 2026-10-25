@@ -2,6 +2,8 @@
 
 A flywheel (reaction wheel) inverted pendulum stabilized by a neural network trained with deep reinforcement learning. The network knows nothing about the physics or its own "body"; it learns by trial and error in simulation how to swing up and hold the upright position, and is then transferred to a real device.
 
+Follow project updates, experiments and videos on [Telegram](https://t.me/ai_fip).
+
 ## Overview
 
 Digital soul aka AI-FIP (flywheel inverted pendulum) — обратный маятник, реакционное колесо. Само-стабилизирующаяся система, управляемая нейронной сетью. НС обучается в виртуальном пространстве, ничего не зная про устройство механизма и аналитические законы. Методом проб и ошибок (DRL) она должна научиться сама управлять двигателем и считывать угол, чтобы удерживать вертикальное положение.

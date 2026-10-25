@@ -82,6 +82,27 @@ class ResponseTimingConfig:
 
 
 @dataclass(frozen=True)
+class TorqueConstantConfig:
+    sample_rate_hz: float = 200.0
+    plateau_s: float = 3.0
+    max_plateau_s: float = 10.0
+    ramp_s: float = 0.25
+    rest_s: float = 5.0
+    baseline_s: float = 0.25
+    max_current_a: float = 8.0
+    current_overshoot_a: float = 0.5
+    max_reported_torque_nm: float = 0.30
+    session_i2t_budget_a2s: float = 2500.0
+    max_velocity_rev_s: float = 0.05
+    max_excursion_rev: float = 0.01
+    response_timeout_s: float = 0.05
+    max_rise_torque_nm: float = 0.05
+    rise_step_s: float = 0.5
+    rise_sample_rate_hz: float = 400.0
+    nominal_kt_nm_per_a: float = 0.025
+
+
+@dataclass(frozen=True)
 class BenchConfig:
     common: CommonConfig
     safety: SafetyConfig
@@ -89,6 +110,7 @@ class BenchConfig:
     position_step: PositionStepConfig
     friction: FrictionConfig
     response_timing: ResponseTimingConfig = ResponseTimingConfig()
+    torque_constant: TorqueConstantConfig = TorqueConstantConfig()
 
 
 def _positive(section: dict[str, Any], key: str) -> float:
@@ -108,6 +130,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BenchConfig:
 
     config = BenchConfig(
         response_timing=ResponseTimingConfig(**document.get("response_timing", {})),
+        torque_constant=TorqueConstantConfig(**document.get("torque_constant", {})),
         common=CommonConfig(
             controller_id=int(common["controller_id"]),
             watchdog_timeout_s=_positive(common, "watchdog_timeout_s"),

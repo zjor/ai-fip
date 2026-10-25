@@ -67,6 +67,28 @@ before a physical run. Offline analysis lives in `software/sim`, with commands
 in that document; results and remaining work are tracked in
 [PNDLM-8](https://zjor.youtrack.cloud/issue/PNDLM-8).
 
+The static torque-constant measurement on the held-rotor lever/scale fixture is
+`poetry run bench torque-constant` (preview: `--dry-run`). It is interactive:
+after the contact radii, a scale-check note and the confirmation word `LEVER`,
+you type a Q-current in amps (optionally followed by seconds, e.g. `4 5`) and
+press Enter; the current is applied for the configured plateau time with a
+terminal bell and countdown, the controller stops, and you type the scale
+reading in grams. The plateau is sent as position-mode feedforward torque
+(amps × 8.27 / `motor.Kv`, zero gains) because the moteus firmware watchdog
+does not cover current mode; the fit uses the measured Q-current. `q` quits. Readings and radii go to `events.csv` next to the
+telemetry. `--rise-time` switches to feedforward torque steps (≤0.05 Nm) for the
+q-current rise-time question and asks for no scale readings. Operator steps,
+limits and the I²t budget are in the
+[fixture spec](../../../docs/hardware/motor-torque-fixture-spec.md); the task
+is [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9). Offline analysis, from
+`software/sim`:
+
+```shell
+poetry run python -m app.analyze_torque_constant \
+  ../../hardware/firmware/moteus-host/logs/bench/<run-id> \
+  --output ../../docs/hardware/measurements/<date>-torque-constant.json
+```
+
 The T-005.A–F bench suite stores raw runs under the ignored `logs/bench/` directory.
 Tracked safety and experiment defaults are in `bench.toml`; the measurement
 design and later experiments are documented in

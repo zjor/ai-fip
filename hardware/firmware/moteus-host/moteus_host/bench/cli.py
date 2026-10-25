@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .analysis import summarize
 from .config import DEFAULT_CONFIG_PATH, load_config
-from .experiments import friction, inspect, position_step, response_timing
+from .experiments import friction, inspect, position_step, response_timing, torque_constant
 from .safety import SafetyStop
 
 
@@ -40,6 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     timing_parser.add_argument("--dry-run", action="store_true",
                                help="validate and print settings without connecting")
+    torque_parser = subparsers.add_parser(
+        "torque-constant",
+        help="interactive held-rotor Q-current plateaus on the lever/scale fixture",
+    )
+    torque_parser.add_argument("--dry-run", action="store_true",
+                               help="validate and print settings without connecting")
+    torque_parser.add_argument("--rise-time", action="store_true",
+                               help="feedforward torque steps for q-current rise time instead")
     analyze_parser = subparsers.add_parser(
         "analyze", help="analyze a completed recorded run"
     )
@@ -66,6 +74,12 @@ async def run(args: argparse.Namespace) -> str:
         if args.dry_run:
             return response_timing.describe(config.response_timing)
         return await response_timing.run(config, output_root, controller_id)
+    if args.experiment == "torque-constant":
+        torque_constant.validate(config.torque_constant, config.safety)
+        if args.dry_run:
+            return torque_constant.describe(config.torque_constant, rise_time=args.rise_time)
+        return await torque_constant.run(config, output_root, controller_id,
+                                         rise_time=args.rise_time)
     raise ValueError(f"unknown experiment {args.experiment}")
 
 

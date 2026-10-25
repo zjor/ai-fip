@@ -25,6 +25,8 @@ TELEMETRY_FIELDS = (
     "command_mode",
     "command_position_rev",
     "command_velocity_rev_s",
+    "command_q_current_a",
+    "command_d_current_a",
     "feedforward_torque_nm",
     "maximum_torque_nm",
     "velocity_limit_rev_s",

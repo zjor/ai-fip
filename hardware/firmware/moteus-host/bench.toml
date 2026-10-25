@@ -55,3 +55,29 @@ observe_s = 0.15
 response_timeout_s = 0.05
 max_velocity_rev_s = 0.8
 max_excursion_rev = 0.05
+
+[torque_constant]
+# Held-rotor lever/scale fixture (docs/hardware/motor-torque-fixture-spec.md).
+# Q-current plateaus are typed interactively; these are the defaults and caps.
+sample_rate_hz = 200.0
+plateau_s = 3.0
+max_plateau_s = 10.0
+# Current is ramped linearly from 0 to the target over ramp_s; an instant 6 A step
+# compressed the fixture 0.3 mm in 6 ms and tripped the velocity stop (2026-10-25).
+ramp_s = 0.25
+rest_s = 5.0
+baseline_s = 0.25
+max_current_a = 8.0
+current_overshoot_a = 0.5
+max_reported_torque_nm = 0.30
+# Session I²t budget: the standard profile is 3 repeats x (0.5² + 1² + 2² + 4² + 6² + 8²) A²
+# x 3 s x 2 directions ≈ 2180 A²s. No motor thermistor is fitted; this bounds copper heating.
+session_i2t_budget_a2s = 2500.0
+max_velocity_rev_s = 0.05
+max_excursion_rev = 0.01
+response_timeout_s = 0.05
+# --rise-time mode: feedforward torque steps for q-current rise time.
+max_rise_torque_nm = 0.05
+rise_step_s = 0.5
+rise_sample_rate_hz = 400.0
+nominal_kt_nm_per_a = 0.025

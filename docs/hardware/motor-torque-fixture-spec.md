@@ -126,8 +126,12 @@ all require a separate Tier-C review.
 Use commanded Q-current plateaus of:
 
 ```text
-0, 1, 2, 4, 6, 8 A
+0, 0.5, 1, 2, 4, 6, 8 A
 ```
+
+The 0.5 A and 1 A points were added from the T-005.A pulse pilot (PNDLM-9
+addendum): the pendulum works near zero torque, and the pilot saw 60–80 % of the
+expected q-current at 0.02 Nm, so the fit must cover the low-current range.
 
 Run positive and negative directions separately, placing the scale beneath the
 appropriate compression contact. Use measured `q_current_a` in analysis. Start
@@ -141,40 +145,143 @@ has unused capacity.
 
 ### 5.3 Manual scale readings
 
-The first version uses manual readings. The host must continue refreshing the
-watchdog while current is active; a blocking terminal prompt must never pause
-motor commands. Prefer this sequence:
+The first version uses manual readings. The host keeps resending the plateau
+command while current is active, which refreshes the firmware watchdog; a
+blocking terminal prompt is only ever shown while the controller is stopped.
+The moteus firmware watchdog only covers position mode (the timeout check in
+`fw/bldc_servo_control.h` runs for `kPosition` and `kStayWithinBounds`, never
+for `kCurrent`; a 2026-10-25 probe on this controller confirmed that a
+`set_current` command stays in mode 9 after 2.5 timeouts). Each plateau is
+therefore sent as a position-mode command with zero gains and a feedforward
+torque of amps × $K_{t,fw}$, where $K_{t,fw} = 8.27 / \texttt{motor.Kv}$ is the
+firmware's linear torque constant (rotation cutoff 10000 A on this motor). The
+fit uses the measured Q-current, so the command path does not enter the
+result.
+The available scale has no hold function, so the operator watches the display
+during the plateau and types the stable value afterwards. The implemented
+sequence of `poetry run bench torque-constant` is:
 
-1. run a fixed-duration plateau while recording moteus telemetry;
-2. give the operator an audible/terminal timing cue;
-3. stop the controller;
-4. enter the observed stable or held scale reading in grams;
-5. record side, current sign, radius, repetition and operator note in
-   `events.csv`.
+1. the controller is stopped, its configuration is captured, and the run
+   refuses to start without a positive finite `motor.Kv`; then a 0 A (0 Nm)
+   probe command with the 0.1 s per-command watchdog is sent and the host
+   stays silent for 2.5 timeouts; the run refuses to continue unless the
+   controller reports its timeout state (mode 11, or 12), which proves the
+   firmware watchdog applies to the plateau command path on this controller;
+2. the operator types the measured contact radius for the positive and the
+   negative side in millimetres, then a free-text scale-check note (known
+   masses, resolution, auto-off); these go to `events.csv`;
+3. the operator types the confirmation word `LEVER`; anything else aborts;
+4. the prompt shows the suggested next current from the standard sequence; the
+   operator types a current in amps, optionally followed by a plateau time in
+   seconds (`4 5` is 4 A for 5 s), or `q` to finish;
+5. a short query-only baseline is recorded, then a terminal bell marks the
+   start of the plateau; the current is ramped linearly from 0 to the target
+   over `ramp_s` (0.25 s), because an instant 6 A step compressed the fixture
+   about 0.3 mm in 6 ms and tripped the 0.05 rev/s stop on 2026-10-25; a
+   countdown prints each second while telemetry is
+   recorded; the firmware's enable and calibration states (modes 2–4) are
+   tolerated for the first 50 ms of a plateau, after that only position mode
+   (10) is accepted; note that the stopped-state baseline Q-current is
+   uncalibrated (about 1.2 A on this controller) and is reported only, the
+   0 A plateau is the real zero point;
+6. the controller stops and is confirmed stopped;
+7. the operator types the observed scale reading in grams (blank skips the
+   point) and an optional note; the script records plateau number, current,
+   side and the reading in `events.csv`;
+8. the script waits the configured rest time before the next plateau.
 
 A camera recording of the scale display is useful evidence when the scale lacks
 a data interface.
 
-## 6. Planned software
+**Zero-command torque (measured 2026-10-25).** A 0 Nm position-mode command
+with zero gains is not torque-free on this controller. Right after the enable
+the motor applied about −0.46 A (−0.013 Nm reported) for roughly 100 ms, and at
+rest it keeps a reported +0.1 to +0.2 A (+0.003 to +0.005 Nm); the firmware
+torque path (`ISR_DoPositionCommon`: PID × 0 + feedforward 0 + inertia term 0)
+commands zero, so the mechanism is in the current loop or its sensing and is
+not identified. On a balanced lever this pulse lifted the lever 7.7° off the
+scale and tripped the velocity stop (data:
+[2026-10-25-zero-torque-probe.csv](measurements/2026-10-25-zero-torque-probe.csv),
+script `hardware/firmware/moteus-host/tools/zero_torque_probe.py`).
+Consequences: the hard stop of §3 is mandatory on the side away from the scale,
+or the lever needs a preload of at least 30 g at 105 mm (twice the 12.6 g
+equivalent of the pulse) so it stays in contact; the first 20 % of each plateau
+(0.6 s) is already excluded from the fit, which covers the transient; the
+steady residual appears in the fit intercept and in the 0 A plateau reading.
 
-`poetry run bench torque-constant` will reuse the recorder and safety layer. It
-must:
+## 6. Software
 
-- require a fixture-specific confirmation phrase;
-- command current directly rather than request torque from the configured motor
-  model;
-- keep D-axis current at zero;
-- refresh a 100 ms watchdog throughout every plateau;
-- enforce the tracked 8 A initial phase-current limit;
-- record requested and measured Q/D current, position, velocity, reported
-  torque, bus voltage, power, controller temperature, fault and timing;
-- stop between plateaus and on normal exit, fault, timeout or `Ctrl-C`;
-- record manually entered scale readings and the measured contact radius;
-- refuse higher-current profiles until the fixture receives a separate review.
+`poetry run bench torque-constant` (module
+`hardware/firmware/moteus-host/moteus_host/bench/experiments/torque_constant.py`)
+reuses the bench recorder and safety layer. It:
 
-Offline analysis will calculate torque for every reading, fit $K_t$ and an
-intercept for each direction, compare slopes, report residuals and uncertainty,
-and compare physical torque with moteus-reported torque.
+- requires the confirmation word `LEVER`;
+- commands each plateau as position-mode feedforward torque amps × 8.27 /
+  `motor.Kv` with `kp_scale`, `kd_scale` and `ilimit_scale` 0 and
+  `maximum_torque` = 8 A × $K_{t,fw}$ (see §5.3: current mode has no firmware
+  watchdog); the firmware commands D-axis current 0; the requested amps are
+  recorded in `command_q_current_a` next to `feedforward_torque_nm`;
+- refreshes the firmware watchdog by resending the command every sample
+  (200 Hz requested) with a 0.1 s per-command timeout, and a 0 A probe at
+  startup proves the timeout fires on this command path before any torque is
+  commanded; no `servo.timeout_mode` override and no `conf write`;
+- refuses commanded currents above `max_current_a` (8 A, bounded by the tracked
+  `safety.max_phase_current_a`) and stops if the measured current exceeds
+  `max_current_a + current_overshoot_a` (8.5 A), reported torque exceeds
+  `max_reported_torque_nm` (0.30 Nm), speed exceeds 0.05 rev/s or the rotor
+  moves more than 0.01 rev from its start;
+- records requested and measured Q/D current, position, velocity, reported
+  torque, bus voltage, controller temperature, fault, mode and host timing at
+  F32 current resolution;
+- stops between plateaus and on normal exit, fault, lost response, timeout or
+  `Ctrl-C`;
+- records the contact radii, the scale-check note, every scale reading and
+  operator note in `events.csv`;
+- enforces a rest time between plateaus (`rest_s`, 5 s) and a session I²t
+  budget (`session_i2t_budget_a2s`, 2500 A²s; the standard profile uses about
+  2180 A²s). The mj5208 has no thermistor and the controller's motor
+  temperature input is not wired, so this budget plus the board temperature
+  stop at 65 °C are the only thermal protection. An 8 A plateau for 3 s puts
+  about 13 J into the copper (0.047 Ω phase resistance).
+
+All values live in `[torque_constant]` of `bench.toml`; `--dry-run` prints the
+resolved settings without connecting.
+
+### 6.1 Rise-time mode
+
+`poetry run bench torque-constant --rise-time` answers the PNDLM-9 addendum
+(q-current rise time after a torque step). With the rotor held by the fixture
+it sends feedforward torque steps through the same command path as the
+pendulum controller (`set_position` with zero gains and `feedforward_torque`),
+capped at `max_rise_torque_nm` (0.05 Nm) for `rise_step_s` (0.5 s), sampling at
+`rise_sample_rate_hz` (400 Hz requested). No scale readings are asked. The
+host sees only CAN replies, so a rise time equal to the sample spacing is an
+upper bound, not a measurement; the analyzer reports `"none within one
+sample"` when every step reaches 95 % of its steady current in the first
+sample.
+
+### 6.2 Offline analysis
+
+`software/sim/app/analyze_torque_constant.py` converts every reading to torque
+at that side's radius, fits $\tau = K_t I_q + b$ per direction against measured
+q-current with standard errors and residual RMS, repeats the fit against
+moteus-reported torque and against the *commanded* current (the first 0.5 A
+plateau on 2026-10-25 measured only 0.24 A, so torque per commanded amp and
+per measured amp differ), fits the low-current points (commanded 0.5 A and
+1 A) separately, evaluates the acceptance flags of section 7, computes rise
+times to 63 % and 95 % for step trials, and writes one JSON with SHA-256
+hashes of the raw files. The `simulator` block carries the values the
+simulator needs: $K_t$ per measured amp, $K_t$ per commanded amp
+(`kt_per_commanded_a_nm_per_a`, the gain a torque request actually gets),
+low-current $K_t$, firmware $K_t$ (8.27/Kv) for comparison, and
+`torque_rate_limit`: the largest 95 % rise time in milliseconds, the string
+`"none within one sample"` when every step reached 95 % in its first sample,
+the string `"not reached"` when no step reached 95 % within the hold, or null
+when the run has no steps.
+
+The analyzer reports statistical uncertainty of the fit only. Scale
+calibration, radius and alignment uncertainty (section 7) are propagated by
+hand in the measurement report.
 
 ## 7. Uncertainty and acceptance
 

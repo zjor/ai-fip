@@ -12,3 +12,6 @@ __pycache__
 
 # OpenSCAD renders
 hardware/cad/build/
+
+# Agent implementation plans (local only)
+.claude/plans/
