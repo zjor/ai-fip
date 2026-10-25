@@ -1,0 +1,9 @@
+{
+  "window.zoomLevel": 0,
+  "workbench.editorAssociations": {
+    "*.md": "vscode.markdown.preview.editor"
+  },
+  "workbench.tree.indent": 16,
+  "workbench.tree.renderIndentGuides": "onHover",
+  "explorer.autoReveal": false
+}
