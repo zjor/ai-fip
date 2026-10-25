@@ -21,6 +21,7 @@ TELEMETRY_FIELDS = (
     "request_time_s",
     "response_time_s",
     "experiment_phase",
+    "trial_id",
     "command_mode",
     "command_position_rev",
     "command_velocity_rev_s",
@@ -29,6 +30,9 @@ TELEMETRY_FIELDS = (
     "velocity_limit_rev_s",
     "accel_limit_rev_s2",
     "watchdog_timeout_s",
+    "kp_scale",
+    "kd_scale",
+    "ilimit_scale",
     *STATE_FIELDS,
 )
 EVENT_FIELDS = ("host_time_s", "event", "value", "unit", "note")

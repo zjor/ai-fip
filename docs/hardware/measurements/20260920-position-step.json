@@ -1,0 +1,514 @@
+{
+  "analysis_version": 1,
+  "fault_samples": 0,
+  "largest_rtt_samples": [
+    {
+      "phase": "center",
+      "rtt_ms": 30.08329216390848,
+      "sample": 477
+    },
+    {
+      "phase": "settle",
+      "rtt_ms": 22.860082797706127,
+      "sample": 69
+    },
+    {
+      "phase": "center",
+      "rtt_ms": 9.812457486987114,
+      "sample": 1214
+    },
+    {
+      "phase": "positive",
+      "rtt_ms": 4.183541052043438,
+      "sample": 118
+    },
+    {
+      "phase": "center",
+      "rtt_ms": 3.974542021751404,
+      "sample": 1220
+    }
+  ],
+  "method": {
+    "adaptive_threshold": "max(0.1 degree, 2 * maximum baseline deviation from median)",
+    "baseline_window_s": 0.1,
+    "consecutive_detection_samples": 3,
+    "percentiles": "linear interpolation; empirical, not guaranteed bounds",
+    "timestamps": "host request/response; no controller sample timestamps",
+    "tracking_position_tolerance_rev": 0.005,
+    "tracking_velocity_tolerance_rev_s": 0.02
+  },
+  "moves": [
+    {
+      "adaptive_threshold_deg": 0.1,
+      "baseline_max_deviation_deg": 0.0164794921875,
+      "baseline_peak_velocity_rev_s": 0.01370227336883545,
+      "baseline_samples": 20,
+      "detections": [
+        {
+          "confirmation_response_ms": 32.57541637867689,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 21.70987520366907,
+          "previous_response_ms": 16.9683750718832,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 41.87558311969042,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 32.57541637867689,
+          "previous_response_ms": 26.762915775179863,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 57.173208333551884,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 46.416000463068485,
+          "previous_response_ms": 41.87558311969042,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": 1,
+      "final_100ms_inside_fraction": 1.0,
+      "final_100ms_peak_velocity_rev_s": 0.017630882561206818,
+      "final_100ms_position_error_deg": {
+        "max": -0.6060791015624983,
+        "median": -0.6225585937499983,
+        "min": -0.6500244140624983,
+        "p95": -0.6112976074218733,
+        "p99": -0.6071228027343734
+      },
+      "final_dwell_ms": 124.82279166579247,
+      "final_entry_ms": 872.0697499811649,
+      "first_entry_ms": 302.0048327744007,
+      "overshoot_deg": 0,
+      "peak_velocity_rev_s": 0.7239803671836853,
+      "phase": "positive",
+      "sample": 100
+    },
+    {
+      "adaptive_threshold_deg": 0.1,
+      "baseline_max_deviation_deg": 0.0274658203125,
+      "baseline_peak_velocity_rev_s": 0.017630882561206818,
+      "baseline_samples": 20,
+      "detections": [
+        {
+          "confirmation_response_ms": 32.249582931399345,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 22.083415649831295,
+          "previous_response_ms": 16.65241550654173,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 36.720165982842445,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 26.620250195264816,
+          "previous_response_ms": 22.083415649831295,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 46.70408274978399,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 36.720165982842445,
+          "previous_response_ms": 32.249582931399345,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": -1,
+      "final_100ms_inside_fraction": 0.30434782608695654,
+      "final_100ms_peak_velocity_rev_s": 0.05603915825486183,
+      "final_100ms_position_error_deg": {
+        "max": 0.098876953125,
+        "median": 0.0164794921875,
+        "min": -0.1043701171875,
+        "p95": 0.09832763671874999,
+        "p99": 0.098876953125
+      },
+      "final_dwell_ms": 0.0,
+      "final_entry_ms": 997.1220409497619,
+      "first_entry_ms": 296.60637490451336,
+      "overshoot_deg": 0.1373291015625,
+      "peak_velocity_rev_s": 0.6068602800369263,
+      "phase": "center",
+      "sample": 300
+    },
+    {
+      "adaptive_threshold_deg": 0.24169921875,
+      "baseline_max_deviation_deg": 0.120849609375,
+      "baseline_peak_velocity_rev_s": 0.05603915825486183,
+      "baseline_samples": 23,
+      "detections": [
+        {
+          "confirmation_response_ms": 32.647084444761276,
+          "exceeds_baseline": false,
+          "first_of_three_response_ms": 22.21083454787731,
+          "previous_response_ms": 16.74720924347639,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 36.83945909142494,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 26.77525021135807,
+          "previous_response_ms": 22.21083454787731,
+          "threshold_deg": 0.24169921875
+        },
+        {
+          "confirmation_response_ms": 36.83945909142494,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 26.77525021135807,
+          "previous_response_ms": 22.21083454787731,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 46.64300009608269,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 36.83945909142494,
+          "previous_response_ms": 32.647084444761276,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": -1,
+      "final_100ms_inside_fraction": 0.19047619047619047,
+      "final_100ms_peak_velocity_rev_s": 0.10194685310125351,
+      "final_100ms_position_error_deg": {
+        "max": 0.5621337890624983,
+        "median": 0.36987304687499833,
+        "min": 0.16113281249999833,
+        "p95": 0.5346679687499983,
+        "p99": 0.5566406249999983
+      },
+      "final_dwell_ms": 0.0,
+      "final_entry_ms": 997.0662500709295,
+      "first_entry_ms": 267.1771254390478,
+      "overshoot_deg": 0,
+      "peak_velocity_rev_s": 0.7266415953636169,
+      "phase": "negative",
+      "sample": 500
+    },
+    {
+      "adaptive_threshold_deg": 0.4010009765625,
+      "baseline_max_deviation_deg": 0.20050048828125,
+      "baseline_peak_velocity_rev_s": 0.10194685310125351,
+      "baseline_samples": 20,
+      "detections": [
+        {
+          "confirmation_response_ms": 36.67924925684929,
+          "exceeds_baseline": false,
+          "first_of_three_response_ms": 26.696999557316303,
+          "previous_response_ms": 21.926291286945343,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 36.67924925684929,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 26.696999557316303,
+          "previous_response_ms": 21.926291286945343,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 57.25645832717419,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 46.546333469450474,
+          "previous_response_ms": 41.851041838526726,
+          "threshold_deg": 0.4010009765625
+        },
+        {
+          "confirmation_response_ms": 61.66708376258612,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 51.557499915361404,
+          "previous_response_ms": 46.546333469450474,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": 1,
+      "final_100ms_inside_fraction": 0.38095238095238093,
+      "final_100ms_peak_velocity_rev_s": 0.05600128695368767,
+      "final_100ms_position_error_deg": {
+        "max": -0.2032470703125,
+        "median": -0.296630859375,
+        "min": -0.3900146484375,
+        "p95": -0.2142333984375,
+        "p99": -0.2054443359375
+      },
+      "final_dwell_ms": 0.0,
+      "final_entry_ms": 996.5427499264479,
+      "first_entry_ms": 331.48983400315046,
+      "overshoot_deg": 0,
+      "peak_velocity_rev_s": 0.6987169981002808,
+      "phase": "center",
+      "sample": 700
+    },
+    {
+      "adaptive_threshold_deg": 0.2032470703125,
+      "baseline_max_deviation_deg": 0.10162353515625,
+      "baseline_peak_velocity_rev_s": 0.05600128695368767,
+      "baseline_samples": 20,
+      "detections": [
+        {
+          "confirmation_response_ms": 26.52241662144661,
+          "exceeds_baseline": false,
+          "first_of_three_response_ms": 16.694582998752594,
+          "previous_response_ms": 11.775416322052479,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 31.5439160913229,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 21.856541745364666,
+          "previous_response_ms": 16.694582998752594,
+          "threshold_deg": 0.2032470703125
+        },
+        {
+          "confirmation_response_ms": 36.726958118379116,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 26.52241662144661,
+          "previous_response_ms": 21.856541745364666,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 51.86212528496981,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 41.924708522856236,
+          "previous_response_ms": 36.726958118379116,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": 1,
+      "final_100ms_inside_fraction": 0.95,
+      "final_100ms_peak_velocity_rev_s": 0.023185160011053085,
+      "final_100ms_position_error_deg": {
+        "max": -0.5401611328124983,
+        "median": -0.5621337890624983,
+        "min": -0.5950927734374983,
+        "p95": -0.5401611328124983,
+        "p99": -0.5401611328124983
+      },
+      "final_dwell_ms": 85.90091671794653,
+      "final_entry_ms": 911.1283337697387,
+      "first_entry_ms": 341.8760830536485,
+      "overshoot_deg": 0,
+      "peak_velocity_rev_s": 0.7222028374671936,
+      "phase": "positive",
+      "sample": 900
+    },
+    {
+      "adaptive_threshold_deg": 0.1,
+      "baseline_max_deviation_deg": 0.032958984375,
+      "baseline_peak_velocity_rev_s": 0.023185160011053085,
+      "baseline_samples": 20,
+      "detections": [
+        {
+          "confirmation_response_ms": 31.79179225116968,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 21.885917522013187,
+          "previous_response_ms": 16.931417398154736,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 36.89308371394873,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 26.6506252810359,
+          "previous_response_ms": 21.885917522013187,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 46.93691711872816,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 36.89308371394873,
+          "previous_response_ms": 31.79179225116968,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": -1,
+      "final_100ms_inside_fraction": 0.25,
+      "final_100ms_peak_velocity_rev_s": 0.07247670739889145,
+      "final_100ms_position_error_deg": {
+        "max": 0.142822265625,
+        "median": 0.01922607421875,
+        "min": -0.1373291015625,
+        "p95": 0.13238525390625,
+        "p99": 0.14073486328124998
+      },
+      "final_dwell_ms": null,
+      "final_entry_ms": null,
+      "first_entry_ms": 282.2607094421983,
+      "overshoot_deg": 0.1373291015625,
+      "peak_velocity_rev_s": 0.624750554561615,
+      "phase": "center",
+      "sample": 1100
+    },
+    {
+      "adaptive_threshold_deg": 0.3131103515625,
+      "baseline_max_deviation_deg": 0.15655517578125,
+      "baseline_peak_velocity_rev_s": 0.07247670739889145,
+      "baseline_samples": 20,
+      "detections": [
+        {
+          "confirmation_response_ms": 25.172624737024307,
+          "exceeds_baseline": false,
+          "first_of_three_response_ms": 15.32249990850687,
+          "previous_response_ms": 10.154458694159985,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 45.50687503069639,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 35.51045898348093,
+          "previous_response_ms": 30.27812484651804,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 45.50687503069639,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 35.51045898348093,
+          "previous_response_ms": 30.27812484651804,
+          "threshold_deg": 0.3131103515625
+        },
+        {
+          "confirmation_response_ms": 50.42320862412453,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 40.37712514400482,
+          "previous_response_ms": 35.51045898348093,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": -1,
+      "final_100ms_inside_fraction": 0.2,
+      "final_100ms_peak_velocity_rev_s": 0.10216543823480606,
+      "final_100ms_position_error_deg": {
+        "max": 0.5072021484374983,
+        "median": 0.33416748046874833,
+        "min": 0.15563964843749833,
+        "p95": 0.49676513671874833,
+        "p99": 0.5051147460937483
+      },
+      "final_dwell_ms": 0.0,
+      "final_entry_ms": 995.7262091338634,
+      "first_entry_ms": 275.78804176300764,
+      "overshoot_deg": 0,
+      "peak_velocity_rev_s": 0.7385885715484619,
+      "phase": "negative",
+      "sample": 1300
+    },
+    {
+      "adaptive_threshold_deg": 0.3570556640625,
+      "baseline_max_deviation_deg": 0.17852783203125,
+      "baseline_peak_velocity_rev_s": 0.10216543823480606,
+      "baseline_samples": 20,
+      "detections": [
+        {
+          "confirmation_response_ms": 36.912666633725166,
+          "exceeds_baseline": false,
+          "first_of_three_response_ms": 26.462124660611153,
+          "previous_response_ms": 22.02799916267395,
+          "threshold_deg": 0.1
+        },
+        {
+          "confirmation_response_ms": 36.912666633725166,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 26.462124660611153,
+          "previous_response_ms": 22.02799916267395,
+          "threshold_deg": 0.25
+        },
+        {
+          "confirmation_response_ms": 41.97179153561592,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 31.88324999064207,
+          "previous_response_ms": 26.462124660611153,
+          "threshold_deg": 0.3570556640625
+        },
+        {
+          "confirmation_response_ms": 61.72599922865629,
+          "exceeds_baseline": true,
+          "first_of_three_response_ms": 51.82704143226147,
+          "previous_response_ms": 46.65433242917061,
+          "threshold_deg": 0.5
+        }
+      ],
+      "direction": 1,
+      "final_100ms_inside_fraction": 0.1,
+      "final_100ms_peak_velocity_rev_s": 0.07028129696846008,
+      "final_100ms_position_error_deg": {
+        "max": -0.142822265625,
+        "median": -0.28839111328125,
+        "min": -0.4339599609375,
+        "p95": -0.148040771484375,
+        "p99": -0.143865966796875
+      },
+      "final_dwell_ms": 0.0,
+      "final_entry_ms": 997.4769167602062,
+      "first_entry_ms": 267.07158237695694,
+      "overshoot_deg": 0,
+      "peak_velocity_rev_s": 0.6920841932296753,
+      "phase": "center",
+      "sample": 1500
+    }
+  ],
+  "source": {
+    "resolved_config": {
+      "accel_limit_rev_s2": 4.0,
+      "controller_id": 1,
+      "cycles": 2,
+      "hold_s": 1.0,
+      "max_torque_nm": 0.1,
+      "sample_rate_hz": 200.0,
+      "settle_s": 0.5,
+      "step_rev": 0.08333333333333333,
+      "velocity_limit_rev_s": 0.5,
+      "watchdog_timeout_s": 0.1
+    },
+    "run_id": "20260920T172343Z_position-step",
+    "sample_count": 1700,
+    "sha256": {
+      "controller-config.txt": "babaa199e269b088fda22a72848d85dad970c287ae0a67dfdb56c248f3a98cf9",
+      "events.csv": "b651dd887f07643e088ecb19c5d7afb7c8f9b27a51716419c349d5535e05c9dd",
+      "run.json": "768d1874d2411bb98079b7202e0fafd95fa32c5938210d4d7aef5840640d2294",
+      "telemetry.csv": "bd06c00161b45f6e04c1f18d5e737200048142c4a1e06d5b2c34b96ca7b456a5"
+    },
+    "software": {
+      "git": {
+        "dirty": true,
+        "revision": "d5cb463948cb06ea6c811be8302f6b4e897265c7"
+      },
+      "moteus": "1.1.1",
+      "project": "0.1.0",
+      "python": "3.12.6"
+    }
+  },
+  "timing": {
+    "request_lateness_ms": {
+      "count_above_10ms": 17,
+      "count_above_5ms": 25,
+      "max": 25.81604182731745,
+      "median": 0.4111665488353289,
+      "min": 0.06891716278989435,
+      "p95": 0.5279623736747673,
+      "p99": 9.408091809300261
+    },
+    "response_gap_ms": {
+      "count_above_10ms": 5,
+      "count_above_5ms": 857,
+      "max": 33.571332693099976,
+      "median": 5.0036245957016945,
+      "min": 1.2806253507733345,
+      "p95": 5.620112642645836,
+      "p99": 5.935671646147966
+    },
+    "response_lateness_ms": {
+      "count_above_10ms": 23,
+      "count_above_5ms": 31,
+      "max": 30.590916760294462,
+      "median": 2.3650416918568062,
+      "min": 1.3327921927706043,
+      "p95": 2.9152187277680985,
+      "p99": 13.618971062938998
+    },
+    "round_trip_ms": {
+      "count_above_10ms": 2,
+      "count_above_5ms": 3,
+      "max": 30.08329216390848,
+      "median": 1.9432087428867817,
+      "min": 1.245083287358284,
+      "p95": 2.395897917449474,
+      "p99": 2.746388716623187
+    }
+  }
+}

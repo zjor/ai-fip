@@ -30,7 +30,7 @@ separate from the `app` package while sharing this Poetry environment.
 ## Project tracking
 
 Simulation work is tracked centrally in
-[docs/project/tasks.md](../../docs/project/tasks.md), currently T-005.A–F and
-T-009–T-012.
+[YouTrack: motor characterization](https://zjor.youtrack.cloud/issue/PNDLM-1) and
+[honest simulation](https://zjor.youtrack.cloud/issue/PNDLM-3).
 The associated curriculum and mastery criteria are in
 [docs/drl/README.md](../../docs/drl/README.md).

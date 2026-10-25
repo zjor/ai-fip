@@ -21,12 +21,15 @@ Rule: `software/` runs on a laptop, `hardware/` runs on the device. Each subproj
 
 ## Project management (read these first for context)
 
+- YouTrack project: [PNDLM](https://zjor.youtrack.cloud/projects/PNDLM). Use this project for AI-FIP issue operations; MCP access is configured in `.codex/config.toml` and `.mcp.json`. Setup details: `docs/project/README.md`.
+
 - `README.md` — vision and Definition of done. Rarely changes.
-- `docs/project/tasks.md` — single source of truth for every unfinished action or open decision. Keep one globally ordered queue across hardware, software, learning and content; do not duplicate task state elsewhere.
+- YouTrack PNDLM is the single source of truth for every unfinished action or open decision. Use Epic → Task and keep one globally ordered queue across hardware, software, learning and content; do not duplicate task state in the repository.
+- `docs/project/tasks.md` — static legacy task ID → YouTrack issue mapping only.
 - `docs/project/roadmap.md` — phases 0–4 with milestones and gates, not fine-grained tasks. The 2026 principle is *hardware feasibility first*: no training code until an honest simulation with real motor limits shows LQR stabilizes the system and stops the wheel.
-- `docs/project/log.md` — dated, append-only journal of completed progress and decisions with rationale. Newest entry on top. Do not add future task lists; put them in `docs/project/tasks.md`.
+- `docs/project/log.md` — dated, append-only journal of completed progress and decisions with rationale. Newest entry on top. Do not add future task lists; put them in YouTrack PNDLM.
 - `docs/project/README.md` — process ownership and update rules.
-- Component READMEs and technical notes provide context only. Link to task IDs instead of maintaining `Status / Next` lists or progress checkboxes.
+- Component READMEs and technical notes provide context only. Link to YouTrack issues (legacy IDs resolve through `docs/project/tasks.md`) instead of maintaining `Status / Next` lists or progress checkboxes.
 
 ## Conventions
 

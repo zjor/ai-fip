@@ -69,5 +69,5 @@ G = 1.11 Nm, I_p = 0.029 kg m², I_w = 0.0027 kg m². These are the
 
 ## Project tracking
 
-CAD and mechanical work is tracked centrally as T-002, T-003 and T-008 in
-[docs/project/tasks.md](../../docs/project/tasks.md).
+CAD and mechanical work is tracked in
+[YouTrack: mechanical, power and sensing design](https://zjor.youtrack.cloud/issue/PNDLM-2).

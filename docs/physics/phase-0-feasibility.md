@@ -225,7 +225,8 @@ $\lambda = \sqrt{G/I_p}$ gives a time constant of 160 ms nominal, 116 ms at the
 fastest corner. Allocating ≤ 10 % to total loop delay and ≤ 5 % to one sample
 period gives **delay ≤ 12 ms and sample rate ≥ 173 Hz**. The sampled nonlinear
 check (`phase0-control --pessimistic --sweep`, r4.11) fails at 50 Hz and passes
-at 75 Hz; fails at 15 ms delay and passes at 10 ms; fails at 2° angle noise with
+at 75 Hz; passes at 15 ms delay and fails at 20 ms (re-run 2026-10-25; an earlier
+run reported failure at 15 ms); fails at 2° angle noise with
 20 °/s rate noise and passes at 1° / 10 °/s. These must be repeated with the
 selected sensor and estimator.
 

@@ -30,5 +30,5 @@ poetry run python -m export.export_model_to_onnx             # models/fip_solver
 ## Project tracking
 
 New RL work is intentionally deferred until the honest-simulation gate passes.
-It is tracked centrally as T-015–T-018 in
-[docs/project/tasks.md](../../docs/project/tasks.md).
+It is tracked in [PPO training](https://zjor.youtrack.cloud/issue/PNDLM-5) and
+[robustness and sim-to-real](https://zjor.youtrack.cloud/issue/PNDLM-6).

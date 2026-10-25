@@ -66,12 +66,29 @@ class FrictionConfig:
 
 
 @dataclass(frozen=True)
+class ResponseTimingConfig:
+    sample_rate_hz: float = 200.0
+    pulse_torque_nm: float = 0.01
+    pulse_s: float = 0.02
+    repetitions_per_direction: int = 2
+    quiet_s: float = 0.25
+    quiet_timeout_s: float = 5.0
+    quiet_velocity_rev_s: float = 0.01
+    quiet_span_rev: float = 0.0005
+    observe_s: float = 0.15
+    response_timeout_s: float = 0.05
+    max_velocity_rev_s: float = 0.25
+    max_excursion_rev: float = 0.05
+
+
+@dataclass(frozen=True)
 class BenchConfig:
     common: CommonConfig
     safety: SafetyConfig
     inspect: InspectConfig
     position_step: PositionStepConfig
     friction: FrictionConfig
+    response_timing: ResponseTimingConfig = ResponseTimingConfig()
 
 
 def _positive(section: dict[str, Any], key: str) -> float:
@@ -90,6 +107,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BenchConfig:
     friction = document["friction"]
 
     config = BenchConfig(
+        response_timing=ResponseTimingConfig(**document.get("response_timing", {})),
         common=CommonConfig(
             controller_id=int(common["controller_id"]),
             watchdog_timeout_s=_positive(common, "watchdog_timeout_s"),

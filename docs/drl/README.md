@@ -2,7 +2,7 @@
 
 This is the curriculum for mastering deep reinforcement learning and 3D
 simulation through AI-FIP. Project progress and current learning actions are
-tracked only in [project/tasks.md](../project/tasks.md); the project phases
+tracked only in [YouTrack PNDLM](https://zjor.youtrack.cloud/projects/PNDLM); the project phases
 and gates live in [project/roadmap.md](../project/roadmap.md).
 
 Principle: learn each concept by building, explaining, and measuring it in the

@@ -2,6 +2,6 @@
 
 ## Project tracking
 
-Web-demo improvements and related content are tracked centrally as T-019 and
-T-020 in [docs/project/tasks.md](../../docs/project/tasks.md). New policy training remains
+Web-demo improvements and related content are tracked in
+[YouTrack: publications and interactive demo](https://zjor.youtrack.cloud/issue/PNDLM-7). New policy training remains
 deferred until the honest-simulation gate passes.

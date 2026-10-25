@@ -29,6 +29,7 @@ The suite will expose one `bench` command from
 ```shell
 poetry run bench inspect
 poetry run bench position-step
+poetry run bench response-timing
 poetry run bench friction
 poetry run bench coast-down
 poetry run bench torque-constant
@@ -55,12 +56,18 @@ Tests are introduced in three safety tiers:
 
 | Tier | Experiments | Mechanical requirement |
 |---|---|---|
-| A | `inspect`, `position-step`, very slow `friction` | Current desk stand; light arrow; clear workspace |
+| A | `inspect`, `position-step`, bounded `response-timing` pilot, very slow `friction` | Current desk stand; light arrow; clear workspace |
 | B | `coast-down`, inertia/acceleration sweeps, moderate-speed tests | Balanced retained rotor/flywheel and a guard; no arrow |
 | C | `torque-constant`, `torque-speed`, `thermal-hold` | Purpose-built restraint/load fixture, independent force or temperature instrumentation, supervised run |
 
 The clock is not reused for Tier B or C: its arrow is unsuitable for meaningful
 speed, torque or thermal characterization.
+
+The [response timing pilot](response-timing-spec.md) uses a quiet zero-torque
+baseline and single watchdog-bounded torque pulses. It temporarily overrides
+the controller timeout mode with verified torque-off behavior, restoring it
+after a confirmed stop; it never persists configuration. Its live abort limits
+and scope are narrower than the Tier-B inertia/acceleration sweeps.
 
 ## 3. Telemetry record
 

@@ -23,7 +23,8 @@ STATE_FIELDS = (
 
 
 def create_controller(
-    controller_id: int, *, include_motor_temperature: bool = False
+    controller_id: int, *, include_motor_temperature: bool = False,
+    timing: bool = False,
 ) -> tuple[Any, Any]:
     import moteus
 
@@ -45,6 +46,9 @@ def create_controller(
     )
     query.home_state = moteus.INT8
     query.trajectory_complete = moteus.INT8
+    if timing:
+        query.q_current = moteus.F32
+        query.power = moteus.IGNORE
     return moteus.Controller(id=controller_id, query_resolution=query), moteus
 
 

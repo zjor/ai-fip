@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .analysis import summarize
 from .config import DEFAULT_CONFIG_PATH, load_config
-from .experiments import friction, inspect, position_step
+from .experiments import friction, inspect, position_step, response_timing
 from .safety import SafetyStop
 
 
@@ -35,6 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "friction", help="record a slow one-revolution outward-and-return sweep"
     )
+    timing_parser = subparsers.add_parser(
+        "response-timing", help="record bounded torque pulses after a quiet baseline"
+    )
+    timing_parser.add_argument("--dry-run", action="store_true",
+                               help="validate and print settings without connecting")
     analyze_parser = subparsers.add_parser(
         "analyze", help="analyze a completed recorded run"
     )
@@ -56,6 +61,11 @@ async def run(args: argparse.Namespace) -> str:
         return await position_step.run(config, output_root, controller_id)
     if args.experiment == "friction":
         return await friction.run(config, output_root, controller_id)
+    if args.experiment == "response-timing":
+        response_timing.validate(config.response_timing, config.safety)
+        if args.dry_run:
+            return response_timing.describe(config.response_timing)
+        return await response_timing.run(config, output_root, controller_id)
     raise ValueError(f"unknown experiment {args.experiment}")
 
 
@@ -63,7 +73,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         output = asyncio.run(run(args))
-        label = "Analysis written" if args.experiment == "analyze" else "Recorded run"
+        label = ("Dry run (no connection)" if getattr(args, "dry_run", False)
+                 else "Analysis written" if args.experiment == "analyze" else "Recorded run")
         print(f"{label}: {output}")
         return 0
     except SafetyStop as exc:

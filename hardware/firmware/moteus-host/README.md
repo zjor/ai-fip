@@ -2,7 +2,7 @@
 
 Control loop for the 2026 build: Raspberry Pi + pi3hat (CAN-FD, IMU) commanding a moteus driver with an mjbots mj5208 motor. Python, LQR first, then the ONNX policy from `software/rl/models/`.
 
-See [docs/hardware/hardware.md → Driver: moteus](../../../docs/hardware/hardware.md) and [docs/project/roadmap.md](../../../docs/project/roadmap.md) Phase 3. Current work is tracked in [docs/project/tasks.md](../../../docs/project/tasks.md).
+See [docs/hardware/hardware.md → Driver: moteus](../../../docs/hardware/hardware.md) and [docs/project/roadmap.md](../../../docs/project/roadmap.md) Phase 3. Current work is tracked in [YouTrack PNDLM](https://zjor.youtrack.cloud/projects/PNDLM).
 
 ## Minute clock
 
@@ -57,6 +57,15 @@ Cut power if the host or CAN adapter itself fails; software stopping is not an
 emergency stop.
 
 ## Bench characterization
+
+The encoder/current timing pilot is available as `poetry run bench
+response-timing`. Preview it without connecting using `poetry run bench
+response-timing --dry-run`. It requires typing `PULSE` before enabling torque,
+uses four short watchdog-bounded pulses and records a quiet baseline per trial.
+Read the [measurement method and operator steps](../../../docs/hardware/response-timing-spec.md)
+before a physical run. Offline analysis lives in `software/sim`, with commands
+in that document; results and remaining work are tracked in
+[PNDLM-8](https://zjor.youtrack.cloud/issue/PNDLM-8).
 
 The T-005.A–F bench suite stores raw runs under the ignored `logs/bench/` directory.
 Tracked safety and experiment defaults are in `bench.toml`; the measurement

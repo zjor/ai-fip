@@ -1,12 +1,14 @@
 .idea
 .DS_Store
 node_modules
-.vscode
 node_modules
 dist
 __pycache__
 .venv
 .pio
+
+# Local credentials
+.env.local
 
 # OpenSCAD renders
 hardware/cad/build/

@@ -40,3 +40,18 @@ settle_s = 1.0
 turnaround_s = 0.5
 move_timeout_s = 65.0
 position_bound_margin_rev = 0.02
+
+[response_timing]
+sample_rate_hz = 200.0
+pulse_torque_nm = 0.02
+pulse_s = 0.02
+repetitions_per_direction = 2
+quiet_s = 0.25
+quiet_timeout_s = 5.0
+# 0.01 is below the encoder velocity noise floor at rest (0.025 rev/s measured 2026-10-25)
+quiet_velocity_rev_s = 0.03
+quiet_span_rev = 0.0005
+observe_s = 0.15
+response_timeout_s = 0.05
+max_velocity_rev_s = 0.8
+max_excursion_rev = 0.05

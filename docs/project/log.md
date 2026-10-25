@@ -1,5 +1,59 @@
 # Project log
 
+**25.10.2026 — PNDLM-8: проведён torque-response pilot на стенде**
+- три завершённых run по четыре импульса ±0.01 / 0.015 / 0.02 Nm × 20 ms;
+  отклик команды хоста виден в телеметрии за 7–13 ms, подтверждение 18–19 ms;
+  граница задана шагом выборки хоста 5.5 ms, а не приводом
+- [отчёт](../hardware/desk-stand-torque-pulse-timing.md) с provenance,
+  таблицей по импульсам, находками по стенду и выводами для симулятора;
+  derived JSON с SHA-256 в `docs/hardware/measurements/20261025-response-timing-*.json`
+- по ходу пилота исправлены четыре дефекта инструмента, порог тихой скорости
+  поднят до 0.03 rev/s, лимит скорости пилота до 0.8 rev/s; спецификация
+  и `phase-0-feasibility.md` (порог провала по задержке 20 ms, не 15) поправлены
+
+**25.10.2026 — PNDLM-8: реализован torque-response pilot**
+- добавлен `bench response-timing` в `hardware/firmware/moteus-host`:
+  quiet baseline, четыре импульса ±0.01 Nm × 20 ms, query-only observation,
+  watchdog torque-off с временным override и проверяемым восстановлением
+- высокочастотный upstream debug stream требует отдельный UART; выбран
+  CAN-пилот с явной host-timing погрешностью без обещания sub-ms точности
+- offline analyzer расположен в `software/sim/app/analyze_response_timing.py`;
+  [методика и команды](../hardware/response-timing-spec.md) описывают пределы
+  измерения и интерпретацию отсутствия обнаружимого отклика
+- прошли 26 bench tests, 4 новых analysis tests и end-to-end проверка
+  fake controller → CSV → analyzer; проверены dry-run и failure cleanup
+- физические команды контроллеру не отправлялись; hardware run не выполнялся
+
+**25.10.2026 — PNDLM-8: обработаны существующие position-step данные**
+- offline-анализ run `20260920T172343Z_position-step`: 1700 samples, 8 moves;
+  [методика и результаты](../hardware/desk-stand-response-timing.md), derived JSON
+  с SHA-256 исходных файлов и воспроизводимый analyzer в `software/sim`
+- CAN RTT median 1.943 ms, p99 2.746 ms, max 30.083 ms; максимальный разрыв
+  между ответами 33.571 ms; эти величины не равны one-way actuator delay
+- обнаружимое направленное перемещение: 21.71–46.55 ms при адаптивном пороге
+  выше pre-step oscillation; чистая задержка привода не идентифицирована
+- уточнение записи 20.09: 267.07–341.88 ms — первое попадание в допуск,
+  не sustained settling; только один move удержал допуск последние ≥100 ms;
+  на двух возвратах к центру найден небольшой overshoot 0.137°
+- аппаратные команды не выполнялись; три теста offline-анализа прошли
+
+**25.10.2026 — backlog перенесён в YouTrack PNDLM**
+- созданы 7 Epic и 23 Task (PNDLM-1–PNDLM-30), настроены parent links и
+  27 явных task dependencies; полные описания сверены с исходным backlog
+- YouTrack стал единственным источником состояния незавершённой работы;
+  `tasks.md` заменён статическим соответствием старых ID и YouTrack issues
+- Now / Next / Later и глобальный порядок сохранены в описаниях задач;
+  отдельные поля или board ordering для очереди пока не настроены
+- обновлены process rules и ссылки; roadmap, технические документы и
+  исторические записи log сохраняют свои роли без дублирования backlog
+
+**25.10.2026 — подключён YouTrack MCP для проекта PNDLM**
+- добавлены настройки Codex и Claude Code по образцу creative-workshop и
+  qr-share; токен хранится в локальном Git-ignored `.env.local`
+- проверены доступ к PNDLM (Pendulum) и MCP initialize; инструкции подключения
+  записаны в `docs/project/README.md`, project scope — в `CLAUDE.md`
+- backlog не переносился; `tasks.md` остаётся источником состояния задач
+
 **25.09.2026 (20) — T-005 разделена по bench setup и измерительным gates**
 - единая T-005 разложена на T-005.A–F: desk-stand timing, guarded rotating
   losses, static torque calibration, loaded torque-speed/voltage, thermal limit

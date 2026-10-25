@@ -1,0 +1,180 @@
+{
+  "analysis_version": 1,
+  "interpretation": "Host command-to-observation detection, NOT pure actuator dead time. Two same-sign consecutive threshold crossings; baseline median and twice maximum deviation. Not detected is not zero delay. Partial runs and timing gaps require review. No device sample timestamp or one-way transport estimate.",
+  "round_trip_ms": {
+    "max": 3.47287580370903,
+    "median": 1.9039157778024673,
+    "min": 1.0458342730998993,
+    "p95": 2.509084716439247,
+    "p99": 2.832567915320397
+  },
+  "source": {
+    "reason": null,
+    "resolved_config": {
+      "controller_id": 1,
+      "max_excursion_rev": 0.05,
+      "max_velocity_rev_s": 0.45,
+      "observe_s": 0.15,
+      "pulse_s": 0.02,
+      "pulse_torque_nm": 0.015,
+      "quiet_s": 0.25,
+      "quiet_span_rev": 0.0005,
+      "quiet_timeout_s": 5.0,
+      "quiet_velocity_rev_s": 0.03,
+      "repetitions_per_direction": 2,
+      "response_timeout_s": 0.05,
+      "sample_rate_hz": 200.0
+    },
+    "run_id": "20261025T114422Z_response-timing",
+    "sample_count": 433,
+    "sha256": {
+      "controller-config.txt": "ac5e79d48cb95f9d985981390b947fadfe4f6d800a81ba4687773cafc55e6dbd",
+      "events.csv": "be94ef243e28ba8dfc116e2dca0dee05cde8dbd8cf7c91bd33b3e7fc7e0e80df",
+      "run.json": "6f4eca28821727223718d32256ed97912c74589630075d2e4fbcf6107bfd2d78",
+      "telemetry.csv": "8399e5887fcac23d4c29e860e42c346d1909a7344019cbb07d786c86813a1e37"
+    },
+    "status": "completed"
+  },
+  "trials": [
+    {
+      "baseline_samples": 48,
+      "max_observation_gap_ms": 6.132500246167183,
+      "pulse_active_samples": 4,
+      "pulse_torque_nm": 0.015,
+      "signals": {
+        "current_a": {
+          "baseline": -0.029947652481496334,
+          "confirmation_response_ms": 18.068209290504456,
+          "first_response_ms": 12.244584038853645,
+          "signed_change": 0.5420195003971457,
+          "status": "detected",
+          "threshold": 0.26212254352867603
+        },
+        "position_rev": {
+          "baseline": 0.01161956787109375,
+          "confirmation_response_ms": 18.068209290504456,
+          "first_response_ms": 12.244584038853645,
+          "signed_change": 0.00075531005859375,
+          "status": "detected",
+          "threshold": 0.0006561279296875
+        },
+        "velocity_rev_s": {
+          "baseline": 0.0031452663242816925,
+          "confirmation_response_ms": 18.068209290504456,
+          "first_response_ms": 12.244584038853645,
+          "signed_change": 0.10125488415360451,
+          "status": "detected",
+          "threshold": 0.05076033994555473
+        }
+      },
+      "timing_gap_exceeds_2_5_periods": false,
+      "trial_id": 0,
+      "watchdog_timeout_observed": true
+    },
+    {
+      "baseline_samples": 48,
+      "max_observation_gap_ms": 6.521707400679588,
+      "pulse_active_samples": 4,
+      "pulse_torque_nm": -0.015,
+      "signals": {
+        "current_a": {
+          "baseline": -0.0559786893427372,
+          "confirmation_response_ms": 12.79408112168312,
+          "first_response_ms": 7.230622693896294,
+          "signed_change": -0.4827842377126217,
+          "status": "detected",
+          "threshold": 0.25870462507009506
+        },
+        "position_rev": {
+          "baseline": 0.01152801513671875,
+          "confirmation_response_ms": 17.840955406427383,
+          "first_response_ms": 12.79408112168312,
+          "signed_change": -0.00060272216796875,
+          "status": "detected",
+          "threshold": 0.0003509521484375
+        },
+        "velocity_rev_s": {
+          "baseline": -0.0005213228723732755,
+          "confirmation_response_ms": 17.840955406427383,
+          "first_response_ms": 12.79408112168312,
+          "signed_change": -0.07769327780988533,
+          "status": "detected",
+          "threshold": 0.04411649671965279
+        }
+      },
+      "timing_gap_exceeds_2_5_periods": false,
+      "trial_id": 1,
+      "watchdog_timeout_observed": true
+    },
+    {
+      "baseline_samples": 47,
+      "max_observation_gap_ms": 6.392918527126312,
+      "pulse_active_samples": 4,
+      "pulse_torque_nm": 0.015,
+      "signals": {
+        "current_a": {
+          "baseline": -0.04838952049612999,
+          "confirmation_response_ms": 12.263583019375801,
+          "first_response_ms": 6.729083135724068,
+          "signed_change": 0.3164663277566433,
+          "status": "detected",
+          "threshold": 0.2842518761754036
+        },
+        "position_rev": {
+          "baseline": 0.0034942626953125,
+          "confirmation_response_ms": 17.56024733185768,
+          "first_response_ms": 12.263583019375801,
+          "signed_change": 0.00079345703125,
+          "status": "detected",
+          "threshold": 0.000335693359375
+        },
+        "velocity_rev_s": {
+          "baseline": 0.000644440995529294,
+          "confirmation_response_ms": 17.56024733185768,
+          "first_response_ms": 12.263583019375801,
+          "signed_change": 0.10681879962794483,
+          "status": "detected",
+          "threshold": 0.05114703765138984
+        }
+      },
+      "timing_gap_exceeds_2_5_periods": false,
+      "trial_id": 2,
+      "watchdog_timeout_observed": true
+    },
+    {
+      "baseline_samples": 48,
+      "max_observation_gap_ms": 7.037168368697166,
+      "pulse_active_samples": 4,
+      "pulse_torque_nm": -0.015,
+      "signals": {
+        "current_a": {
+          "baseline": 0.04369164630770683,
+          "confirmation_response_ms": 18.13979260623455,
+          "first_response_ms": 12.917082756757736,
+          "signed_change": -0.6181062571704388,
+          "status": "detected",
+          "threshold": 0.2938494309782982
+        },
+        "position_rev": {
+          "baseline": 0.01214599609375,
+          "confirmation_response_ms": 18.13979260623455,
+          "first_response_ms": 12.917082756757736,
+          "signed_change": -0.00079345703125,
+          "status": "detected",
+          "threshold": 0.000518798828125
+        },
+        "velocity_rev_s": {
+          "baseline": -0.0011997660622000694,
+          "confirmation_response_ms": 18.13979260623455,
+          "first_response_ms": 12.917082756757736,
+          "signed_change": -0.11490782443434,
+          "status": "detected",
+          "threshold": 0.05062769167125225
+        }
+      },
+      "timing_gap_exceeds_2_5_periods": false,
+      "trial_id": 3,
+      "watchdog_timeout_observed": true
+    }
+  ]
+}

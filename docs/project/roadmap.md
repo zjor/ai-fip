@@ -20,7 +20,8 @@ Policy training не начинается, пока honest simulation с изм�
 после проверки этой модели на реальном устройстве с LQR и swing-up: иначе policy
 будет учиться использовать ошибки симулятора, а не управлять маятником.
 
-Единая очередь конкретных действий и dependencies: [tasks.md](tasks.md).
+Единая очередь конкретных действий и dependencies: [YouTrack PNDLM](https://zjor.youtrack.cloud/projects/PNDLM).
+Соответствие старых task ID: [tasks.md](tasks.md).
 
 ## Phase 0 — Simulation foundations and feasibility math
 

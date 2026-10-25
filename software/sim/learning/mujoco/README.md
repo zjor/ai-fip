@@ -1,7 +1,7 @@
 # MuJoCo learning exercises
 
 Small, cumulative exercises for learning MuJoCo while working toward
-[T-001](../../../../docs/project/tasks.md). Each numbered directory is a runnable
+[T-001 (completed)](../../../../docs/project/log.md). Each numbered directory is a runnable
 snapshot and should remain understandable on its own.
 
 Assets reused by multiple exercises live in [`assets/`](assets/). Exercise MJCF
@@ -35,4 +35,4 @@ Poetry environment.
 
 Add later exercises as new numbered directories instead of rewriting earlier
 ones. Keep observations that are specific to an exercise in that exercise's
-README. Project task state remains in `docs/project/tasks.md`.
+README. Project task state lives in [YouTrack PNDLM](https://zjor.youtrack.cloud/projects/PNDLM).
