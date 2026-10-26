@@ -29,6 +29,10 @@ Project knowledge and process, organized by concept.
 - [DRL outline](drl/outline.md) — problem statement, glossary, model-based vs model-free
 - [Modern simulation and RL stack (2026)](drl/modern-simulation-and-rl-stack-2026.md) — simulator survey, Apple Silicon strategy, policy architecture, parallel training, and sim-to-real plan
 
+## Content
+
+- [Content drafts](content/README.md) — article, post and video-scenario drafts with their figures
+
 ## References
 
 - [Reference papers](references/README.md)
