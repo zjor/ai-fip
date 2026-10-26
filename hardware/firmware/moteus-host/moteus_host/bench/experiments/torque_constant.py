@@ -70,8 +70,14 @@ def validate(cfg: TorqueConstantConfig, limits: SafetyConfig) -> None:
         raise ValueError("ramp_s must be <= 1 s and shorter than plateau_s")
     if cfg.rise_step_s > 2:
         raise ValueError("rise_step_s must be <= 2 s")
+    if cfg.rise_prehold_nm >= cfg.max_rise_torque_nm:
+        raise ValueError("rise_prehold_nm must be below max_rise_torque_nm")
+    if cfg.rise_prehold_s > 1.0:
+        raise ValueError("rise_prehold_s must be <= 1 s")
     if cfg.max_velocity_rev_s > limits.max_abs_velocity_rev_s:
         raise ValueError("max_velocity_rev_s exceeds the Tier-A hard limit")
+    if not cfg.max_velocity_rev_s <= cfg.settle_max_velocity_rev_s <= limits.max_abs_velocity_rev_s:
+        raise ValueError("max_velocity_rev_s <= settle_max_velocity_rev_s <= Tier-A hard limit required")
     if cfg.max_excursion_rev > limits.max_position_excursion_rev:
         raise ValueError("max_excursion_rev exceeds the Tier-A hard limit")
     if cfg.response_timeout_s > 0.1:
@@ -90,14 +96,18 @@ def firmware_kt(settings: dict[str, str]) -> float:
 
 
 def describe(cfg: TorqueConstantConfig, *, rise_time: bool) -> str:
-    stops = (f"stop thresholds: speed {cfg.max_velocity_rev_s:g} rev/s, excursion "
+    stops = (f"stop thresholds: speed {cfg.max_velocity_rev_s:g} rev/s "
+             f"({cfg.settle_max_velocity_rev_s:g} during the first {ENABLE_SETTLE_S + cfg.ramp_s:g} s "
+             f"of a plateau while the lever re-seats), excursion "
              f"{cfg.max_excursion_rev:g} rev, measured current "
              f"{cfg.max_current_a + cfg.current_overshoot_a:g} A, reported torque "
              f"{cfg.max_reported_torque_nm:g} Nm. No timeout-mode override; controller "
              "stopped between plateaus.")
     if rise_time:
         return (f"Torque-constant, rise-time mode: feedforward torque steps up to "
-                f"±{cfg.max_rise_torque_nm:g} Nm for {cfg.rise_step_s:g} s (max 2 s), "
+                f"±{cfg.max_rise_torque_nm:g} Nm for {cfg.rise_step_s:g} s (max 2 s), each from a "
+                f"{cfg.rise_prehold_nm:g} Nm same-sign pre-hold of {cfg.rise_prehold_s:g} s so the "
+                f"step is applied with the controller already in position mode, "
                 f"{cfg.rise_sample_rate_hz:g} Hz requested, rest {cfg.rest_s:g} s, "
                 f"session budget {cfg.session_i2t_budget_a2s:g} A²s. {stops}")
     sequence = ", ".join(f"{v:g}" for v in STANDARD_SEQUENCE_A)
@@ -141,8 +151,11 @@ def parse_entry(text: str, cfg: TorqueConstantConfig, *, rise_time: bool) -> Ent
 
 
 def i2t_cost(entry: Entry, cfg: TorqueConstantConfig) -> float:
-    amps = entry.value if entry.kind == "plateau" else entry.value / cfg.nominal_kt_nm_per_a
-    return amps * amps * entry.duration_s
+    if entry.kind == "plateau":
+        return entry.value * entry.value * entry.duration_s
+    amps = entry.value / cfg.nominal_kt_nm_per_a
+    prehold = cfg.rise_prehold_nm / cfg.nominal_kt_nm_per_a
+    return amps * amps * entry.duration_s + prehold * prehold * cfg.rise_prehold_s
 
 
 def next_suggestion(counts: dict[float, int], sign: int) -> float | None:
@@ -221,9 +234,16 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         return await confirm_stopped(controller, moteus, timeout_s=timeout_s or cfg.response_timeout_s)
 
     async def record(phase: str, trial: int, entry: Entry | None = None, *,
-                     enabling: bool = False, fraction: float = 1.0) -> dict[str, Any]:
-        """One sample; `fraction` scales the plateau torque during the ramp-in."""
-        nonlocal sample
+                     enabling: bool = False, settling: bool = False,
+                     fraction: float = 1.0) -> dict[str, Any]:
+        """One sample; `fraction` scales the plateau torque during the ramp-in.
+
+        The excursion origin is re-anchored on the first sample after it is cleared,
+        so each plateau is judged against the rotor position at its own baseline and
+        not against where the rotor sat at connect time: the enable transient and the
+        operator re-seating the lever on the scale move it while the controller is off.
+        """
+        nonlocal sample, origin
         scheduled = elapsed()
         request = elapsed()
         if entry is None:
@@ -248,6 +268,8 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
             allowed_modes = (0, 10, 11)
         response = elapsed()
         state = result_to_state(result, moteus)
+        if origin is None and math.isfinite(state["position_rev"]):
+            origin = state["position_rev"]
         row = dict(sample=sample, host_time_s=response, scheduled_time_s=scheduled,
                    request_time_s=request, response_time_s=response,
                    experiment_phase=phase, trial_id=trial, **command, **state)
@@ -255,7 +277,8 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         sample += 1
         check_state(state, limits, origin_position_rev=origin,
                     max_position_excursion_rev=cfg.max_excursion_rev,
-                    max_abs_velocity_rev_s=cfg.max_velocity_rev_s)
+                    max_abs_velocity_rev_s=(cfg.settle_max_velocity_rev_s if settling
+                                            else cfg.max_velocity_rev_s))
         for field in ("position_rev", "velocity_rev_s", "q_current_a", "d_current_a",
                       "torque_nm", "controller_temperature_c", "bus_voltage_v"):
             if not math.isfinite(state[field]):
@@ -282,15 +305,15 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         kt_fw = firmware_kt(settings)
         state = await stopped()
         check_state(state, limits)
-        origin = state["position_rev"]
-        if not math.isfinite(origin):
+        if not math.isfinite(state["position_rev"]):
             raise SafetyStop("finite rotor position required")
         # Prove on this controller that the firmware watchdog applies to the
         # command path used for plateaus: one 0 A (0 Nm) command with the
         # per-command watchdog, then silence for 2.5 timeouts must leave the
         # controller in its timeout state (11; 12 if the fallback mode is
         # reported instead), before any torque is ever commanded.
-        probe = await record("watchdog_probe", -1, Entry("plateau", 0.0, 0.0), enabling=True)
+        probe = await record("watchdog_probe", -1, Entry("plateau", 0.0, 0.0),
+                             enabling=True, settling=True)
         await wait_until(time.perf_counter() + 2.5 * watchdog_s)
         probe_mode = result_to_state(await bounded(controller.query()), moteus)["mode"]
         await stopped()
@@ -347,6 +370,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                 print(f"resting {last_end + cfg.rest_s - time.perf_counter():.1f} s", flush=True)
                 await wait_until(last_end + cfg.rest_s)
 
+            origin = None  # re-anchor the excursion check on this plateau's baseline
             baseline_start = time.perf_counter()
             while time.perf_counter() - baseline_start < cfg.baseline_s:
                 tick = time.perf_counter()
@@ -355,10 +379,24 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
 
             recorder.event(elapsed(), "plateau_start", value=entry.value, unit=unit,
                            note=format_note(plateau=trial, kind=entry.kind, value=entry.value,
-                                            duration_s=entry.duration_s))
+                                            duration_s=entry.duration_s,
+                                            origin_rev=round(origin, 5) if origin is not None else None))
             print(f"\a>>> {entry.kind} ON: {entry.value:+g} {unit} for {entry.duration_s:g} s"
                   " — read the scale <<<", flush=True)
             active_rows = []
+            if entry.kind == "step":
+                # Enable the controller on a small same-sign torque first, so the step
+                # itself is applied in mode 10 and measures the current loop, not the
+                # firmware enable sequence. The excursion origin stays at the baseline.
+                prehold = Entry("step", math.copysign(cfg.rise_prehold_nm, entry.value),
+                                cfg.rise_prehold_s)
+                prehold_start = time.perf_counter()
+                while time.perf_counter() - prehold_start < cfg.rise_prehold_s:
+                    tick = time.perf_counter()
+                    since_start = tick - prehold_start
+                    await record("prehold", trial, prehold,
+                                 enabling=since_start < ENABLE_SETTLE_S, settling=True)
+                    await wait_until(tick + period_s)
             active_start = time.perf_counter()
             next_announce = 1.0
             while time.perf_counter() - active_start < entry.duration_s:
@@ -366,7 +404,9 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                 since_start = tick - active_start
                 active_rows.append(await record(
                     entry.kind, trial, entry,
-                    enabling=since_start < ENABLE_SETTLE_S,
+                    enabling=entry.kind == "plateau" and since_start < ENABLE_SETTLE_S,
+                    settling=(entry.kind == "plateau"
+                              and since_start < ENABLE_SETTLE_S + cfg.ramp_s),
                     fraction=min(1.0, since_start / cfg.ramp_s) if entry.kind == "plateau" else 1.0))
                 remaining = entry.duration_s - (time.perf_counter() - active_start)
                 if entry.duration_s - remaining >= next_announce:

@@ -94,10 +94,13 @@ class TorqueConstantConfig:
     max_reported_torque_nm: float = 0.30
     session_i2t_budget_a2s: float = 2500.0
     max_velocity_rev_s: float = 0.05
+    settle_max_velocity_rev_s: float = 0.15
     max_excursion_rev: float = 0.01
     response_timeout_s: float = 0.05
     max_rise_torque_nm: float = 0.05
     rise_step_s: float = 0.5
+    rise_prehold_nm: float = 0.01
+    rise_prehold_s: float = 0.25
     rise_sample_rate_hz: float = 400.0
     nominal_kt_nm_per_a: float = 0.025
 

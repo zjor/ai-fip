@@ -40,6 +40,18 @@ class CoreTest(unittest.TestCase):
         self.assertEqual(r["t95_ms"], 12.5)
         self.assertEqual(r["resolution_ms"], 2.5)
 
+    def test_rise_time_measures_the_change_from_the_prehold_level(self):
+        # Exponential from 0.4 A (pre-hold) to 1.5 A, tau 2 ms, sampled every 0.5 ms.
+        samples = [dict(response_time_s=0.0005 * i,
+                        q_current_a=0.4 + 1.1 * (1 - math.exp(-0.0005 * i / 0.002)))
+                   for i in range(1, 200)]
+        result = rise_time(samples, 0.0, start_a=0.4)
+        self.assertEqual(result["status"], "resolved")
+        self.assertAlmostEqual(result["t63_ms"], 2.0, delta=0.5)
+        self.assertAlmostEqual(result["t95_ms"], 6.0, delta=0.5)
+        from_zero = rise_time(samples, 0.0)
+        self.assertLess(from_zero["t95_ms"], result["t95_ms"])  # from-rest framing is optimistic
+
     def test_rise_time_within_one_sample(self):
         samples = [dict(response_time_s=0.005 * (i + 1), q_current_a=-2.0) for i in range(20)]
         r = rise_time(samples, 0.0)
@@ -79,9 +91,9 @@ TELEMETRY = ("sample", "host_time_s", "scheduled_time_s", "request_time_s", "res
 
 def write_run(directory, *, plateaus, steps=(), kt=0.025, offset_nm=0.001, radius=100.0,
               skip_reading_for=(), status="completed", experiment="torque-constant", offset_a=0.0,
-              gain=1.0):
+              gain=1.0, run_id="20260101T000000Z_torque-constant"):
     """Synthetic run: baseline + plateau rows at 200 Hz, step rows at 400 Hz."""
-    run = Path(directory) / "20260101T000000Z_torque-constant"
+    run = Path(directory) / run_id
     run.mkdir()
     rows, events, t = [], [], 0.0
     mode = "rise_time" if steps and not plateaus else "plateau"
@@ -153,6 +165,17 @@ class AnalyzeTest(unittest.TestCase):
         self.assertIsNone(result["plateaus"][0]["physical_torque_nm"])
         self.assertEqual(len(result["source"]["sha256"]), 4)
 
+    def test_linear_region_fit_uses_only_plateaus_of_two_amps_and_above(self):
+        with tempfile.TemporaryDirectory() as d:
+            result = analyze(write_run(d, plateaus=FULL))
+        for direction in ("positive", "negative"):
+            fit = result["fits"][direction]["linear_region"]
+            self.assertEqual(fit["n"], sum(1 for v in FULL if abs(v) >= 2.0
+                                            and (v > 0) == (direction == "positive")))
+            self.assertAlmostEqual(abs(fit["slope"]), 0.025, places=3)
+        self.assertTrue(result["acceptance"]["kt_symmetry_within_5pct_linear_region"])
+        self.assertAlmostEqual(result["simulator"]["kt_linear_region_per_commanded_a_nm_per_a"], 0.025, places=3)
+
     def test_low_current_fit_selects_by_commanded_current(self):
         with tempfile.TemporaryDirectory() as d:
             result = analyze(write_run(d, plateaus=FULL, offset_a=-0.1))
@@ -196,6 +219,22 @@ class AnalyzeTest(unittest.TestCase):
         self.assertEqual(result["rise_time"][1]["torque_nm"], -0.03)
         self.assertEqual(result["simulator"]["resolution_ms"], 2.5)
         self.assertIsNone(result["radius_mm"])
+
+    def test_pools_runs_recorded_in_separate_sessions(self):
+        positive = [v for v in FULL if v > 0]
+        negative = [v for v in FULL if v < 0]
+        with tempfile.TemporaryDirectory() as d:
+            runs = [write_run(d, plateaus=positive, run_id="A"), write_run(d, plateaus=negative, run_id="B")]
+            single = analyze(runs[0])
+            result = analyze(runs)
+        self.assertEqual(single["fits"]["negative"]["physical"], None)
+        self.assertTrue(result["acceptance"]["four_magnitudes_per_direction"])
+        self.assertTrue(result["acceptance"]["kt_symmetry_within_5pct"])
+        self.assertTrue(result["acceptance"]["no_fault_or_stop"])
+        self.assertEqual([r["run_id"] for r in result["source"]["runs"]], ["A", "B"])
+        self.assertEqual({p["run_id"] for p in result["plateaus"]}, {"A", "B"})
+        self.assertEqual(set(result["radius_mm"]), {"A", "B"})
+        self.assertAlmostEqual(result["simulator"]["kt_nm_per_a"], abs(single["fits"]["positive"]["physical"]["slope"]), places=6)
 
     def test_rejects_other_experiments(self):
         with tempfile.TemporaryDirectory() as d:

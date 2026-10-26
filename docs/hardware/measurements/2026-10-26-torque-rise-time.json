@@ -1,0 +1,230 @@
+{
+  "acceptance": {
+    "four_magnitudes_per_direction": false,
+    "kt_symmetry_within_5pct": false,
+    "kt_symmetry_within_5pct_linear_region": false,
+    "monotonic_negative": false,
+    "monotonic_positive": false,
+    "no_fault_or_stop": true,
+    "repeat_spread_ok": true
+  },
+  "analysis_version": 2,
+  "fits": {
+    "negative": {
+      "commanded": null,
+      "linear_region": null,
+      "low_current": null,
+      "physical": null,
+      "reported": null
+    },
+    "positive": {
+      "commanded": null,
+      "linear_region": null,
+      "low_current": null,
+      "physical": null,
+      "reported": null
+    }
+  },
+  "interpretation": "Physical torque from the compression scale at the measured contact radius is the reference; moteus-reported torque is a comparison channel. Rise times are host-sampled; a value equal to the resolution is an upper bound, not a measurement.",
+  "plateaus": [],
+  "radius_mm": null,
+  "rise_time": [
+    {
+      "prehold_torque_nm": 0.01,
+      "resolution_ms": 2.611,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": 0.09239315594779411,
+      "status": "resolved",
+      "steady_a": 0.45634856598174317,
+      "t63_ms": 12.513749999925494,
+      "t95_ms": 17.796708998503163,
+      "torque_nm": 0.02,
+      "trial_id": 0
+    },
+    {
+      "prehold_torque_nm": 0.01,
+      "resolution_ms": 2.648,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": 0.07730188717664503,
+      "status": "resolved",
+      "steady_a": 0.4607357120001188,
+      "t63_ms": 9.488499999861233,
+      "t95_ms": 14.863249991321936,
+      "torque_nm": 0.02,
+      "trial_id": 1
+    },
+    {
+      "prehold_torque_nm": 0.01,
+      "resolution_ms": 2.636,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": 0.09124603583283412,
+      "status": "resolved",
+      "steady_a": 0.44770318269729614,
+      "t63_ms": 7.47195900476072,
+      "t95_ms": 23.489625004003756,
+      "torque_nm": 0.02,
+      "trial_id": 2
+    },
+    {
+      "prehold_torque_nm": 0.01,
+      "resolution_ms": 2.629,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": 0.1046952330950434,
+      "status": "resolved",
+      "steady_a": 1.5449649069620215,
+      "t63_ms": 7.084750002832152,
+      "t95_ms": 12.600582995219156,
+      "torque_nm": 0.05,
+      "trial_id": 3
+    },
+    {
+      "prehold_torque_nm": 0.01,
+      "resolution_ms": 2.637,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": 0.09564197182861273,
+      "status": "resolved",
+      "steady_a": 1.5402590299907484,
+      "t63_ms": 4.409457993460819,
+      "t95_ms": 12.30770799156744,
+      "torque_nm": 0.05,
+      "trial_id": 4
+    },
+    {
+      "prehold_torque_nm": 0.01,
+      "resolution_ms": 2.629,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": 0.10103642055764794,
+      "status": "resolved",
+      "steady_a": 1.540575048798009,
+      "t63_ms": 7.461959001375362,
+      "t95_ms": 10.087792004924268,
+      "torque_nm": 0.05,
+      "trial_id": 5
+    },
+    {
+      "prehold_torque_nm": -0.01,
+      "resolution_ms": 2.654,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": -0.6399442293542497,
+      "status": "resolved",
+      "steady_a": -1.0079409404003874,
+      "t63_ms": 4.4741250021616,
+      "t95_ms": 7.147166004870087,
+      "torque_nm": -0.02,
+      "trial_id": 6
+    },
+    {
+      "prehold_torque_nm": -0.01,
+      "resolution_ms": 2.636,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": -0.6242193015331917,
+      "status": "resolved",
+      "steady_a": -0.9932405703946163,
+      "t63_ms": 4.517084002145566,
+      "t95_ms": 4.517084002145566,
+      "torque_nm": -0.02,
+      "trial_id": 7
+    },
+    {
+      "prehold_torque_nm": -0.01,
+      "resolution_ms": 2.652,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": -0.639540211317387,
+      "status": "resolved",
+      "steady_a": -0.9976062410756161,
+      "t63_ms": 4.464708006707951,
+      "t95_ms": 4.464708006707951,
+      "torque_nm": -0.02,
+      "trial_id": 8
+    },
+    {
+      "prehold_torque_nm": -0.01,
+      "resolution_ms": 2.639,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": -0.6380982133357421,
+      "status": "resolved",
+      "steady_a": -2.0896791783712243,
+      "t63_ms": 4.360125007224269,
+      "t95_ms": 4.360125007224269,
+      "torque_nm": -0.05,
+      "trial_id": 9
+    },
+    {
+      "prehold_torque_nm": -0.01,
+      "resolution_ms": 2.658,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": -0.620124655835172,
+      "status": "resolved",
+      "steady_a": -2.0942916793207966,
+      "t63_ms": 4.344790999311954,
+      "t95_ms": 4.344790999311954,
+      "torque_nm": -0.05,
+      "trial_id": 10
+    },
+    {
+      "prehold_torque_nm": -0.01,
+      "resolution_ms": 2.62,
+      "run_id": "20261026T180300Z_torque-constant",
+      "start_a": -0.6077179650465647,
+      "status": "resolved",
+      "steady_a": -2.0855363808180156,
+      "t63_ms": 4.474625005968846,
+      "t95_ms": 9.793792007258162,
+      "torque_nm": -0.05,
+      "trial_id": 11
+    }
+  ],
+  "round_trip_ms": {
+    "max": 9.946333011612296,
+    "median": 1.7889585069497116,
+    "min": 0.9082090109586716,
+    "p95": 2.371643295191461,
+    "p99": 2.7230601101473457
+  },
+  "simulator": {
+    "kt_firmware_nm_per_a": 0.027906003671309795,
+    "kt_linear_region_per_commanded_a_nm_per_a": null,
+    "kt_low_current_nm_per_a": null,
+    "kt_nm_per_a": null,
+    "kt_per_commanded_a_nm_per_a": null,
+    "resolution_ms": 2.64,
+    "torque_rate_limit": 23.489625004003756
+  },
+  "source": {
+    "mode": "rise_time",
+    "reason": null,
+    "resolved_config": {
+      "baseline_s": 0.25,
+      "controller_id": 1,
+      "current_overshoot_a": 0.5,
+      "max_current_a": 8.0,
+      "max_excursion_rev": 0.01,
+      "max_plateau_s": 10.0,
+      "max_reported_torque_nm": 0.3,
+      "max_rise_torque_nm": 0.05,
+      "max_velocity_rev_s": 0.05,
+      "mode": "rise_time",
+      "nominal_kt_nm_per_a": 0.025,
+      "plateau_s": 3.0,
+      "ramp_s": 0.25,
+      "response_timeout_s": 0.05,
+      "rest_s": 5.0,
+      "rise_prehold_nm": 0.01,
+      "rise_prehold_s": 0.25,
+      "rise_sample_rate_hz": 400.0,
+      "rise_step_s": 0.5,
+      "sample_rate_hz": 200.0,
+      "session_i2t_budget_a2s": 2500.0,
+      "settle_max_velocity_rev_s": 0.15
+    },
+    "run_id": "20261026T180300Z_torque-constant",
+    "sample_count": 4488,
+    "sha256": {
+      "controller-config.txt": "ac5e79d48cb95f9d985981390b947fadfe4f6d800a81ba4687773cafc55e6dbd",
+      "events.csv": "029d78955efc429810e04a419175431c8859b35c94e845a081771cbb583a5c45",
+      "run.json": "c68cd3590c5e5d476a694ccae7141618845c770080bc2f78407fd137e82eb56c",
+      "telemetry.csv": "4d2423df0cba3761a083f613363ac3c4c09d018e200b5dcbb9d3e7a910e9c1e7"
+    },
+    "status": "completed"
+  }
+}

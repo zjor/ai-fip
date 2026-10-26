@@ -198,8 +198,11 @@ with zero gains is not torque-free on this controller. Right after the enable
 the motor applied about −0.46 A (−0.013 Nm reported) for roughly 100 ms, and at
 rest it keeps a reported +0.1 to +0.2 A (+0.003 to +0.005 Nm); the firmware
 torque path (`ISR_DoPositionCommon`: PID × 0 + feedforward 0 + inertia term 0)
-commands zero, so the mechanism is in the current loop or its sensing and is
-not identified. On a balanced lever this pulse lifted the lever 7.7° off the
+commands zero. **Identified on 2026-10-26 (§9.2): it is the anticogging
+feedforward** (`motor.cogging_dq_scale` 0.00879 × a 1024-entry table calibrated
+2026-09-20), a position-dependent q-current of −1.12 to +0.90 A over one
+revolution, about −0.27 A at the fixture position. On a balanced lever this
+pulse lifted the lever 7.7° off the
 scale and tripped the velocity stop (data:
 [2026-10-25-zero-torque-probe.csv](measurements/2026-10-25-zero-torque-probe.csv),
 script `hardware/firmware/moteus-host/tools/zero_torque_probe.py`).
@@ -208,6 +211,15 @@ or the lever needs a preload of at least 30 g at 105 mm (twice the 12.6 g
 equivalent of the pulse) so it stays in contact; the first 20 % of each plateau
 (0.6 s) is already excluded from the fit, which covers the transient; the
 steady residual appears in the fit intercept and in the 0 A plateau reading.
+
+**Per-plateau safety origin and settle window (2026-10-26).** The excursion
+check is re-anchored on each plateau's baseline, because the enable transient
+and the operator re-seating the lever move the rotor while the controller is
+stopped; motion during a plateau is still limited to 0.01 rev. During the
+first 50 ms + `ramp_s` of a plateau the velocity limit is relaxed to
+`settle_max_velocity_rev_s` (0.15 rev/s): the lever lifted by the anticogging
+current drops back onto the scale at 0.05–0.06 rev/s over about 2 mrev. Skip
+the 0 A plateau: with anticogging on it lifts the lever and trips the stop.
 
 ## 6. Software
 
@@ -254,7 +266,15 @@ resolved settings without connecting.
 it sends feedforward torque steps through the same command path as the
 pendulum controller (`set_position` with zero gains and `feedforward_torque`),
 capped at `max_rise_torque_nm` (0.05 Nm) for `rise_step_s` (0.5 s), sampling at
-`rise_sample_rate_hz` (400 Hz requested). No scale readings are asked. The
+`rise_sample_rate_hz` (400 Hz requested). Each step is preceded by a same-sign
+pre-hold of `rise_prehold_nm` (0.01 Nm) for `rise_prehold_s` (0.25 s), so the
+controller is already in position mode when the step is applied: a step from
+the stopped state measured the firmware enable sequence (modes 2–3, about
+15 ms) instead of the current loop (runs 174421Z and 175101Z, 2026-10-26). The
+analyzer measures the rise from the pre-hold level. Seat the lever by hand on
+the loaded contact before a step; on the side with the smaller pre-hold
+preload the measured current creeps for 10–20 ms while the fixture settles,
+which is mechanical. No scale readings are asked. The
 host sees only CAN replies, so a rise time equal to the sample spacing is an
 upper bound, not a measurement; the analyzer reports `"none within one
 sample"` when every step reaches 95 % of its steady current in the first
@@ -262,17 +282,21 @@ sample.
 
 ### 6.2 Offline analysis
 
-`software/sim/app/analyze_torque_constant.py` converts every reading to torque
+`software/sim/app/analyze_torque_constant.py` takes one or more run
+directories (several are pooled, every plateau tagged with its run ID, every
+run listed with its SHA-256 hashes), converts every reading to torque
 at that side's radius, fits $\tau = K_t I_q + b$ per direction against measured
 q-current with standard errors and residual RMS, repeats the fit against
-moteus-reported torque and against the *commanded* current (the first 0.5 A
-plateau on 2026-10-25 measured only 0.24 A, so torque per commanded amp and
-per measured amp differ), fits the low-current points (commanded 0.5 A and
-1 A) separately, evaluates the acceptance flags of section 7, computes rise
-times to 63 % and 95 % for step trials, and writes one JSON with SHA-256
-hashes of the raw files. The `simulator` block carries the values the
+moteus-reported torque and against the *commanded* current (measured current
+is commanded current plus the anticogging feedforward, §9.2, so torque per
+commanded amp is the gain a torque request gets), fits the low-current points
+(commanded ≤ 1 A) and the linear region (commanded ≥ 2 A, above the seating
+dead band) separately, evaluates the acceptance flags of section 7, computes
+rise times to 63 % and 95 % for step trials from the pre-hold level, and
+writes one JSON. The `simulator` block carries the values the
 simulator needs: $K_t$ per measured amp, $K_t$ per commanded amp
-(`kt_per_commanded_a_nm_per_a`, the gain a torque request actually gets),
+(`kt_per_commanded_a_nm_per_a`), the linear-region $K_t$ per commanded amp
+(`kt_linear_region_per_commanded_a_nm_per_a`, the reference value),
 low-current $K_t$, firmware $K_t$ (8.27/Kv) for comparison, and
 `torque_rate_limit`: the largest 95 % rise time in milliseconds, the string
 `"none within one sample"` when every step reached 95 % in its first sample,
@@ -313,3 +337,88 @@ approved for the published 1.7 Nm peak, continuous stall/thermal testing or
 rotating torque-speed work. Those tests require a reviewed restraint, motor
 temperature instrumentation and, for rotating tests, a retained balanced rotor
 and guard.
+
+## 9. Results, 2026-10-26
+
+Data: [2026-10-26-torque-constant.json](measurements/2026-10-26-torque-constant.json)
+(55 readings, 7 runs, 105 mm radius both sides, scale resolution 0.1 g) and
+[2026-10-26-torque-rise-time.json](measurements/2026-10-26-torque-rise-time.json)
+(12 steps with pre-hold). Task: [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9).
+
+### 9.1 Torque constant
+
+| fit, physical torque per **commanded** ampere | positive | negative |
+|---|---|---|
+| linear region, 2–6 A | 0.02447 ± 0.00027 Nm/A (n = 19) | 0.02441 ± 0.00022 Nm/A (n = 18) |
+| all points, 0.25–6 A | 0.02357 ± 0.00019 Nm/A (n = 28) | 0.02498 ± 0.00014 Nm/A (n = 27) |
+| per measured ampere, all points | 0.02327 ± 0.00018 Nm/A | 0.02462 ± 0.00014 Nm/A |
+| firmware, 8.27 / Kv 296.35 | 0.02791 Nm/A | |
+
+**$K_t$ = 0.0244 ± 0.0005 Nm/A** (linear region, both directions agree within
+0.3 %; the ± covers the fit error, the 0.1 g scale resolution, a ±1 mm radius
+and the choice of fit region). It is 87.5 % of the firmware constant. Residual
+RMS 1.3–1.6 mNm (1.5 g). Repeats agree within 1–3 g at every magnitude.
+
+Below 2 A the two sides bend differently and the all-points slopes differ by
+5.8 %: the readings carry a constant offset of about 8.5 g (8.8 mNm) between
+the sides at every load from 3 to 6 A, i.e. ±4.4 mNm around the common line,
+plus a seating dead band of about 0.3 A. Candidates for the constant: gravity
+on the H-shaped lever (4.5 g more mass on one leg) or an anticogging residual at
+this rotor position; the scale (coins 3.6–9.7 g read within 0.1 g) and the
+radius (identical slopes) are excluded. Not separated; see §10 for the
+assumption.
+
+Acceptance (§7): monotonic both sides, repeats within tolerance, four
+magnitudes per direction, symmetry within 5 % in the linear region (not in
+the all-points fit, documented above), raw data preserved. Four of the seven
+runs ended in a safety stop; none was fixture motion under load (one operator
+sign typo, two lever re-seating events before the settle window existed, one
+unseated lever on the gap side), and the readings taken before each stop are
+valid. The 8 A plateau was skipped: the fixture yields at about 216 g.
+
+### 9.2 Anticogging, not a current shortfall
+
+The constant "measured current 0.25 A below the command" of 2026-10-25 is the
+moteus anticogging feedforward. At every plateau the measured minus commanded
+current equals the interpolated `motor.cogging_dq_comp` table at the rotor
+position within 0.01 A, including its drift as the fixture compresses under
+load (−0.27 A at rest, −0.20 A at +6 A, −0.34 A at −6 A) and its sign change
+when the lever moved freely to another position (+0.22 A). The current loop
+delivers exactly command plus table. The table spans −1.12 to +0.90 A (−27 to
++22 mNm with the measured $K_t$); at the fixture position it is steep, 0.5 A
+over 1.8° mechanical.
+
+### 9.3 Rise time
+
+With the pre-hold, the step from −0.01 to −0.05 Nm reached 95 % of its change
+by the first sample after the command, 4.4 ms, at 2.6 ms host resolution; the
+loop is at least that fast. Positive steps crept for 10–23 ms while the
+barely preloaded lever settled, a mechanical effect. Steps from the stopped
+state include the firmware enable sequence (modes 2–3, about 15 ms) before any
+torque is applied, which explains the 60–80 % current shortfall seen in the
+20 ms pulses of the PNDLM-8 pilot.
+
+## 10. Simulator-facing parameters
+
+Assumptions adopted on 2026-10-26 to close PNDLM-9 without further bench work:
+
+- **Torque gain.** A torque request $T$ delivers $0.875\,T$ ($K_t$ 0.0244 vs
+  firmware 0.0279 Nm/A); no offset in the gain. Either model the gain in the
+  simulator or divide the host's torque command by 0.875.
+- **Torque rate limit: none** within one control sample at 100–200 Hz; model
+  torque as instantaneous. The controller must stay in position mode
+  continuously: an enable from stop costs about 15 ms.
+- **Low-current $K_t$:** the same 0.0244 Nm/A. The bend below 2 A on the
+  fixture is a seating dead band plus a constant, not a change of slope.
+- **Torque disturbance.** Keep anticogging enabled; without it the cogging
+  torque is up to ±27 mNm with 84 periods per revolution. With it, assume a
+  residual position-dependent torque of up to **±5 mNm** (the unresolved
+  constant of §9.1 taken as controller-side, worst case). It is 1.5 % of the
+  0.33 Nm needed to hold 20° and about 0.3° of equivalent pendulum offset, so
+  the LQR with wheel-speed feedback must reject it; it is not a feasibility
+  risk.
+- **Budget (Phase 0 gate).** Continuous 12 A → 0.29 Nm (needs ≥ 0.20); the
+  1.7 Nm peak needs about 70 A (inside the r4.11 100 A peak); 20° hold 0.33 Nm
+  at 13.5 A. The gate still passes.
+- Not measured: thermal limits (no motor thermistor), $K_t$ above 6 A, $K_t$ at
+  other rotor positions.

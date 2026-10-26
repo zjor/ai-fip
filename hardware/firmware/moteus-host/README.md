@@ -76,16 +76,22 @@ terminal bell and countdown, the controller stops, and you type the scale
 reading in grams. The plateau is sent as position-mode feedforward torque
 (amps × 8.27 / `motor.Kv`, zero gains) because the moteus firmware watchdog
 does not cover current mode; the fit uses the measured Q-current. `q` quits. Readings and radii go to `events.csv` next to the
-telemetry. `--rise-time` switches to feedforward torque steps (≤0.05 Nm) for the
-q-current rise-time question and asks for no scale readings. Operator steps,
+telemetry. Skip the 0 A plateau: the anticogging feedforward lifts the lever
+at zero command. The excursion check is anchored on each plateau's own
+baseline, so re-seating the lever by hand between plateaus is fine; during the
+first 0.3 s of a plateau the velocity limit is relaxed while the lever drops
+back onto the scale. `--rise-time` switches to feedforward torque steps
+(≤0.05 Nm) from a 0.01 Nm same-sign pre-hold for the q-current rise-time
+question and asks for no scale readings. Operator steps,
 limits and the I²t budget are in the
-[fixture spec](../../../docs/hardware/motor-torque-fixture-spec.md); the task
+[fixture spec](../../../docs/hardware/motor-torque-fixture-spec.md); results
+are in its §9–10; the task
 is [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9). Offline analysis, from
-`software/sim`:
+`software/sim`; several run directories are pooled into one fit:
 
 ```shell
 poetry run python -m app.analyze_torque_constant \
-  ../../hardware/firmware/moteus-host/logs/bench/<run-id> \
+  ../../hardware/firmware/moteus-host/logs/bench/<run-id> [<run-id> ...] \
   --output ../../docs/hardware/measurements/<date>-torque-constant.json
 ```
 

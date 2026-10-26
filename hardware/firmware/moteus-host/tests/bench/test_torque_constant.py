@@ -44,8 +44,15 @@ class FakeController:
 
     def __init__(self, clock, *, gain=1.0, offset=0.0, velocity=0.0,
                  fail_command=False, fail_stop=False, timeout_enabled=True, cancel_on_call=None,
-                 calibrating_s=0.0):
+                 calibrating_s=0.0, hand_move_rev=0.0, creep_rev=0.0,
+                 settle_velocity_rev_s=None, settle_velocity_s=0.0):
         self.clock, self.gain, self.offset, self.velocity = clock, gain, offset, velocity
+        # settle_velocity_rev_s: reported velocity for settle_velocity_s after an enable
+        # (the lever lifted by the enable transient dropping back onto the scale).
+        self.settle_velocity_rev_s, self.settle_velocity_s = settle_velocity_rev_s, settle_velocity_s
+        # hand_move_rev: the operator re-seats the rotor after every stop (controller off).
+        # creep_rev: the rotor moves this much on every torque command (fixture yielding).
+        self.hand_move_rev, self.creep_rev, self.position = hand_move_rev, creep_rev, 0.0
         self.fail_command, self.fail_stop = fail_command, fail_stop
         self.timeout_enabled, self.cancel_on_call = timeout_enabled, cancel_on_call
         self.calibrating_s = calibrating_s  # firmware mode 3 for this long after an enable
@@ -60,7 +67,11 @@ class FakeController:
         if self.timeout_enabled and self.clock.now >= self.expires and self.mode in (9, 10):
             self.mode = 11
         q = self.q if self.mode in (9, 10) else self.offset
-        values = dict(MODE=self.mode, FAULT=0, POSITION=0.0, VELOCITY=self.velocity,
+        velocity = self.velocity
+        if (self.settle_velocity_rev_s is not None and self.mode != 0
+                and self.clock.now - self.enabled_at < self.settle_velocity_s):
+            velocity = self.settle_velocity_rev_s
+        values = dict(MODE=self.mode, FAULT=0, POSITION=self.position, VELOCITY=velocity,
                       TORQUE=self.KT * q, Q_CURRENT=q, D_CURRENT=0.0, VOLTAGE=24.0,
                       TEMPERATURE=25.0, HOME_STATE=1, TRAJECTORY_COMPLETE=1)
         return SimpleNamespace(values={getattr(moteus.Register, k): v for k, v in values.items()})
@@ -78,6 +89,7 @@ class FakeController:
         if self.mode == 0:
             self.mode, self.enabled_at = 3, self.clock.now  # enabling -> calibrating
         self.q = self.gain * kwargs["feedforward_torque"] / self.KT + self.offset
+        self.position += self.creep_rev
         self.expires = self.clock.now + kwargs["watchdog_timeout"]
         return self.result()
 
@@ -92,6 +104,7 @@ class FakeController:
             raise TimeoutError("stop response lost")
         reply = self.result()  # stale mode, like the real firmware
         self.mode = 0
+        self.position += self.hand_move_rev
         return reply
 
     async def query(self):
@@ -103,7 +116,8 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
                       snapshot="servo.default_timeout_s 0.1\nmotor.Kv 330.797\n", **overrides):
         controller_kwargs = {k: overrides.pop(k) for k in
                              ("velocity", "fail_command", "fail_stop", "timeout_enabled", "cancel_on_call",
-                              "calibrating_s")
+                              "calibrating_s", "hand_move_rev", "creep_rev",
+                              "settle_velocity_rev_s", "settle_velocity_s")
                              if k in overrides}
         config = load_config()
         defaults = dict(plateau_s=0.1, rest_s=0.05, baseline_s=0.02, rise_step_s=0.05, ramp_s=0.02)
@@ -190,6 +204,40 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(controller.amps, [0.0])
         self.assertEqual(meta["status"], "aborted")
 
+    async def test_hand_reseating_between_plateaus_is_not_an_excursion(self):
+        # The probe transient and the operator re-seating the lever move the rotor
+        # while the controller is stopped; each plateau is judged from its own baseline.
+        answers = ["100", "100", "", "LEVER", "0.5", "7", "", "1", "20", "", "q"]
+        controller, meta, _, events = await self.execute(answers, hand_move_rev=0.02,
+                                                         max_excursion_rev=0.01)
+        self.assertEqual(meta["status"], "completed")
+        starts = [parse_note(e["note"]) for e in events if e["event"] == "plateau_start"]
+        self.assertEqual([float(n["origin_rev"]) for n in starts], [0.06, 0.08])
+
+    async def test_lever_reseating_during_ramp_is_tolerated(self):
+        # ENABLE_SETTLE_S + ramp_s = 0.07 s window; the lever drops back at 0.1 rev/s for 0.06 s.
+        controller, meta, _, _ = await self.execute(
+            ["100", "100", "", "LEVER", "0.5", "8", "", "q"],
+            settle_velocity_rev_s=0.1, settle_velocity_s=0.06,
+            max_velocity_rev_s=0.05, settle_max_velocity_rev_s=0.15)
+        self.assertEqual(meta["status"], "completed")
+
+    async def test_velocity_after_the_settle_window_still_stops(self):
+        controller, meta, _, _ = await self.execute(
+            ["100", "100", "", "LEVER", "0.5"],
+            settle_velocity_rev_s=0.1, settle_velocity_s=0.09,
+            max_velocity_rev_s=0.05, settle_max_velocity_rev_s=0.15, expected_error=SafetyStop)
+        self.assertEqual(meta["status"], "safety_stop")
+        self.assertEqual(controller.mode, 0)
+
+    async def test_motion_during_plateau_still_stops(self):
+        # 0.1 s plateau at 1 ms per sample: 0.0005 rev per command passes 0.01 rev in ~20 samples.
+        controller, meta, _, _ = await self.execute(["100", "100", "", "LEVER", "4"],
+                                                    creep_rev=0.0005, max_excursion_rev=0.01,
+                                                    expected_error=SafetyStop)
+        self.assertEqual(meta["status"], "safety_stop")
+        self.assertEqual(controller.mode, 0)
+
     async def test_lost_response_during_plateau_stops(self):
         controller, meta, _, _ = await self.execute(["100", "100", "", "LEVER", "4"],
                                                     fail_command=True, expected_error=TimeoutError)
@@ -265,7 +313,7 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
         controller, meta, rows, events = await self.execute(["LEVER", "0.03", "-0.03", "q"], rise_time=True)
         self.assertEqual(meta["status"], "completed")
         steps = [p["feedforward_torque"] for p in controller.positions]
-        self.assertEqual(sorted(set(steps)), [-0.03, 0.0, 0.03])  # 0.0 is the watchdog probe
+        self.assertEqual(sorted(set(steps)), [-0.03, -0.01, 0.0, 0.01, 0.03])  # 0.0: watchdog probe
         self.assertTrue(all(p["kp_scale"] == p["kd_scale"] == p["ilimit_scale"] == 0
                             for p in controller.positions))
         self.assertEqual(controller.currents, [])
@@ -273,6 +321,29 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(any(e["event"] == "scale_reading" for e in events))
         self.assertTrue(any(r["experiment_phase"] == "step" for r in rows))
         self.assertEqual(meta["resolved_config"]["mode"], "rise_time")
+
+    async def test_rise_time_step_is_applied_from_a_same_sign_prehold_in_mode_10(self):
+        controller, meta, rows, _ = await self.execute(["LEVER", "0.03", "-0.03", "q"], rise_time=True,
+                                                       calibrating_s=0.01, rise_prehold_s=0.03)
+        self.assertEqual(meta["status"], "completed")
+        for trial, sign in ((0, 1), (1, -1)):
+            mine = [r for r in rows if int(r["trial_id"]) == trial and r["experiment_phase"] in ("prehold", "step")]
+            phases = [r["experiment_phase"] for r in mine]
+            self.assertEqual(phases.index("step"), phases.count("prehold"))  # every prehold precedes the step
+            prehold = [r for r in mine if r["experiment_phase"] == "prehold"]
+            step = [r for r in mine if r["experiment_phase"] == "step"]
+            self.assertEqual({float(r["feedforward_torque_nm"]) for r in prehold}, {sign * 0.01})
+            self.assertEqual({float(r["feedforward_torque_nm"]) for r in step}, {sign * 0.03})
+            self.assertIn("3", [r["mode"] for r in prehold])  # the enable sequence lands in the pre-hold
+            self.assertEqual({r["mode"] for r in step}, {"10"})
+
+    async def test_enable_sequence_during_step_itself_stops(self):
+        # A pre-hold too short for the firmware calibration leaves the step in mode 3.
+        controller, meta, _, _ = await self.execute(["LEVER", "0.03"], rise_time=True,
+                                                    calibrating_s=0.02, rise_prehold_s=0.01,
+                                                    expected_error=SafetyStop)
+        self.assertEqual(meta["status"], "safety_stop")
+        self.assertIn("mode 3", meta["reason"])
 
     def test_cli_dry_run_does_not_connect(self):
         with patch.object(torque_constant, "create_controller") as create:
@@ -330,7 +401,8 @@ class HelperTest(unittest.TestCase):
 
     def test_i2t_cost(self):
         self.assertAlmostEqual(i2t_cost(Entry("plateau", 4.0, 3.0), self.cfg), 48.0)
-        self.assertAlmostEqual(i2t_cost(Entry("step", 0.05, 0.5), self.cfg), (0.05 / 0.025) ** 2 * 0.5)
+        self.assertAlmostEqual(i2t_cost(Entry("step", 0.05, 0.5), self.cfg),
+                               (0.05 / 0.025) ** 2 * 0.5 + (0.01 / 0.025) ** 2 * 0.25)  # step + pre-hold
 
     def test_next_suggestion_walks_standard_sequence(self):
         self.assertEqual(next_suggestion({}, 1), 0.0)

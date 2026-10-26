@@ -3,6 +3,10 @@
 Physical torque from the compression scale at the measured contact radius is
 the reference; moteus-reported torque is a comparison channel. Rise times are
 host-sampled: a value equal to the resolution is an upper bound.
+
+Several run directories can be pooled into one analysis (for example the
+positive side and the negative side recorded in separate sessions); every
+plateau and step is tagged with its run ID and the provenance lists every run.
 """
 
 from __future__ import annotations
@@ -49,20 +53,24 @@ def fit_line(x: list[float], y: list[float]) -> dict:
                 residual_rms=math.sqrt(sse / n), n=n)
 
 
-def rise_time(samples: list[dict], t0: float, *, settle_fraction: float = 0.5) -> dict:
+def rise_time(samples: list[dict], t0: float, *, settle_fraction: float = 0.5,
+              start_a: float = 0.0) -> dict:
+    """Time to 63 % and 95 % of the change from `start_a` (the pre-hold level, 0 if the
+    step was applied from rest) to the settled current."""
     times = [s["response_time_s"] for s in samples]
     currents = [s["q_current_a"] for s in samples]
     tail = currents[max(0, int(len(currents) * (1.0 - settle_fraction))):] or currents
     steady = statistics.fmean(tail)
+    change = steady - start_a
     spacing = [b - a for a, b in zip(times, times[1:])]
     resolution_ms = round(1000.0 * statistics.median(spacing), 3) if spacing else None
-    result = dict(steady_a=steady, t63_ms=None, t95_ms=None, resolution_ms=resolution_ms,
-                  status="not_reached")
-    if steady == 0.0:
+    result = dict(steady_a=steady, start_a=start_a, t63_ms=None, t95_ms=None,
+                  resolution_ms=resolution_ms, status="not_reached")
+    if change == 0.0:
         return result
     for key, fraction in (("t63_ms", 0.63), ("t95_ms", 0.95)):
         for index, value in enumerate(currents):
-            if abs(value) >= fraction * abs(steady) and value * steady > 0:
+            if (value - start_a) * change >= fraction * change * change:
                 result[key] = 1000.0 * (times[index] - t0)
                 if key == "t95_ms":
                     result["status"] = "within_one_sample" if index == 0 else "resolved"
@@ -172,8 +180,13 @@ def _fits(plateaus: list[dict]) -> dict:
         # Selected by commanded magnitude: a zero-current offset must not drop the 1 A plateaus.
         low = [(p["mean_q_current_a"], p["physical_torque_nm"]) for p in read
                if abs(p["command_a"]) <= 1.0]
+        # Linear region, per commanded amp: above the ~0.3 A seating dead band and the
+        # constant fixture/cogging offset that dominate the readings below 2 A (2026-10-26).
+        linear = [(p["command_a"], p["physical_torque_nm"]) for p in read
+                  if abs(p["command_a"]) >= 2.0]
         fits[direction] = dict(physical=_fit_or_none(physical), reported=_fit_or_none(reported),
-                               low_current=_fit_or_none(low), commanded=_fit_or_none(commanded))
+                               low_current=_fit_or_none(low), commanded=_fit_or_none(commanded),
+                               linear_region=_fit_or_none(linear))
     return fits
 
 
@@ -195,10 +208,11 @@ def _acceptance(plateaus: list[dict], fits: dict, status: str) -> dict:
         magnitudes_ok &= len([k for k in groups if k > 0.0]) >= 4
     result["repeat_spread_ok"] = spread_ok
     result["four_magnitudes_per_direction"] = magnitudes_ok
-    slopes = [fits[d]["physical"]["slope"] for d in ("positive", "negative") if fits[d]["physical"]]
-    result["kt_symmetry_within_5pct"] = (
-        len(slopes) == 2 and abs(abs(slopes[0]) - abs(slopes[1]))
-        <= 0.05 * statistics.fmean(abs(s) for s in slopes))
+    for key, flag in (("physical", "kt_symmetry_within_5pct"),
+                      ("linear_region", "kt_symmetry_within_5pct_linear_region")):
+        slopes = [fits[d][key]["slope"] for d in ("positive", "negative") if fits[d][key]]
+        result[flag] = (len(slopes) == 2 and abs(abs(slopes[0]) - abs(slopes[1]))
+                        <= 0.05 * statistics.fmean(abs(s) for s in slopes))
     result["no_fault_or_stop"] = status == "completed"
     return result
 
@@ -207,8 +221,12 @@ def _rise_times(rows: list[dict]) -> list[dict]:
     results = []
     for trial in sorted({r["trial_id"] for r in rows if r["experiment_phase"] == "step"}):
         step = [r for r in rows if r["trial_id"] == trial and r["experiment_phase"] == "step"]
+        prehold = [r for r in rows if r["trial_id"] == trial and r["experiment_phase"] == "prehold"]
+        settled = prehold[len(prehold) // 2:]
+        start = statistics.fmean(r["q_current_a"] for r in settled) if settled else 0.0
         results.append(dict(trial_id=trial, torque_nm=step[0]["feedforward_torque_nm"],
-                            **rise_time(step, step[0]["request_time_s"])))
+                            prehold_torque_nm=prehold[0]["feedforward_torque_nm"] if prehold else None,
+                            **rise_time(step, step[0]["request_time_s"], start_a=start)))
     return results
 
 
@@ -220,15 +238,35 @@ def _firmware_kt(run: Path) -> float | None:
     return None
 
 
-def analyze(run: Path) -> dict:
-    metadata, rows, events = load_run(run)
-    radii = {e["event"]: _float(e["value"]) for e in events
-             if e["event"] in ("radius_positive_mm", "radius_negative_mm")}
-    radius = (dict(positive=radii["radius_positive_mm"], negative=radii["radius_negative_mm"])
-              if len(radii) == 2 else None)
-    plateaus = _plateaus(rows, events, radius)
+def _source(run: Path, metadata: dict, rows: list[dict]) -> dict:
+    return dict(run_id=metadata["run_id"], status=metadata["status"], reason=metadata.get("reason"),
+                mode=metadata["resolved_config"].get("mode"), sample_count=len(rows),
+                resolved_config=metadata["resolved_config"],
+                sha256={name: hashlib.sha256((run / name).read_bytes()).hexdigest()
+                        for name in FILES})
+
+
+def analyze(run: Path | list[Path]) -> dict:
+    runs = [run] if isinstance(run, Path) else list(run)
+    if not runs:
+        raise ValueError("at least one run directory is required")
+    sources, radii_by_run, plateaus, rises, all_rows = [], {}, [], [], []
+    for path in runs:
+        metadata, rows, events = load_run(path)
+        radii = {e["event"]: _float(e["value"]) for e in events
+                 if e["event"] in ("radius_positive_mm", "radius_negative_mm")}
+        radius = (dict(positive=radii["radius_positive_mm"], negative=radii["radius_negative_mm"])
+                  if len(radii) == 2 else None)
+        run_id = metadata["run_id"]
+        sources.append(_source(path, metadata, rows))
+        radii_by_run[run_id] = radius
+        plateaus += [dict(run_id=run_id, **p) for p in _plateaus(rows, events, radius)]
+        rises += [dict(run_id=run_id, **r) for r in _rise_times(rows)]
+        all_rows += rows
+    run, rows = runs[0], all_rows
+    radius = radii_by_run[sources[0]["run_id"]] if len(runs) == 1 else radii_by_run
+    status = "completed" if all(s["status"] == "completed" for s in sources) else "incomplete"
     fits = _fits(plateaus)
-    rises = _rise_times(rows)
     step_rows = [r for r in rows if r["experiment_phase"] == "step"]
     spacing = [b["response_time_s"] - a["response_time_s"]
                for a, b in zip(step_rows, step_rows[1:])
@@ -246,17 +284,16 @@ def analyze(run: Path) -> dict:
         reached = [r["t95_ms"] for r in rises if r["t95_ms"] is not None]
         rate_limit = max(reached) if reached else "not reached"
     return dict(
-        analysis_version=1,
-        source=dict(run_id=metadata["run_id"], status=metadata["status"], reason=metadata.get("reason"),
-                    mode=metadata["resolved_config"].get("mode"), sample_count=len(rows),
-                    resolved_config=metadata["resolved_config"],
-                    sha256={name: hashlib.sha256((run / name).read_bytes()).hexdigest()
-                            for name in FILES}),
+        analysis_version=2,
+        source=sources[0] if len(sources) == 1 else dict(
+            runs=sources, status=status, sample_count=len(rows),
+            mode=sorted({s["mode"] for s in sources})),
         radius_mm=radius, plateaus=plateaus, fits=fits,
-        acceptance=_acceptance(plateaus, fits, metadata["status"]),
+        acceptance=_acceptance(plateaus, fits, status),
         rise_time=rises,
         simulator=dict(kt_nm_per_a=mean_abs_slope("physical"),
                        kt_per_commanded_a_nm_per_a=mean_abs_slope("commanded"),
+                       kt_linear_region_per_commanded_a_nm_per_a=mean_abs_slope("linear_region"),
                        kt_low_current_nm_per_a=mean_abs_slope("low_current"),
                        kt_firmware_nm_per_a=_firmware_kt(run),
                        torque_rate_limit=rate_limit,
@@ -268,7 +305,8 @@ def analyze(run: Path) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("run", type=Path)
+    parser.add_argument("run", type=Path, nargs="+",
+                        help="one or more run directories; several are pooled into one fit")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = analyze(args.run)
