@@ -54,8 +54,8 @@ module motor_flange() {
             i_flanges(beam_end - tongue_len, stub_top);
             i_web(beam_end - tongue_len, stub_top, web_t);   // offset web lies beside the beam's tongue
         }
-        // stator screws on a square, along Y, and the rotor-side centre hole
-        for (x = [-1, 1], z = [-1, 1]) translate([x * stator_pitch / 2, 0, rod_len + z * stator_pitch / 2]) ycyl(M3, flange_plate_t + 2, -flange_plate_t / 2 - 1);
+        // stator screws on the Ø25 bolt circle (axis along Y), and the rotor-side centre hole
+        for (i = [0 : stator_n - 1]) translate([stator_bc_d / 2 * cos(i * 360 / stator_n), 0, rod_len + stator_bc_d / 2 * sin(i * 360 / stator_n)]) ycyl(M3, flange_plate_t + 2, -flange_plate_t / 2 - 1);
         translate([0, 0, rod_len]) ycyl(12, flange_plate_t + 2, -flange_plate_t / 2 - 1);
         lap_holes(3 * web_t + 2);
     }

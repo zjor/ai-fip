@@ -23,12 +23,15 @@ Decisions this spec implements (see [project/log.md](../project/log.md), 04.09.2
 | Electronics on the pendulum | 4S pack and RPi + pi3hat centred on the axle |
 | Targets from Phase 0 | I_w ≈ 0.003 kg·m², rod 250 mm axle-to-motor-axis, G within the 0.97–1.34 Nm planning range (section 5 estimates 1.19) |
 
-Verified motor mounting data (mjbots product page and blog, 2026-09-04):
-mj5208 Ø63 × 25 mm, 193 g; rotor 3× M3 on a Ø17 bolt circle plus 2× M3 at
-12 mm spacing; stator 4× M3 at 25 mm spacing plus 3× M2.5 at 32 mm. The exact
-hole geometry (square vs. circle, depth, shaft protrusion) is **to verify**
-against the mjbots 2D drawing before the first motor-flange print; it is
-isolated in one parameter block and one part for that reason.
+Motor mounting data, verified against the official mjbots 2D drawing
+(mj5208, rev. 3, 2025-07-26, linked as "2D drawing" on
+<https://mjbots.com/products/mj5208>; checked 2026-10-27, PNDLM-10):
+mj5208 Ø63 × 25 mm, 193 g; rotor 3× M3×0.5 on a Ø17 **or Ø16** bolt circle
+(varies by batch, measure the unit) plus 2× M3×0.5 at 12 mm spacing; stator
+4× M3×0.5 on a **Ø25 bolt circle** (not a 25 mm square) plus 3× M2.5×0.45 on
+Ø32; stator hub Ø38; shaft Ø5 protruding 2 mm. Stator thread depth is not on
+the drawing. The stator pattern is isolated in one parameter block and one
+part (`motor_flange`) so only that part is reprinted if the unit differs.
 
 ## 2. Coordinate frame
 
@@ -59,8 +62,8 @@ Y ≤ −`axle_overhang`, Z ∈ [−`axle_height` − `table_thickness`, −`axl
 | `hub_d`, `hub_t` | 60, 5 | hub plate and quadrant flange |
 | `pocket_n`, `pocket_bolt` | 16, M6 | tuning holes, every 22.5° starting at 11.25°, axial through the rim, plain (nut and head clamp the rim faces) |
 | `motor_d`, `motor_len` | 63, 25 | mj5208 |
-| `rotor_bc_d`, `rotor_n` | 17, 3 | rotor pattern, M3 |
-| `stator_pitch`, `stator_n` | 25, 4 | stator pattern, M3, square — **to verify** |
+| `rotor_bc_d`, `rotor_n` | 17, 3 | rotor pattern, M3; drawing allows Ø16 or Ø17, measure the unit |
+| `stator_bc_d`, `stator_n` | 25, 4 | stator pattern, M3 on a Ø25 bolt circle (drawing rev. 3) |
 | `axle_d`, `axle_len` | 8, 120 | steel shaft |
 | `bearing` | 8 × 22 × 7 | 608 |
 | `bearing_spacing` | 40 | between bearing centres |
@@ -131,12 +134,13 @@ Estimated 60 g.
 ### 4.3 Rod: motor flange (`rod.scad`, module `motor_flange`)
 
 One print. A plate Ø70 × 6 mm carrying the stator pattern (4× M3 on the
-`stator_pitch` square, counterbored), a Ø12 centre hole for the rotor
+Ø`stator_bc_d` bolt circle, counterbored), a Ø12 centre hole for the rotor
 shaft/magnet side, and a 40 mm groove continuing the I-beam down to overlap
 the beam's tongue (two M3 through-holes). The motor sits on the +Y face; the
 wheel therefore spins on the outer side, away from the table.
 
-Estimated 25 g. Reprint this part alone once the stator pattern is verified.
+Estimated 25 g. Stator pattern verified against the drawing (PNDLM-10); reprint
+this part alone if the unit's thread depth or hub differs.
 
 ### 4.4 Stand (`stand.scad`)
 
