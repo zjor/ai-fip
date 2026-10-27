@@ -12,3 +12,4 @@ script in `software/sim/app/`, so they can be regenerated.
 | Draft | Topic | Status |
 |---|---|---|
 | [2026-10-26-torque-constant-draft.md](2026-10-26-torque-constant-draft.md) | Static torque constant of the mj5208: 87.5 % of the firmware value, anticogging explains the "missing" current, rise time | draft |
+| [2026-10-26-torque-constant-video-scenario.md](2026-10-26-torque-constant-video-scenario.md) | English video scenario: why measure torque per amp, lever-and-scale experiment, measured gain versus controller estimate | draft |
