@@ -9,8 +9,20 @@ from pathlib import Path
 
 from .analysis import summarize
 from .config import DEFAULT_CONFIG_PATH, load_config
-from .experiments import friction, inspect, position_step, response_timing, torque_constant
+from .experiments import (
+    coast_down, friction, inspect, position_step, response_timing, torque_constant,
+)
 from .safety import SafetyStop
+
+
+def _ladder(text: str) -> tuple[float, ...]:
+    try:
+        values = tuple(float(item) for item in text.split(",") if item.strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"ladder must be comma-separated rpm values, got {text!r}") from exc
+    if not values:
+        raise argparse.ArgumentTypeError("ladder must list at least one rpm value")
+    return values
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,6 +60,18 @@ def build_parser() -> argparse.ArgumentParser:
                                help="validate and print settings without connecting")
     torque_parser.add_argument("--rise-time", action="store_true",
                                help="feedforward torque steps for q-current rise time instead")
+    coast_parser = subparsers.add_parser(
+        "coast-down",
+        help="speed-ladder free coast-downs of the retained test disc (Tier B, guard required)",
+    )
+    coast_parser.add_argument("--dry-run", action="store_true",
+                              help="validate and print settings without connecting")
+    coast_parser.add_argument("--accelerate", action="store_true",
+                              help="feedforward torque steps from rest instead of the speed ladder")
+    coast_parser.add_argument("--direction", type=int, choices=(1, -1),
+                              help="override the configured ladder direction")
+    coast_parser.add_argument("--ladder", type=_ladder, metavar="RPM,RPM,...",
+                              help="override the configured speed ladder, e.g. 20,50,100")
     analyze_parser = subparsers.add_parser(
         "analyze", help="analyze a completed recorded run"
     )
@@ -80,6 +104,13 @@ async def run(args: argparse.Namespace) -> str:
             return torque_constant.describe(config.torque_constant, rise_time=args.rise_time)
         return await torque_constant.run(config, output_root, controller_id,
                                          rise_time=args.rise_time)
+    if args.experiment == "coast-down":
+        cfg = coast_down.resolve(config.coast_down, ladder_rpm=args.ladder, direction=args.direction)
+        coast_down.validate(cfg, config.safety)
+        if args.dry_run:
+            return coast_down.describe(cfg, accelerate=args.accelerate)
+        return await coast_down.run(config, output_root, controller_id, accelerate=args.accelerate,
+                                    ladder_rpm=args.ladder, direction=args.direction)
     raise ValueError(f"unknown experiment {args.experiment}")
 
 
