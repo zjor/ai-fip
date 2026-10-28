@@ -77,9 +77,13 @@ Defaults (`bench.toml [coast_down]`, my calls):
   host hang coasts instead of braking); `servopos.position_min/max NaN`
   (unbounded); `servo.max_velocity` = 55 rev/s, which derates torque above
   that speed on the controller side (not a hard limit; the host stop
-  threshold is the limit); `servo.flux_brake_min_voltage` = 27 V so any
-  regeneration above the supply voltage is dissipated in the windings instead
-  of pushed into a supply that cannot sink it.
+  threshold is the limit); flux brake threshold 27 V so any regeneration
+  above the supply voltage is dissipated in the windings instead of pushed
+  into a supply that cannot sink it. The key depends on the firmware:
+  `servo.flux_brake_min_voltage 27` on older builds, or
+  `servo.flux_brake_margin_voltage` = `servo.max_voltage` − 27 on 2025
+  builds (our r4.11: 30 − 27 = 3, which is already the default). No key at
+  all stops the run before motion.
 - **A safety stop does not stop the disc.** On any exception, a cancelled
   task (what `asyncio.run` does on Ctrl-C) or a lost reply the tool sends
   `set_stop()` (retried), and then keeps querying and printing the speed until

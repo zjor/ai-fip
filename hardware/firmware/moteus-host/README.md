@@ -169,7 +169,8 @@ Each step waits for `GO`; anything else ends the run after the current coast.
 The motor never brakes: the 24 V bench supply cannot sink current, so every
 stop is `set_stop()` plus friction. For the run the tool sets volatile
 overrides (`servo.timeout_mode 0`, position bounds `nan`, `servo.max_velocity`
-as a torque derate above the Tier B speed, `servo.flux_brake_min_voltage 27`)
+as a torque derate above the Tier B speed, a 27 V flux brake threshold via
+whichever flux-brake key the firmware has)
 and restores them with a readback on exit. A safety stop, Ctrl-C or a lost
 reply sends the stop and then keeps printing the speed until the disc is below
 12 rpm, so you are never left with a blind spinning disc; a second Ctrl-C

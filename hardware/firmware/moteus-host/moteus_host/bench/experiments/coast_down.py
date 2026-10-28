@@ -34,11 +34,13 @@ from .common import confirm_stopped, wait_until
 
 CONFIRM_WORD = "GO"
 CONNECT_TIMEOUT_S = 5.0
-OVERRIDES = ("servo.timeout_mode", "servopos.position_min", "servopos.position_max",
-             "servo.max_velocity", "servo.flux_brake_min_voltage")
+OVERRIDES = ("servo.timeout_mode", "servopos.position_min", "servopos.position_max", "servo.max_velocity")
 # Regeneration above this bus voltage is dissipated in the windings instead of
-# pushed into the 24 V supply, which cannot sink current.
+# pushed into the 24 V supply, which cannot sink current. Older firmware exposes
+# the threshold directly (flux_brake_min_voltage); 2025 firmware derives it as
+# servo.max_voltage - servo.flux_brake_margin_voltage.
 FLUX_BRAKE_MIN_VOLTAGE_V = 27.0
+FLUX_BRAKE_KEYS = ("servo.flux_brake_min_voltage", "servo.flux_brake_margin_voltage")
 # stopped, enabling, calibrating, calibration complete, position, timeout
 ALLOWED_MODES = (0, 2, 3, 4, 10, 11)
 # After this many samples of a commanded phase the controller must report position mode;
@@ -128,6 +130,21 @@ def torque_arguments(torque_nm: float, cfg: CoastDownConfig, watchdog_s: float) 
                 watchdog_timeout=watchdog_s, query=True)
 
 
+def flux_brake_override(settings: dict[str, str]) -> tuple[str, str]:
+    """(key, value) that makes flux braking start at FLUX_BRAKE_MIN_VOLTAGE_V on this firmware."""
+    if "servo.flux_brake_min_voltage" in settings:
+        return "servo.flux_brake_min_voltage", f"{FLUX_BRAKE_MIN_VOLTAGE_V:g}"
+    if "servo.flux_brake_margin_voltage" in settings:
+        try:
+            max_voltage = float(settings["servo.max_voltage"])
+        except (KeyError, ValueError) as exc:
+            raise SafetyStop("servo.max_voltage missing; cannot place the flux brake threshold") from exc
+        margin = max(max_voltage - FLUX_BRAKE_MIN_VOLTAGE_V, 0.0)
+        return "servo.flux_brake_margin_voltage", f"{margin:g}"
+    raise SafetyStop("no flux brake key (" + " or ".join(FLUX_BRAKE_KEYS)
+                     + ") in the controller configuration; regeneration could reach the supply")
+
+
 def _same(reported: str, expected: str) -> bool:
     try:
         a, b = float(reported), float(expected)
@@ -151,6 +168,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
     controller = stream = moteus = None
     originals: dict[str, str] = {}
     overrides_set = False
+    motion_commanded = False
     status, reason = "failed", None
     start = time.perf_counter()
     sample = 0
@@ -172,10 +190,12 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
 
     async def record(phase, trial, arguments=None, *, meta=None):
         """One query (arguments None) or one command per sample; checks Tier B limits."""
+        nonlocal motion_commanded
         if arguments is None:
             result = await bounded(controller.query())
             command = {"command_mode": "query"}
         else:
+            motion_commanded = True
             result = await bounded(controller.set_position(**arguments))
             command = meta
         state = result_to_state(result, moteus)
@@ -265,8 +285,9 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         configuration, device = await asyncio.wait_for(snapshot_controller(controller, moteus), 60)
         recorder.attach_controller(configuration, device)
         settings = dict(line.split(maxsplit=1) for line in configuration.splitlines() if " " in line)
+        flux_key, flux_value = flux_brake_override(settings)
         try:
-            originals = {key: settings[key] for key in OVERRIDES}
+            originals = {key: settings[key] for key in OVERRIDES + (flux_key,)}
         except KeyError as exc:
             raise SafetyStop(f"{exc.args[0]} missing from the controller configuration") from exc
         state = await stopped()
@@ -283,7 +304,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         await conf("servopos.position_min", "nan")
         await conf("servopos.position_max", "nan")
         await conf("servo.max_velocity", f"{cfg.max_velocity_rev_s:g}")
-        await conf("servo.flux_brake_min_voltage", f"{FLUX_BRAKE_MIN_VOLTAGE_V:g}")
+        await conf(flux_key, flux_value)
         recorder.event(time.perf_counter() - start, "overrides_set",
                        note="; ".join(f"{k}={v}" for k, v in originals.items()) + "; volatile only; never conf write")
         for index, step in enumerate(steps):
@@ -359,9 +380,16 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         except BaseException as exc:
             status = "cleanup_failed"
             reason = f"{reason or ''}; cleanup: {type(exc).__name__}: {exc}"
-            print("STOP/RESTORE NOT CONFIRMED: disconnect power; keep clear of the disc; "
-                  "inspect timeout mode, position bounds, max velocity and flux brake before reuse.",
-                  flush=True)
+            if motion_commanded:
+                print("STOP/RESTORE NOT CONFIRMED: disconnect power; keep clear of the disc; "
+                      "inspect timeout mode, position bounds, max velocity and flux brake before reuse.",
+                      flush=True)
+            elif overrides_set:
+                print("OVERRIDES NOT RESTORED (motion was never commanded): inspect timeout mode, "
+                      "position bounds, max velocity and flux brake before reuse.", flush=True)
+            else:
+                print("No reply from the controller; motion was never commanded. Check power, "
+                      "the CAN cable and the controller ID.", flush=True)
             raise
         finally:
             if previous_handler is not None:

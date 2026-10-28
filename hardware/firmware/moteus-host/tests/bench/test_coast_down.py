@@ -148,10 +148,11 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         return replace(config, coast_down=replace(config.coast_down, **values))
 
     async def execute(self, config, *, inputs=("GO", "GO", "GO", "GO", "GO", "GO"),
-                      controller=None, interrupt_in_coast=False, expected_error=None, **kwargs):
+                      controller=None, interrupt_in_coast=False, expected_error=None,
+                      snapshot=SNAPSHOT, stream=None, stdout=None, **kwargs):
         controller = controller or FakeController(FakeClock())
         clock = controller.clock          # the experiment's perf_counter is the fake's physics clock
-        stream = FakeStream()
+        stream = stream or FakeStream()
         answers = iter(inputs)
         state = {"interrupted": False}
 
@@ -163,12 +164,12 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             with (patch.object(experiment, "create_controller", return_value=(controller, moteus)),
-                  patch.object(experiment, "snapshot_controller", AsyncMock(return_value=(SNAPSHOT, {}))),
+                  patch.object(experiment, "snapshot_controller", AsyncMock(return_value=(snapshot, {}))),
                   patch.object(experiment.time, "perf_counter", clock.time),
                   patch.object(experiment, "wait_until", wait),
                   patch.object(moteus, "Stream", return_value=stream),
                   patch("builtins.input", lambda prompt="": next(answers)),
-                  contextlib.redirect_stdout(io.StringIO())):
+                  contextlib.redirect_stdout(stdout if stdout is not None else io.StringIO())):
                 if expected_error:
                     with self.assertRaises(expected_error):
                         await experiment.run(config, Path(directory), 1, **kwargs)
@@ -302,6 +303,41 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         self.assertLess(len(plateau_rows), 20)
         self.assertEqual(plateau_rows[-1]["mode"], "11")
         self.assertEqual(stream.settings[b"servo.timeout_mode"], b"12")
+
+    async def test_flux_brake_uses_margin_key_on_newer_firmware(self):
+        # 2025 firmware: no flux_brake_min_voltage; braking starts at max_voltage - margin
+        snapshot = ("servo.timeout_mode 12\nservopos.position_min -1\nservopos.position_max 1\n"
+                    "servo.max_velocity 10\nservo.max_voltage 30\nservo.flux_brake_margin_voltage 3\n")
+        stream = FakeStream()
+        del stream.settings[b"servo.flux_brake_min_voltage"]
+        stream.settings[b"servo.flux_brake_margin_voltage"] = b"3"
+        stream.settings[b"servo.max_velocity"] = b"10"
+        controller, stream, meta, rows, events = await self.execute(
+            self.config(), snapshot=snapshot, stream=stream)
+        self.assertEqual(meta["status"], "completed")
+        self.assertIn(b"conf set servo.flux_brake_margin_voltage 3", stream.writes)   # 30 - 27
+        self.assertFalse(any(b"flux_brake_min_voltage" in w for w in stream.writes))
+        self.assertEqual(stream.settings[b"servo.flux_brake_margin_voltage"], b"3")
+        self.assertEqual(stream.settings[b"servo.max_velocity"], b"10")
+
+    async def test_missing_flux_brake_key_stops_before_motion(self):
+        snapshot = ("servo.timeout_mode 12\nservopos.position_min -1\nservopos.position_max 1\n"
+                    "servo.max_velocity 10\nservo.max_voltage 30\n")
+        controller, stream, meta, rows, events = await self.execute(
+            self.config(), snapshot=snapshot, expected_error=SafetyStop)
+        self.assertIn("flux brake", meta["reason"])
+        self.assertEqual(controller.commands, [])
+
+    async def test_connect_failure_does_not_claim_the_disc_moved(self):
+        clock = FakeClock()
+        controller = FakeController(clock, drop_stop_replies=99)
+        controller.command = {"position": math.nan}     # make the fake drop every stop reply
+        output = io.StringIO()
+        controller, stream, meta, rows, events = await self.execute(
+            self.config(), controller=controller, stdout=output, expected_error=SafetyStop)
+        self.assertEqual(meta["status"], "cleanup_failed")
+        self.assertNotIn("disconnect power", output.getvalue())
+        self.assertIn("never commanded", output.getvalue())
 
     async def test_ladder_override_above_cap_rejected(self):
         create = Mock()
