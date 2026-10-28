@@ -9,6 +9,7 @@ import statistics
 from pathlib import Path
 from typing import Any
 
+from . import coast_down
 from .plots import Series, write_line_plot
 
 
@@ -228,6 +229,20 @@ def _write_plots(run_directory: Path, bins: list[dict[str, float | int]]) -> Non
 
 
 def analyze(run_directory: Path) -> Path:
+    """Dispatch on the run's experiment; each analysis writes its own summary.json."""
+    run_directory = run_directory.resolve()
+    metadata_path = run_directory / "run.json"
+    if not metadata_path.is_file():
+        raise ValueError(f"missing required run file: {metadata_path}")
+    experiment = json.loads(metadata_path.read_text()).get("experiment")
+    if experiment == "friction":
+        return analyze_friction(run_directory)
+    if experiment == "coast-down":
+        return coast_down.analyze(run_directory)
+    raise ValueError(f"no analysis for experiment {experiment!r}")
+
+
+def analyze_friction(run_directory: Path) -> Path:
     run_directory = run_directory.resolve()
     metadata_path = run_directory / "run.json"
     telemetry_path = run_directory / "telemetry.csv"
