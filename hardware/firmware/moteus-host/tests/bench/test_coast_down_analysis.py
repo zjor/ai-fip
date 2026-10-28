@@ -25,13 +25,16 @@ def _loss(v: float, a: float, b: float, c: float) -> float:
     return a + b * omega + c * omega * omega
 
 
-def _create_run(root: Path, *, inertia=INERTIA, a=0.004, b=2e-5, c=1e-7, kt=KT,
+def _create_run(root: Path, *, inertia=INERTIA, rotor_inertia=0.0, a=0.004, b=2e-5, c=1e-7, kt=KT,
                 steps=(8.33, 25.0, 50.0), accel=((0.10, 1), (0.10, -1)),
-                coast_s=None, status="completed") -> Path:
+                coast_s=None, status="completed", incomplete_last=False) -> Path:
+    """Synthetic run. The physics spins inertia + rotor_inertia; run.json records only the disc."""
     run = root / "test_coast"
     run.mkdir()
     rows: list[dict] = []
     plan: list[dict] = []
+    events: list[str] = []
+    total = inertia + rotor_inertia
     time_s = 0.0
     sample = 0
 
@@ -52,7 +55,7 @@ def _create_run(root: Path, *, inertia=INERTIA, a=0.004, b=2e-5, c=1e-7, kt=KT,
         elapsed = 0.0
         while abs(v) >= 0.2 and (coast_s is None or elapsed < coast_s):
             emit("coast", trial, v, 0.0)
-            v -= math.copysign(_loss(v, a, b, c), v) / (2.0 * math.pi * inertia) * DT
+            v -= math.copysign(_loss(v, a, b, c), v) / (2.0 * math.pi * total) * DT
             elapsed += DT
 
     trial = 0
@@ -66,6 +69,7 @@ def _create_run(root: Path, *, inertia=INERTIA, a=0.004, b=2e-5, c=1e-7, kt=KT,
         for _ in range(int(3.0 / DT)):
             emit("plateau", trial, target, _loss(target, a, b, c) / kt, "velocity")
         coast(trial, target)
+        events.append(f"{time_s},step_complete,{trial},,")
         trial += 1
     for torque, direction in accel:
         plan.append({"trial": trial, "kind": "accel", "target_rev_s": direction * 30.0,
@@ -74,9 +78,12 @@ def _create_run(root: Path, *, inertia=INERTIA, a=0.004, b=2e-5, c=1e-7, kt=KT,
         while abs(v) < 30.0:
             emit("accel", trial, v, direction * torque / kt, "torque")
             net = torque - _loss(v, a, b, c)
-            v += direction * net / (2.0 * math.pi * inertia) * DT
+            v += direction * net / (2.0 * math.pi * total) * DT
         coast(trial, v)
+        events.append(f"{time_s},step_complete,{trial},,")
         trial += 1
+    if incomplete_last:
+        events.pop()
 
     (run / "run.json").write_text(json.dumps({
         "run_id": "test_coast", "experiment": "coast-down", "status": status,
@@ -90,7 +97,7 @@ def _create_run(root: Path, *, inertia=INERTIA, a=0.004, b=2e-5, c=1e-7, kt=KT,
         writer = csv.DictWriter(sink, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
-    (run / "events.csv").write_text("host_time_s,event,value,unit,note\n")
+    (run / "events.csv").write_text("host_time_s,event,value,unit,note\n" + "".join(e + "\n" for e in events))
     (run / "controller-config.txt").write_text("motor.Kv 330\n")
     return run
 
@@ -111,12 +118,46 @@ class CoastDownAnalysisTest(unittest.TestCase):
 
     def test_fit_recovers_loss_model(self) -> None:
         fit = self._summary()["fit"]
-        self.assertAlmostEqual(fit["a_nm"], 0.004, delta=0.0004)
-        self.assertAlmostEqual(fit["b_nm_s"], 2e-5, delta=3e-6)
-        self.assertAlmostEqual(fit["c_nm_s2"], 1e-7, delta=1.5e-8)
+        self.assertAlmostEqual(fit["a_nm"], 0.004, delta=0.00012)
+        self.assertAlmostEqual(fit["b_nm_s"], 2e-5, delta=6e-7)
+        self.assertAlmostEqual(fit["c_nm_s2"], 1e-7, delta=3e-9)
         self.assertGreater(fit["n"], 6)
         for key in ("a_se", "b_se", "c_se", "rmse_nm"):
             self.assertGreaterEqual(fit[key], 0.0)
+
+    def test_rotor_inertia_is_recovered_and_used_for_the_losses(self) -> None:
+        # the disc record knows nothing about the motor rotor; the accel trials must find it
+        summary = self._summary(rotor_inertia=5e-5)
+        inertia = summary["inertia"]
+        self.assertEqual(inertia["basis"], "effective")
+        self.assertAlmostEqual(inertia["effective"]["mean"], INERTIA + 5e-5, delta=0.03 * (INERTIA + 5e-5))
+        self.assertAlmostEqual(inertia["ratio_eff_to_disc"], (INERTIA + 5e-5) / INERTIA, delta=0.03)
+        fit = summary["fit"]
+        self.assertAlmostEqual(fit["a_nm"], 0.004, delta=0.03 * 0.004)
+        self.assertAlmostEqual(fit["c_nm_s2"], 1e-7, delta=0.03 * 1e-7)
+
+    def test_disc_only_basis_without_accel_trials(self) -> None:
+        summary = self._summary(accel=())
+        self.assertEqual(summary["inertia"]["basis"], "disc_only")
+        self.assertIsNone(summary["effective_inertia"]["mean"])
+        self.assertIsNotNone(summary["fit"])
+
+    def test_partial_run_uses_completed_steps_only(self) -> None:
+        summary = self._summary(status="safety_stop", incomplete_last=True)
+        self.assertEqual(summary["source"]["status"], "safety_stop")
+        self.assertEqual(summary["source"]["completed_trials"], [0, 1, 2, 3])
+        self.assertEqual(len(summary["effective_inertia"]["trials"]), 1)
+
+    def test_partial_run_without_completed_steps_is_rejected(self) -> None:
+        run = _create_run(self.root, steps=(8.33,), accel=(), status="interrupted", incomplete_last=True)
+        with self.assertRaisesRegex(ValueError, "completed step"):
+            analyze(run)
+
+    def test_fit_uses_non_overlapping_windows(self) -> None:
+        times = [i * DT for i in range(200)]                 # 1.0 s of coast
+        velocities = [10.0 - 2.0 * t for t in times]
+        points = coast_down.coast_points(times, velocities, INERTIA)
+        self.assertEqual(len(points), 4)                      # 1.0 s / 0.25 s, no half-window overlap
 
     def test_loss_map_bins_cover_ladder(self) -> None:
         run = _create_run(self.root)
@@ -146,9 +187,9 @@ class CoastDownAnalysisTest(unittest.TestCase):
         self.assertIsNone(summary["fit"])
         self.assertEqual(summary["source"]["experiment"], "coast-down")
 
-    def test_rejects_incomplete_run(self) -> None:
-        run = _create_run(self.root, status="safety_stop")
-        with self.assertRaisesRegex(ValueError, "completed"):
+    def test_rejects_failed_run(self) -> None:
+        run = _create_run(self.root, status="failed")
+        with self.assertRaisesRegex(ValueError, "failed"):
             analyze(run)
 
     def test_dispatch_rejects_unknown_experiment(self) -> None:
