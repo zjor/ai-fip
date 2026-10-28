@@ -75,34 +75,53 @@ Defaults (`bench.toml [coast_down]`, my calls):
 - **Controller overrides**, volatile only, never `conf write`, restored in
   `finally` with readback: `servo.timeout_mode 0` (watchdog → torque off, so a
   host hang coasts instead of braking); `servopos.position_min/max NaN`
-  (unbounded); `servo.max_velocity` = 55 rev/s as a firmware-side cap
-  independent of the host.
-- **A safety stop does not stop the disc.** On any exception the tool sends
-  `set_stop()` and then keeps querying and printing the speed until the disc
-  is below `coast_stop_rev_s`, so the operator is never left with a blind
-  spinning disc. Power disconnect stays the only emergency stop; it also
-  coasts.
-- Regeneration: the only motor-driven decelerations are the velocity
-  controller's small corrections during the plateau. Bus voltage is checked
-  every sample against the 30 V limit.
+  (unbounded); `servo.max_velocity` = 55 rev/s, which derates torque above
+  that speed on the controller side (not a hard limit; the host stop
+  threshold is the limit); `servo.flux_brake_min_voltage` = 27 V so any
+  regeneration above the supply voltage is dissipated in the windings instead
+  of pushed into a supply that cannot sink it.
+- **A safety stop does not stop the disc.** On any exception, a cancelled
+  task (what `asyncio.run` does on Ctrl-C) or a lost reply the tool sends
+  `set_stop()` (retried), and then keeps querying and printing the speed until
+  the disc is below `coast_stop_rev_s`, tolerating lost replies, so the
+  operator is never left with a blind spinning disc. A second Ctrl-C during
+  that wait is swallowed with a reminder. Power disconnect stays the only
+  emergency stop; it also coasts.
+- **Watchdog trip is a safety stop, not data.** During spin-up, plateau and
+  acceleration the controller must report position mode after the first two
+  samples; mode 11 (timeout) ends the run, because the firmware ignores
+  further commands and the rows would otherwise look like a plateau.
+- Regeneration: velocity commands use `kp_scale 0`, a pure velocity loop, so
+  the lag built up during the ramp cannot be corrected by a braking pulse at
+  its end; the only motor-driven decelerations are the velocity loop's small
+  corrections during the plateau, which the flux brake absorbs. Bus voltage
+  is checked every sample against the 30 V limit.
 - Ramp discipline from the test-disc spec: the ladder is the ramp. The
   operator stops at any step if vibration grows or the plateau current jumps.
 
 ## 5. Analysis (`bench analyze <run>`)
 
-`analyze` dispatches on the `experiment` field in `run.json` (today it accepts
-friction only).
+`analyze` dispatches on the `experiment` field in `run.json` (friction and
+coast-down). Completed, safety-stopped and interrupted runs are analyzed;
+only steps with a `step_complete` event count.
 
-- Coast: per step, velocity is smoothed with a centred linear fit over
-  0.25 s windows; α from the slope; loss torque τ = −I·α. All steps pool into
-  one speed-binned loss map (`loss-map.csv`, 1 rev/s bins, mean and sd), and
-  a least-squares fit τ = a + b·ω + c·ω² (Coulomb, viscous, windage) with
-  parameter standard errors.
-- Plateau: mean q-current × K_t per step, listed next to the coast estimate
-  at the same speed.
-- Acceleration: α from the step phase, I_eff = K_t·i_q / α per torque, mean
-  and sd; the ratio to the recorded disc inertia gives the motor-rotor share.
-- `summary.json` plus PNG plots: speed versus time per step, loss torque
+- Coast: per step, velocity is smoothed with a linear fit over
+  non-overlapping 0.25 s windows (at least 5 samples each); α from the slope.
+- Inertia: the rotating inertia is the disc plus the motor rotor, which the
+  disc record does not know. With acceleration trials the total is recovered
+  without a loss model from matched speeds,
+  I = K_t·i_q / (α_accel + |α_coast(ω)|), per window; mean, sd and the ratio
+  to the disc inertia (the motor-rotor share) go to `summary.json`. Without
+  acceleration trials the disc value is used and the basis is marked
+  `disc_only`.
+- Loss torque τ = I·|α_coast| with that I. All steps pool into one
+  speed-binned loss map (`loss-map.csv`, 1 rev/s bins, mean and sd), and a
+  least-squares fit τ = a + b·ω + c·ω² (Coulomb, viscous, windage) with
+  statistical parameter standard errors; the inertia's relative sd is
+  reported beside it and is not folded in.
+- Plateau: mean q-current × K_t per step, listed next to the coast fit at the
+  same speed.
+- `summary.json` plus SVG plots: speed versus time per step, loss torque
   versus speed with the fit.
 
 ## 6. Out of scope

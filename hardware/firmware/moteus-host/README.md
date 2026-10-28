@@ -168,12 +168,16 @@ poetry run bench coast-down --accelerate                   # torque steps from r
 Each step waits for `GO`; anything else ends the run after the current coast.
 The motor never brakes: the 24 V bench supply cannot sink current, so every
 stop is `set_stop()` plus friction. For the run the tool sets volatile
-overrides (`servo.timeout_mode 0`, position bounds `nan`, `servo.max_velocity`)
-and restores them with a readback on exit. A safety stop or Ctrl-C sends the
-stop and then keeps printing the speed until the disc is below 12 rpm, so you
-are never left with a blind spinning disc; a power disconnect also coasts. The
+overrides (`servo.timeout_mode 0`, position bounds `nan`, `servo.max_velocity`
+as a torque derate above the Tier B speed, `servo.flux_brake_min_voltage 27`)
+and restores them with a readback on exit. A safety stop, Ctrl-C or a lost
+reply sends the stop and then keeps printing the speed until the disc is below
+12 rpm, so you are never left with a blind spinning disc; a second Ctrl-C
+during that wait is ignored, and a power disconnect also coasts. A watchdog
+trip (mode 11) during a commanded phase ends the run as a safety stop. The
 disc inertia and its provenance are copied from
-`docs/hardware/measurements/2026-10-28-test-disc.json` into `run.json`.
+`docs/hardware/measurements/2026-10-28-test-disc.json` into `run.json`; the
+analysis recovers the motor rotor's share from the acceleration trials.
 
 Analyze a completed friction or coast-down run offline with:
 
@@ -181,10 +185,12 @@ Analyze a completed friction or coast-down run offline with:
 poetry run bench analyze logs/bench/<run-id>
 ```
 
-For a coast-down run it writes `summary.json` (the a + b·ω + c·ω² loss fit
-with standard errors, plateau current × K_t per step, effective inertia from
-the acceleration trials), a 1 rev/s `loss-map.csv`, and `plots/speed-vs-time.svg`
-and `plots/loss-vs-speed.svg`. For a friction run:
+For a coast-down run (completed, safety-stopped or interrupted; only finished
+steps count) it writes `summary.json` (the total rotating inertia from matched
+coast and acceleration slopes, the a + b·ω + c·ω² loss fit with standard
+errors, plateau current × K_t per step beside the fit), a 1 rev/s
+`loss-map.csv`, and `plots/speed-vs-time.svg` and `plots/loss-vs-speed.svg`.
+For a friction run:
 
 The command leaves raw files unchanged and writes `summary.json`, a
 100-position-bin `friction-map.csv`, and standalone SVG plots under `plots/`.

@@ -64,12 +64,13 @@ def resolve(cfg: CoastDownConfig, *, ladder_rpm: tuple[float, ...] | None = None
 
 
 def describe(cfg: CoastDownConfig, *, accelerate: bool) -> str:
-    caps = (f"caps: {cfg.max_velocity_rev_s:g} rev/s ({60 * cfg.max_velocity_rev_s:g} rpm, also set as "
-            f"servo.max_velocity), {cfg.max_torque_nm:g} Nm; {cfg.sample_rate_hz:g} Hz requested; "
+    caps = (f"host stop thresholds: {cfg.max_velocity_rev_s:g} rev/s ({60 * cfg.max_velocity_rev_s:g} rpm; "
+            f"servo.max_velocity derates torque above it), {cfg.max_torque_nm:g} Nm; {cfg.sample_rate_hz:g} Hz requested; "
             f"coast ends below {cfg.coast_stop_rev_s:g} rev/s ({60 * cfg.coast_stop_rev_s:g} rpm), "
             f"coast timeout {cfg.coast_timeout_s:g} s. The motor never brakes: every stop is a free "
-            "coast. Volatile overrides: servo.timeout_mode 0, position bounds NaN, servo.max_velocity; "
-            "restored with readback. Operator types GO per step.")
+            "coast. Volatile overrides: servo.timeout_mode 0, position bounds NaN, servo.max_velocity, "
+            f"servo.flux_brake_min_voltage {FLUX_BRAKE_MIN_VOLTAGE_V:g} V; restored with readback. "
+            "Operator types GO per step.")
     if accelerate:
         torques = ", ".join(f"{t:g}" for t in cfg.accel_torques_nm)
         return (f"Coast-down, acceleration mode: feedforward torque steps of {torques} Nm from rest, "
