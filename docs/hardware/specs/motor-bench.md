@@ -63,7 +63,7 @@ Tests are introduced in three safety tiers:
 The clock is not reused for Tier B or C: its arrow is unsuitable for meaningful
 speed, torque or thermal characterization.
 
-The [response timing pilot](response-timing-spec.md) uses a quiet zero-torque
+The [response timing pilot](response-timing.md) uses a quiet zero-torque
 baseline and single watchdog-bounded torque pulses. It temporarily overrides
 the controller timeout mode with verified torque-off behavior, restoring it
 after a confirmed stop; it never persists configuration. Its live abort limits
@@ -217,6 +217,8 @@ without changing the raw acquisition format.
    comparison channel, not the reference measurement.
 5. **Coast-down and acceleration.** Only with a known, retained inertia and
    guard. Estimate velocity-dependent losses and check torque-to-acceleration.
+   Implemented 2026-10-28 as `bench coast-down` / `--accelerate`:
+   [coast-down.md](coast-down.md).
 6. **Torque-speed envelope.** Sweep only bus voltages and speeds relevant to
    the 12.0–16.8 V design range. A credible torque-at-speed result requires a
    known inertia or external load; an unloaded speed sweep alone measures only

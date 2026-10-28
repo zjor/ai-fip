@@ -62,7 +62,7 @@ The encoder/current timing pilot is available as `poetry run bench
 response-timing`. Preview it without connecting using `poetry run bench
 response-timing --dry-run`. It requires typing `PULSE` before enabling torque,
 uses four short watchdog-bounded pulses and records a quiet baseline per trial.
-Read the [measurement method and operator steps](../../../docs/hardware/response-timing-spec.md)
+Read the [measurement method and operator steps](../../../docs/hardware/specs/response-timing.md)
 before a physical run. Offline analysis lives in `software/sim`, with commands
 in that document; results and remaining work are tracked in
 [PNDLM-8](https://zjor.youtrack.cloud/issue/PNDLM-8).
@@ -84,7 +84,7 @@ back onto the scale. `--rise-time` switches to feedforward torque steps
 (≤0.05 Nm) from a 0.01 Nm same-sign pre-hold for the q-current rise-time
 question and asks for no scale readings. Operator steps,
 limits and the I²t budget are in the
-[fixture spec](../../../docs/hardware/motor-torque-fixture-spec.md); results
+[fixture spec](../../../docs/hardware/specs/motor-torque-fixture.md); results
 are in its §9–10; the task
 is [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9). Offline analysis, from
 `software/sim`; several run directories are pooled into one fit:
@@ -98,7 +98,7 @@ poetry run python -m app.analyze_torque_constant \
 The T-005.A–F bench suite stores raw runs under the ignored `logs/bench/` directory.
 Tracked safety and experiment defaults are in `bench.toml`; the measurement
 design and later experiments are documented in
-[`docs/hardware/motor-bench-spec.md`](../../../docs/hardware/motor-bench-spec.md).
+[`docs/hardware/specs/motor-bench.md`](../../../docs/hardware/specs/motor-bench.md).
 
 Start with the stopped-state inspection. It does not command motion:
 
@@ -153,11 +153,38 @@ Restart tview after changing configuration, then close it before running
 controller limits; the friction command also independently stops at 1.10 rev
 displacement from its recorded origin.
 
-Analyze a completed friction run offline with:
+With the retained test disc mounted and the guard closed (Tier B,
+[`docs/hardware/specs/coast-down.md`](../../../docs/hardware/specs/coast-down.md)),
+the coast-down experiment records free coast-downs from a speed ladder:
+
+```shell
+poetry run bench coast-down --dry-run --ladder 20,50,100   # print settings, no connection
+poetry run bench coast-down --ladder 20,50,100             # first live run: prove the sequence
+poetry run bench coast-down                                # full ladder 500..3000 rpm
+poetry run bench coast-down --direction -1                 # the other direction
+poetry run bench coast-down --accelerate                   # torque steps from rest, both directions
+```
+
+Each step waits for `GO`; anything else ends the run after the current coast.
+The motor never brakes: the 24 V bench supply cannot sink current, so every
+stop is `set_stop()` plus friction. For the run the tool sets volatile
+overrides (`servo.timeout_mode 0`, position bounds `nan`, `servo.max_velocity`)
+and restores them with a readback on exit. A safety stop or Ctrl-C sends the
+stop and then keeps printing the speed until the disc is below 12 rpm, so you
+are never left with a blind spinning disc; a power disconnect also coasts. The
+disc inertia and its provenance are copied from
+`docs/hardware/measurements/2026-10-28-test-disc.json` into `run.json`.
+
+Analyze a completed friction or coast-down run offline with:
 
 ```shell
 poetry run bench analyze logs/bench/<run-id>
 ```
+
+For a coast-down run it writes `summary.json` (the a + b·ω + c·ω² loss fit
+with standard errors, plateau current × K_t per step, effective inertia from
+the acceleration trials), a 1 rev/s `loss-map.csv`, and `plots/speed-vs-time.svg`
+and `plots/loss-vs-speed.svg`. For a friction run:
 
 The command leaves raw files unchanged and writes `summary.json`, a
 100-position-bin `friction-map.csv`, and standalone SVG plots under `plots/`.
