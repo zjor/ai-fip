@@ -38,8 +38,10 @@ direction:
 4. **Plateau**: hold the velocity for `plateau_s`; record q-current. The mean
    current here times K_t is the direct loss torque at that speed.
 5. **Coast**: `set_stop()` (phases open) and query only, until
-   `|velocity| < coast_stop_rev_s` or `coast_timeout_s`.
-6. Next step.
+   `|velocity| < coast_stop_rev_s` continuously for `coast_settle_s`, or
+   `coast_timeout_s`.
+6. Next step: a `preflight` standstill wait with the same settle rule absorbs a
+   late velocity blip before the prompt.
 
 Acceleration run (`--accelerate`): for each torque in `accel_torques_nm`, in
 both directions: quiet baseline at rest, feedforward torque step
@@ -58,6 +60,7 @@ Defaults (`bench.toml [coast_down]`, my calls):
 | `spin_up_timeout_s` | 15 | |
 | `plateau_s` | 3.0 | |
 | `coast_stop_rev_s` | 0.2 | below this the coast is over |
+| `coast_settle_s` | 0.25 | ... once the speed has stayed below it this long; the encoder velocity jitters ±0.05 rev/s at low speed |
 | `coast_timeout_s` | 120 | ≈ 12 s expected |
 | `accel_torques_nm` | 0.05, 0.10, 0.15 | within the K_t linear range |
 | `accel_target_rev_s` | 30 | 1800 rpm, then coast |

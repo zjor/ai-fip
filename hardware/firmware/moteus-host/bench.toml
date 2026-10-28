@@ -113,6 +113,9 @@ plateau_s = 3.0
 plateau_tolerance_rev_s = 0.5
 # below this the coast is over (12 rpm); must stay under the lowest ladder step
 coast_stop_rev_s = 0.2
+# ... and it must stay below for this long: the encoder velocity jitters by about
+# ±0.05 rev/s at low speed, which ended 15 rpm coasts on their first sample (2026-10-28)
+coast_settle_s = 0.25
 coast_timeout_s = 120.0
 # --accelerate: feedforward torque steps from rest, both directions, within the K_t linear range
 accel_torques_nm = [0.05, 0.10, 0.15]

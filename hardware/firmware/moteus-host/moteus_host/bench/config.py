@@ -123,6 +123,7 @@ class CoastDownConfig:
     plateau_s: float = 3.0
     plateau_tolerance_rev_s: float = 0.5
     coast_stop_rev_s: float = 0.2
+    coast_settle_s: float = 0.25
     coast_timeout_s: float = 120.0
     accel_torques_nm: tuple[float, ...] = (0.05, 0.10, 0.15)
     accel_target_rev_s: float = 30.0

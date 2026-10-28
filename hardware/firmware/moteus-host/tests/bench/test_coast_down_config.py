@@ -22,6 +22,7 @@ class CoastDownConfigTest(unittest.TestCase):
         self.assertEqual(self.cfg.max_velocity_rev_s, 55.0)
         self.assertEqual(self.cfg.max_torque_nm, 0.20)
         self.assertEqual(self.cfg.kt_nm_per_a, 0.0244)
+        self.assertEqual(self.cfg.coast_settle_s, 0.25)
         self.assertEqual(self.limits.max_rotating_velocity_rev_s, 55.0)
         self.assertEqual(self.limits.max_rotating_torque_nm, 0.20)
         self.assertTrue((REPO_ROOT / self.cfg.inertia_record).is_file())
@@ -47,6 +48,11 @@ class CoastDownConfigTest(unittest.TestCase):
     def test_rejects_coast_stop_above_lowest_step(self) -> None:
         cfg = replace(self.cfg, ladder_rpm=(20.0,), coast_stop_rev_s=0.4)
         with self.assertRaisesRegex(ValueError, "coast_stop"):
+            validate_coast_down(cfg, self.limits)
+
+    def test_rejects_settle_longer_than_coast_timeout(self) -> None:
+        cfg = replace(self.cfg, coast_settle_s=200.0)
+        with self.assertRaisesRegex(ValueError, "coast_settle_s"):
             validate_coast_down(cfg, self.limits)
 
     def test_rejects_bad_direction(self) -> None:

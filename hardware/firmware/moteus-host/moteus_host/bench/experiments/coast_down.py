@@ -209,6 +209,19 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                 raise SafetyStop(f"non-finite {field}")
         return state
 
+    def settled_below_stop():
+        """done() for coasts: |v| < coast_stop_rev_s continuously for coast_settle_s."""
+        since = None
+
+        def done(state, elapsed):
+            nonlocal since
+            if abs(state["velocity_rev_s"]) < cfg.coast_stop_rev_s:
+                since = elapsed if since is None else since
+                return elapsed - since >= cfg.coast_settle_s
+            since = None
+            return False
+        return done
+
     async def phase_loop(phase, trial, arguments, meta, *, done, timeout_s, timeout_message):
         phase_start = time.perf_counter()
         count = 0
@@ -229,8 +242,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
     async def coast(trial):
         await stopped()
         recorder.event(time.perf_counter() - start, "coast_start", value=trial)
-        return await phase_loop("coast", trial, None, None,
-                                done=lambda s, _: abs(s["velocity_rev_s"]) < cfg.coast_stop_rev_s,
+        return await phase_loop("coast", trial, None, None, done=settled_below_stop(),
                                 timeout_s=cfg.coast_timeout_s,
                                 timeout_message=f"coast timeout after {cfg.coast_timeout_s:g} s")
 
@@ -244,11 +256,13 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                 await wait_until(time.perf_counter() + period)
         raise SafetyStop(f"stop not confirmed after {STOP_ATTEMPTS} attempts: {last}")
 
-    async def wait_for_standstill():
-        """After any stop: keep the operator informed until the disc is slow."""
-        deadline = time.perf_counter() + cfg.coast_timeout_s
+    async def wait_for_standstill(phase="standstill_wait", trial=None):
+        """After any stop: keep the operator informed until the disc is slow for coast_settle_s."""
+        wait_start = time.perf_counter()
+        deadline = wait_start + cfg.coast_timeout_s
         last_print = -math.inf
         lost = 0
+        done = settled_below_stop()
         while True:
             tick = time.perf_counter()
             try:
@@ -260,9 +274,9 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                 await wait_until(tick + period)
                 continue
             lost = 0
-            write_row(state, phase="standstill_wait", trial=None, command={"command_mode": "query"})
+            write_row(state, phase=phase, trial=trial, command={"command_mode": "query"})
             speed = abs(state["velocity_rev_s"]) if state["velocity_rev_s"] is not None else math.inf
-            if speed < cfg.coast_stop_rev_s:
+            if done(state, tick - wait_start):
                 recorder.event(tick - start, "standstill", value=speed, unit="rev/s")
                 return
             if tick - last_print >= PROGRESS_INTERVAL_S:
@@ -309,9 +323,9 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                        note="; ".join(f"{k}={v}" for k, v in originals.items()) + "; volatile only; never conf write")
         for index, step in enumerate(steps):
             trial = step["trial"]
-            state = await stopped()
-            if abs(state["velocity_rev_s"]) >= cfg.coast_stop_rev_s:
-                raise SafetyStop("disc still turning before the next step")
+            await stopped()
+            # the previous coast ended settled below the threshold; this absorbs a late blip
+            await wait_for_standstill(phase="preflight", trial=trial)
             if step["kind"] == "ladder":
                 prompt = (f"Step {index + 1}/{len(steps)}: {60 * abs(step['target_rev_s']):g} rpm "
                           f"({step['target_rev_s']:+.2f} rev/s), spin-up at {step['torque_nm']:g} Nm, "

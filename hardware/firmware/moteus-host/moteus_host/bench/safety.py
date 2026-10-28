@@ -34,7 +34,7 @@ def validate_coast_down(config: CoastDownConfig, limits: SafetyConfig) -> None:
     """Tier B checks: every value must sit inside the tracked rotating caps."""
     numeric = (
         "sample_rate_hz", "spin_up_torque_nm", "accel_limit_rev_s2", "spin_up_timeout_s",
-        "plateau_s", "plateau_tolerance_rev_s", "coast_stop_rev_s", "coast_timeout_s",
+        "plateau_s", "plateau_tolerance_rev_s", "coast_stop_rev_s", "coast_settle_s", "coast_timeout_s",
         "accel_target_rev_s", "accel_timeout_s", "max_velocity_rev_s", "max_torque_nm",
         "response_timeout_s", "kt_nm_per_a",
     )
@@ -64,6 +64,8 @@ def validate_coast_down(config: CoastDownConfig, limits: SafetyConfig) -> None:
         raise ValueError("coast_down.accel_target_rev_s must stay below max_velocity_rev_s")
     if config.coast_stop_rev_s >= min(config.ladder_rpm) / 60.0:
         raise ValueError("coast_down.coast_stop_rev_s must be below the lowest ladder speed")
+    if config.coast_settle_s >= config.coast_timeout_s:
+        raise ValueError("coast_down.coast_settle_s must be below coast_timeout_s")
     if config.direction not in (1, -1):
         raise ValueError("coast_down.direction must be 1 or -1")
     if not 50.0 <= config.sample_rate_hz <= 500.0:

@@ -41,8 +41,10 @@ class FakeController:
     torque mode accelerates by torque/(2*pi*I), stopped decays by friction."""
 
     def __init__(self, clock, *, velocity=0.0, friction_nm=0.004, fail_spin_up=False,
-                 drop_stop_replies=0, drop_query_every=0, mode_11_after_s=None):
+                 drop_stop_replies=0, drop_query_every=0, mode_11_after_s=None, noise=0.0):
         self.clock = clock
+        self.noise = noise               # alternating ± jitter on the reported velocity
+        self.reads = 0
         self.velocity = velocity
         self.friction = friction_nm
         self.fail_spin_up = fail_spin_up
@@ -81,7 +83,9 @@ class FakeController:
         q = 0.0
         if self.mode == 10 and self.command is not None:
             q = self.command.get("feedforward_torque", 0.0) / KT or 0.5
-        values = dict(MODE=self.mode, FAULT=0, POSITION=1.0, VELOCITY=self.velocity,
+        self.reads += 1
+        reported = self.velocity + (self.noise if self.reads % 2 else -self.noise)
+        values = dict(MODE=self.mode, FAULT=0, POSITION=1.0, VELOCITY=reported,
                       TORQUE=q * KT, Q_CURRENT=q, D_CURRENT=0.0, VOLTAGE=24.0, POWER=0.0,
                       TEMPERATURE=25.0, HOME_STATE=1, TRAJECTORY_COMPLETE=1)
         return SimpleNamespace(values={getattr(moteus.Register, k): v for k, v in values.items()})
@@ -229,7 +233,8 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
     async def test_operator_can_end_after_first_step(self):
         controller, stream, meta, rows, events = await self.execute(self.config(), inputs=("GO", "q"))
         self.assertEqual(meta["status"], "completed")
-        self.assertEqual({r["trial_id"] for r in rows if r["trial_id"]}, {"0"})
+        # step 2 got its preflight standstill check, then the operator declined: no motion for trial 1
+        self.assertEqual({r["trial_id"] for r in rows if r["trial_id"] and r["experiment_phase"] != "preflight"}, {"0"})
         self.assertIn("operator_ended", events)
 
     async def test_decline_first_step_aborts(self):
@@ -292,14 +297,15 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_watchdog_timeout_during_plateau_is_a_safety_stop(self):
         clock = FakeClock()
-        controller = FakeController(clock, mode_11_after_s=0.09)
+        # preflight settle 0.25 s, spin-up ~0.03 s, so 0.35 s lands a few samples into the plateau
+        controller = FakeController(clock, mode_11_after_s=0.35)
         controller, stream, meta, rows, events = await self.execute(
             self.config(plateau_s=0.5), controller=controller, expected_error=SafetyStop)
         self.assertEqual(meta["status"], "safety_stop")
         self.assertIn("mode 11", meta["reason"])
         self.assertIn("plateau", meta["reason"])
         plateau_rows = [r for r in rows if r["experiment_phase"] == "plateau"]
-        # the flip at 0.09 s lands a few samples into the plateau; nothing after it is logged as plateau
+        # the flip lands a few samples into the plateau; nothing after it is logged as plateau
         self.assertLess(len(plateau_rows), 20)
         self.assertEqual(plateau_rows[-1]["mode"], "11")
         self.assertEqual(stream.settings[b"servo.timeout_mode"], b"12")
@@ -338,6 +344,22 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(meta["status"], "cleanup_failed")
         self.assertNotIn("disconnect power", output.getvalue())
         self.assertIn("never commanded", output.getvalue())
+
+    async def test_noisy_velocity_near_threshold_does_not_end_the_coast_early(self):
+        # 15 and 20 rpm with ±0.06 rev/s jitter: a single dip below 0.2 rev/s must not end the coast,
+        # and a single blip above it must not refuse the next step (seen on hardware 2026-10-28)
+        clock = FakeClock()
+        controller = FakeController(clock, noise=0.06)
+        controller, stream, meta, rows, events = await self.execute(
+            self.config(ladder_rpm=(15.0, 20.0), coast_settle_s=0.25), controller=controller)
+        self.assertEqual(meta["status"], "completed")
+        self.assertEqual(events.count("step_complete"), 2)
+        for trial in ("0", "1"):
+            coast = [r for r in rows if r["trial_id"] == trial and r["experiment_phase"] == "coast"]
+            span = float(coast[-1]["host_time_s"]) - float(coast[0]["host_time_s"])
+            self.assertGreaterEqual(span, 0.25, trial)
+            tail = [r for r in coast if float(coast[-1]["host_time_s"]) - float(r["host_time_s"]) <= 0.25]
+            self.assertTrue(all(abs(float(r["velocity_rev_s"])) < 0.2 for r in tail), trial)
 
     async def test_ladder_override_above_cap_rejected(self):
         create = Mock()
