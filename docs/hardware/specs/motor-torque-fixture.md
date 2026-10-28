@@ -204,7 +204,7 @@ feedforward** (`motor.cogging_dq_scale` 0.00879 × a 1024-entry table calibrated
 revolution, about −0.27 A at the fixture position. On a balanced lever this
 pulse lifted the lever 7.7° off the
 scale and tripped the velocity stop (data:
-[2026-10-25-zero-torque-probe.csv](measurements/2026-10-25-zero-torque-probe.csv),
+[2026-10-25-zero-torque-probe.csv](../measurements/2026-10-25-zero-torque-probe.csv),
 script `hardware/firmware/moteus-host/tools/zero_torque_probe.py`).
 Consequences: the hard stop of §3 is mandatory on the side away from the scale,
 or the lever needs a preload of at least 30 g at 105 mm (twice the 12.6 g
@@ -340,9 +340,9 @@ and guard.
 
 ## 9. Results, 2026-10-26
 
-Data: [2026-10-26-torque-constant.json](measurements/2026-10-26-torque-constant.json)
+Data: [2026-10-26-torque-constant.json](../measurements/2026-10-26-torque-constant.json)
 (55 readings, 7 runs, 105 mm radius both sides, scale resolution 0.1 g) and
-[2026-10-26-torque-rise-time.json](measurements/2026-10-26-torque-rise-time.json)
+[2026-10-26-torque-rise-time.json](../measurements/2026-10-26-torque-rise-time.json)
 (12 steps with pre-hold). Task: [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9).
 
 ### 9.1 Torque constant

@@ -15,13 +15,14 @@ Project knowledge and process, organized by concept.
 - [Physics primer](physics/primer.md) — torque, K_t, K_v, K_m, thermal limits, momentum capacity, swing-up, FOC, cogging
 - [Phase 0 feasibility check](physics/phase-0-feasibility.md) — reproducible torque, momentum, thermal, and sensor timing pre-check
 - [Motor torque estimation](physics/torque-estimation.md) — measured parameters of the 2025 stepper build and the holding-torque estimate
+- [Flywheel moment of inertia measurement](physics/moment-of-inertia-measurement.md) — bifilar suspension, uncertainty and rotating-assembly accounting
 - [Double inverted pendulum](physics/double-pendulum.md) — Euler-Lagrange derivation for the double pendulum
 
 ## Hardware
 
 - [Hardware](hardware/hardware.md) — parameters, motor selection criteria, moteus driver integration, legacy stepper BOM
 - [BLDC motor candidates](hardware/motor-candidates.md) — 15 motors evaluated, shortlist, buy list, final choice
-- [CAD specification](hardware/cad-spec.md) — wheel, rod and table-clamp stand for OpenSCAD (`hardware/cad/`): frame, parameters, parts, BOM, mass model
+- [CAD specification](hardware/specs/cad.md) — wheel, rod and table-clamp stand for OpenSCAD (`hardware/cad/`): frame, parameters, parts, BOM, mass model
 
 ## Deep reinforcement learning
 

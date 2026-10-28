@@ -2,7 +2,7 @@
 
 Measurement design and implementation for
 [PNDLM-8](https://zjor.youtrack.cloud/issue/PNDLM-8). The existing
-[position-step analysis](desk-stand-response-timing.md) motivates a quiet
+[position-step analysis](../desk-stand-response-timing.md) motivates a quiet
 baseline and torque excitation instead of another position trajectory.
 
 ## Locations

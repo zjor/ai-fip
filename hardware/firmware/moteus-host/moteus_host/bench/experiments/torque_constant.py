@@ -1,7 +1,7 @@
 """Tier-C held-rotor fixture: interactive Q-current plateaus and torque steps for K_t.
 
 Physical torque comes from the compression scale on the ±100 mm lever
-(docs/hardware/motor-torque-fixture-spec.md); moteus-reported torque is only
+(docs/hardware/specs/motor-torque-fixture.md); moteus-reported torque is only
 a comparison channel. The operator types one plateau at a time, watches the
 scale while current is on, and types the reading after the controller stops.
 

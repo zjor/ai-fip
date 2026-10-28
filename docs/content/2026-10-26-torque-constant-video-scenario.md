@@ -7,7 +7,7 @@ Audience: technically curious viewers and engineers without motor-control or
 robotics experience. Language of the planned video: English.
 
 Sources: [existing Russian article draft](2026-10-26-torque-constant-draft.md),
-[measurement report, sections 9–10](../hardware/motor-torque-fixture-spec.md#9-results-2026-10-26),
+[measurement report, sections 9–10](../hardware/specs/motor-torque-fixture.md#9-results-2026-10-26),
 [project rationale](../project/roadmap.md),
 [completed experiment PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9).
 

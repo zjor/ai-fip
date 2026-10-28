@@ -3,7 +3,7 @@
 Status: approved design, 2026-09-04. Source of truth for `hardware/cad/`.
 Dimensions here are defaults; `hardware/cad/params.scad` is the single place
 they live in code. When the two disagree, fix the one that is wrong and say so
-in [project/log.md](../project/log.md).
+in [project/log.md](../../project/log.md).
 
 ## 1. Purpose and inputs
 
@@ -11,7 +11,7 @@ Printable mechanics for the 2026 build: a reaction-wheel pendulum on a
 table-edge stand, driven by an mjbots mj5208 + moteus r4.11, sensed by the IMU
 on a pi3hat riding on the pendulum, powered by a 4S pack on the pivot axis.
 
-Decisions this spec implements (see [project/log.md](../project/log.md), 04.09.2026):
+Decisions this spec implements (see [project/log.md](../../project/log.md), 04.09.2026):
 
 | Decision | Value |
 |---|---|
@@ -27,7 +27,8 @@ Motor mounting data, verified against the official mjbots 2D drawing
 (mj5208, rev. 3, 2025-07-26, linked as "2D drawing" on
 <https://mjbots.com/products/mj5208>; checked 2026-10-27, PNDLM-10):
 mj5208 Ø63 × 25 mm, 193 g; rotor 3× M3×0.5 on a Ø17 **or Ø16** bolt circle
-(varies by batch, measure the unit) plus 2× M3×0.5 at 12 mm spacing; stator
+(varies by batch; our unit is **Ø17**, confirmed with a printed fit gauge on
+2026-10-28) plus 2× M3×0.5 at 12 mm spacing; stator
 4× M3×0.5 on a **Ø25 bolt circle** (not a 25 mm square) plus 3× M2.5×0.45 on
 Ø32; stator hub Ø38; shaft Ø5 protruding 2 mm. Stator thread depth is not on
 the drawing. The stator pattern is isolated in one parameter block and one
@@ -62,7 +63,7 @@ Y ≤ −`axle_overhang`, Z ∈ [−`axle_height` − `table_thickness`, −`axl
 | `hub_d`, `hub_t` | 60, 5 | hub plate and quadrant flange |
 | `pocket_n`, `pocket_bolt` | 16, M6 | tuning holes, every 22.5° starting at 11.25°, axial through the rim, plain (nut and head clamp the rim faces) |
 | `motor_d`, `motor_len` | 63, 25 | mj5208 |
-| `rotor_bc_d`, `rotor_n` | 17, 3 | rotor pattern, M3; drawing allows Ø16 or Ø17, measure the unit |
+| `rotor_bc_d`, `rotor_n` | 17, 3 | rotor pattern, M3; drawing allows Ø16 or Ø17, Ø17 confirmed with `rotor_gauge.scad` 2026-10-28 |
 | `stator_bc_d`, `stator_n` | 25, 4 | stator pattern, M3 on a Ø25 bolt circle (drawing rev. 3) |
 | `axle_d`, `axle_len` | 8, 120 | steel shaft |
 | `bearing` | 8 × 22 × 7 | 608 |

@@ -1,7 +1,7 @@
 # Черновик: «Мотор отдаёт 87 % момента. Куда делись 13 %?»
 
 Статус: черновик статьи / сценария видео. Не опубликовано.
-Данные: [fixture spec §9–10](../hardware/motor-torque-fixture-spec.md),
+Данные: [fixture spec §9–10](../hardware/specs/motor-torque-fixture.md),
 [2026-10-26-torque-constant.json](../hardware/measurements/2026-10-26-torque-constant.json),
 [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9).
 График: `figures/2026-10-26-torque-constant.png`

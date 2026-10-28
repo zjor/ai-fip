@@ -4,7 +4,7 @@ Supervised hardware pilot on 2026-10-25 for
 [PNDLM-8](https://zjor.youtrack.cloud/issue/PNDLM-8). It replaces the
 position-mode observation bound of 22–47 ms from the
 [position-step analysis](desk-stand-response-timing.md) with a torque-mode
-bound measured by the method in [response-timing-spec.md](response-timing-spec.md).
+bound measured by the method in [specs/response-timing.md](specs/response-timing.md).
 
 **Result: a host torque command becomes visible in moteus telemetry within
 7–13 ms, confirmed within 18–19 ms, at three torque levels.** The bound is set
