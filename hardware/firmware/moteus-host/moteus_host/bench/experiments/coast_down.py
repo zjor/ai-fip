@@ -43,9 +43,11 @@ FLUX_BRAKE_MIN_VOLTAGE_V = 27.0
 FLUX_BRAKE_KEYS = ("servo.flux_brake_min_voltage", "servo.flux_brake_margin_voltage")
 # stopped, enabling, calibrating, calibration complete, position, timeout
 ALLOWED_MODES = (0, 2, 3, 4, 10, 11)
-# After this many samples of a commanded phase the controller must report position mode;
-# the first replies can still carry the enable sequence (modes 2-4).
-COMMAND_MODE_GRACE_SAMPLES = 2
+# After an enable the firmware passes through enabling (2), calibrating (3) and
+# calibration complete (4) for ~15 ms before position mode; the real controller
+# reported mode 3 on the third reply (2026-10-28). Position mode is required once
+# this long has passed since the first command of the step.
+ENABLE_SETTLE_S = 0.05
 STOP_ATTEMPTS = 3
 MAX_LOST_REPLIES = 5
 PROGRESS_INTERVAL_S = 1.0
@@ -169,6 +171,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
     originals: dict[str, str] = {}
     overrides_set = False
     motion_commanded = False
+    step_command_started = None   # perf_counter of the first command of the current step
     status, reason = "failed", None
     start = time.perf_counter()
     sample = 0
@@ -190,12 +193,14 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
 
     async def record(phase, trial, arguments=None, *, meta=None):
         """One query (arguments None) or one command per sample; checks Tier B limits."""
-        nonlocal motion_commanded
+        nonlocal motion_commanded, step_command_started
         if arguments is None:
             result = await bounded(controller.query())
             command = {"command_mode": "query"}
         else:
             motion_commanded = True
+            if step_command_started is None:
+                step_command_started = time.perf_counter()
             result = await bounded(controller.set_position(**arguments))
             command = meta
         state = result_to_state(result, moteus)
@@ -224,12 +229,12 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
 
     async def phase_loop(phase, trial, arguments, meta, *, done, timeout_s, timeout_message):
         phase_start = time.perf_counter()
-        count = 0
         while True:
             tick = time.perf_counter()
             state = await record(phase, trial, arguments, meta=meta)
-            count += 1
-            if arguments is not None and count > COMMAND_MODE_GRACE_SAMPLES and state["mode"] != 10:
+            settled = (arguments is not None and step_command_started is not None
+                       and time.perf_counter() - step_command_started > ENABLE_SETTLE_S)
+            if settled and state["mode"] != 10:
                 # mode 11 = firmware watchdog fired; the disc is already coasting and
                 # further commands are ignored, so these rows must not pass as data
                 raise SafetyStop(f"controller left position mode during {phase}: mode {state['mode']}")
@@ -279,7 +284,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
             if done(state, tick - wait_start):
                 recorder.event(tick - start, "standstill", value=speed, unit="rev/s")
                 return
-            if tick - last_print >= PROGRESS_INTERVAL_S:
+            if speed >= cfg.coast_stop_rev_s and tick - last_print >= PROGRESS_INTERVAL_S:
                 print(f"coasting: {60 * speed:.0f} rpm", flush=True)
                 last_print = tick
             if tick > deadline:
@@ -323,6 +328,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                        note="; ".join(f"{k}={v}" for k, v in originals.items()) + "; volatile only; never conf write")
         for index, step in enumerate(steps):
             trial = step["trial"]
+            step_command_started = None
             await stopped()
             # the previous coast ended settled below the threshold; this absorbs a late blip
             await wait_for_standstill(phase="preflight", trial=trial)
@@ -340,12 +346,14 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
             recorder.event(time.perf_counter() - start, "operator_confirmed", value=trial)
             if step["kind"] == "ladder":
                 target = step["target_rev_s"]
+                # a low step must still ramp: never accept "reached" while more than 30 % away
+                tolerance = min(cfg.plateau_tolerance_rev_s, 0.3 * abs(target))
                 arguments = velocity_arguments(target, cfg, watchdog_s)
                 meta = dict(command_mode="velocity", command_velocity_rev_s=target,
                             maximum_torque_nm=cfg.spin_up_torque_nm, velocity_limit_rev_s=cfg.max_velocity_rev_s,
                             accel_limit_rev_s2=cfg.accel_limit_rev_s2, watchdog_timeout_s=watchdog_s)
                 await phase_loop("spin_up", trial, arguments, meta,
-                                 done=lambda s, _: abs(s["velocity_rev_s"] - target) <= cfg.plateau_tolerance_rev_s,
+                                 done=lambda s, _: abs(s["velocity_rev_s"] - target) <= tolerance,
                                  timeout_s=cfg.spin_up_timeout_s,
                                  timeout_message=f"spin-up timeout: {60 * abs(target):g} rpm not reached in {cfg.spin_up_timeout_s:g} s")
                 await phase_loop("plateau", trial, arguments, meta,

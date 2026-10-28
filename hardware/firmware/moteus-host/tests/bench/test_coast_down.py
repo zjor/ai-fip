@@ -41,8 +41,11 @@ class FakeController:
     torque mode accelerates by torque/(2*pi*I), stopped decays by friction."""
 
     def __init__(self, clock, *, velocity=0.0, friction_nm=0.004, fail_spin_up=False,
-                 drop_stop_replies=0, drop_query_every=0, mode_11_after_s=None, noise=0.0):
+                 drop_stop_replies=0, drop_query_every=0, mode_11_after_s=None, noise=0.0,
+                 enable_s=0.0):
         self.clock = clock
+        self.enable_s = enable_s         # firmware enable sequence: modes 2, 3 before position mode 10
+        self.enabled_at = None
         self.noise = noise               # alternating ± jitter on the reported velocity
         self.reads = 0
         self.velocity = velocity
@@ -80,12 +83,15 @@ class FakeController:
         if self.mode == 10 and self.mode_11_after_s is not None and self.clock.now >= self.mode_11_after_s:
             self.mode = 11          # firmware watchdog fired: torque off, commands ignored until a stop
         self._integrate()
+        mode = self.mode
+        if mode == 10 and self.enabled_at is not None and self.clock.now - self.enabled_at < self.enable_s:
+            mode = 2 if self.clock.now - self.enabled_at < self.enable_s / 4 else 3
         q = 0.0
         if self.mode == 10 and self.command is not None:
             q = self.command.get("feedforward_torque", 0.0) / KT or 0.5
         self.reads += 1
         reported = self.velocity + (self.noise if self.reads % 2 else -self.noise)
-        values = dict(MODE=self.mode, FAULT=0, POSITION=1.0, VELOCITY=reported,
+        values = dict(MODE=mode, FAULT=0, POSITION=1.0, VELOCITY=reported,
                       TORQUE=q * KT, Q_CURRENT=q, D_CURRENT=0.0, VOLTAGE=24.0, POWER=0.0,
                       TEMPERATURE=25.0, HOME_STATE=1, TRAJECTORY_COMPLETE=1)
         return SimpleNamespace(values={getattr(moteus.Register, k): v for k, v in values.items()})
@@ -99,6 +105,7 @@ class FakeController:
         reply = self.result()
         self.mode = 0
         self.command = None
+        self.enabled_at = None
         return reply
 
     async def query(self):
@@ -111,6 +118,8 @@ class FakeController:
         self.commands.append(kwargs)
         if self.mode == 11:
             return self.result()    # ignored by the firmware until a stop
+        if self.mode == 0:
+            self.enabled_at = self.clock.now
         self.command = kwargs
         self.mode = 10
         return self.result()
@@ -360,6 +369,20 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
             self.assertGreaterEqual(span, 0.25, trial)
             tail = [r for r in coast if float(coast[-1]["host_time_s"]) - float(r["host_time_s"]) <= 0.25]
             self.assertTrue(all(abs(float(r["velocity_rev_s"])) < 0.2 for r in tail), trial)
+
+    async def test_enable_sequence_is_not_mistaken_for_leaving_position_mode(self):
+        # 30 rpm on hardware (2026-10-28): the spin-up ended on its first sample and the plateau
+        # saw the firmware's enable modes 2 and 3 (~15 ms) and stopped the run
+        clock = FakeClock()
+        controller = FakeController(clock, enable_s=0.02)
+        controller, stream, meta, rows, events = await self.execute(
+            self.config(ladder_rpm=(30.0,), plateau_s=0.2), controller=controller)
+        self.assertEqual(meta["status"], "completed")
+        plateau = [r for r in rows if r["experiment_phase"] == "plateau"]
+        self.assertTrue(all(r["mode"] == "10" for r in plateau))      # the plateau starts in position mode
+        spin_up = [r for r in rows if r["experiment_phase"] == "spin_up"]
+        self.assertGreater(len(spin_up), 3)                            # it really ramps to 0.5 rev/s first
+        self.assertGreaterEqual(float(spin_up[-1]["velocity_rev_s"]), 0.5 - 0.15)
 
     async def test_ladder_override_above_cap_rejected(self):
         create = Mock()
