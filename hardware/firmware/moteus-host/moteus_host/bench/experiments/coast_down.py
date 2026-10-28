@@ -4,11 +4,14 @@ plus torque-step spin-ups from rest with --accelerate.
 Design: docs/hardware/specs/coast-down.md. The 24 V bench supply cannot sink
 current, so the motor never brakes: every deceleration is set_stop() and
 friction. For the run the firmware watchdog is set to torque-off
-(servo.timeout_mode 0), the position bounds are opened (NaN) and
-servo.max_velocity caps speed on the controller side; all three are volatile
-and restored with a readback in `finally`. A safety stop sends the stop and
-then keeps querying until the disc is below coast_stop_rev_s, so the operator
-is never left with a blind spinning disc.
+(servo.timeout_mode 0), the position bounds are opened (NaN),
+servo.max_velocity derates torque above the Tier B speed and the flux brake
+burns any regeneration in the windings below the supply's limit; all of them
+are volatile and restored with a readback in `finally`. A safety stop, a
+cancelled task (what asyncio.run does on Ctrl-C) or a lost reply sends the
+stop and then keeps querying until the disc is below coast_stop_rev_s, so the
+operator is never left with a blind spinning disc; a second Ctrl-C during that
+wait is swallowed with a reminder that only a power disconnect stops it sooner.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import signal
 import time
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -30,9 +34,18 @@ from .common import confirm_stopped, wait_until
 
 CONFIRM_WORD = "GO"
 CONNECT_TIMEOUT_S = 5.0
-OVERRIDES = ("servo.timeout_mode", "servopos.position_min", "servopos.position_max", "servo.max_velocity")
+OVERRIDES = ("servo.timeout_mode", "servopos.position_min", "servopos.position_max",
+             "servo.max_velocity", "servo.flux_brake_min_voltage")
+# Regeneration above this bus voltage is dissipated in the windings instead of
+# pushed into the 24 V supply, which cannot sink current.
+FLUX_BRAKE_MIN_VOLTAGE_V = 27.0
 # stopped, enabling, calibrating, calibration complete, position, timeout
 ALLOWED_MODES = (0, 2, 3, 4, 10, 11)
+# After this many samples of a commanded phase the controller must report position mode;
+# the first replies can still carry the enable sequence (modes 2-4).
+COMMAND_MODE_GRACE_SAMPLES = 2
+STOP_ATTEMPTS = 3
+MAX_LOST_REPLIES = 5
 PROGRESS_INTERVAL_S = 1.0
 
 
@@ -101,9 +114,11 @@ def plan_steps(cfg: CoastDownConfig, *, accelerate: bool) -> list[dict[str, Any]
 
 
 def velocity_arguments(target_rev_s: float, cfg: CoastDownConfig, watchdog_s: float) -> dict[str, Any]:
-    return dict(position=math.nan, velocity=target_rev_s, maximum_torque=cfg.spin_up_torque_nm,
-                velocity_limit=cfg.max_velocity_rev_s, accel_limit=cfg.accel_limit_rev_s2,
-                watchdog_timeout=watchdog_s, query=True)
+    # kp_scale 0: a pure velocity (kd) loop. With position tracking the lag built up during
+    # the ramp would be corrected by a braking pulse at the end of it.
+    return dict(position=math.nan, velocity=target_rev_s, kp_scale=0.0,
+                maximum_torque=cfg.spin_up_torque_nm, velocity_limit=cfg.max_velocity_rev_s,
+                accel_limit=cfg.accel_limit_rev_s2, watchdog_timeout=watchdog_s, query=True)
 
 
 def torque_arguments(torque_nm: float, cfg: CoastDownConfig, watchdog_s: float) -> dict[str, Any]:
@@ -175,9 +190,15 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
 
     async def phase_loop(phase, trial, arguments, meta, *, done, timeout_s, timeout_message):
         phase_start = time.perf_counter()
+        count = 0
         while True:
             tick = time.perf_counter()
             state = await record(phase, trial, arguments, meta=meta)
+            count += 1
+            if arguments is not None and count > COMMAND_MODE_GRACE_SAMPLES and state["mode"] != 10:
+                # mode 11 = firmware watchdog fired; the disc is already coasting and
+                # further commands are ignored, so these rows must not pass as data
+                raise SafetyStop(f"controller left position mode during {phase}: mode {state['mode']}")
             if done(state, tick - phase_start):
                 return state
             if time.perf_counter() - phase_start > timeout_s:
@@ -192,13 +213,32 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
                                 timeout_s=cfg.coast_timeout_s,
                                 timeout_message=f"coast timeout after {cfg.coast_timeout_s:g} s")
 
+    async def stop_with_retries():
+        last = None
+        for attempt in range(STOP_ATTEMPTS):
+            try:
+                return await stopped()
+            except (TimeoutError, SafetyStop) as exc:
+                last = exc
+                await wait_until(time.perf_counter() + period)
+        raise SafetyStop(f"stop not confirmed after {STOP_ATTEMPTS} attempts: {last}")
+
     async def wait_for_standstill():
         """After any stop: keep the operator informed until the disc is slow."""
         deadline = time.perf_counter() + cfg.coast_timeout_s
         last_print = -math.inf
+        lost = 0
         while True:
             tick = time.perf_counter()
-            state = result_to_state(await bounded(controller.query()), moteus)
+            try:
+                state = result_to_state(await bounded(controller.query()), moteus)
+            except TimeoutError:
+                lost += 1
+                if lost >= MAX_LOST_REPLIES:
+                    raise SafetyStop(f"{lost} replies lost in a row while the disc may be turning")
+                await wait_until(tick + period)
+                continue
+            lost = 0
             write_row(state, phase="standstill_wait", trial=None, command={"command_mode": "query"})
             speed = abs(state["velocity_rev_s"]) if state["velocity_rev_s"] is not None else math.inf
             if speed < cfg.coast_stop_rev_s:
@@ -242,6 +282,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         await conf("servopos.position_min", "nan")
         await conf("servopos.position_max", "nan")
         await conf("servo.max_velocity", f"{cfg.max_velocity_rev_s:g}")
+        await conf("servo.flux_brake_min_voltage", f"{FLUX_BRAKE_MIN_VOLTAGE_V:g}")
         recorder.event(time.perf_counter() - start, "overrides_set",
                        note="; ".join(f"{k}={v}" for k, v in originals.items()) + "; volatile only; never conf write")
         for index, step in enumerate(steps):
@@ -291,7 +332,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         if not completed_steps:
             reason = "operator did not confirm the first step"
     except BaseException as exc:
-        if isinstance(exc, KeyboardInterrupt):
+        if isinstance(exc, (KeyboardInterrupt, asyncio.CancelledError)):
             status = "interrupted"
         elif isinstance(exc, (SafetyStop, TimeoutError)):
             status = "safety_stop"
@@ -300,9 +341,14 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
         reason = f"{type(exc).__name__}: {exc}"
         raise
     finally:
+        previous_handler = None
         try:
+            try:
+                previous_handler = signal.signal(signal.SIGINT, _second_interrupt)
+            except ValueError:
+                previous_handler = None   # not the main thread (tests); nothing to guard
             if controller is not None:
-                await stopped()
+                await stop_with_retries()
                 await wait_for_standstill()
             if overrides_set:
                 for key, value in originals.items():
@@ -313,8 +359,15 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
             status = "cleanup_failed"
             reason = f"{reason or ''}; cleanup: {type(exc).__name__}: {exc}"
             print("STOP/RESTORE NOT CONFIRMED: disconnect power; keep clear of the disc; "
-                  "inspect timeout mode, position bounds and max velocity before reuse.", flush=True)
+                  "inspect timeout mode, position bounds, max velocity and flux brake before reuse.",
+                  flush=True)
             raise
         finally:
+            if previous_handler is not None:
+                signal.signal(signal.SIGINT, previous_handler)
             recorder.close(status, reason)
     return str(recorder.path)
+
+
+def _second_interrupt(signum, frame):
+    print("still coasting; the stop was sent. Only a power disconnect stops the disc sooner.", flush=True)

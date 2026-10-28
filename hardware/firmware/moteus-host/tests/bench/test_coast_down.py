@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import csv
 import io
@@ -21,7 +22,7 @@ from moteus_host.bench.safety import SafetyStop
 INERTIA = 3.54e-4
 KT = 0.0244
 SNAPSHOT = ("servo.timeout_mode 12\nservopos.position_min -1\nservopos.position_max 1\n"
-            "servo.max_velocity 500\nmotor.Kv 330\n")
+            "servo.max_velocity 500\nservo.flux_brake_min_voltage 34\nmotor.Kv 330\n")
 
 
 class FakeClock:
@@ -39,11 +40,16 @@ class FakeController:
     """Integrates disc speed from the last command: velocity mode ramps at accel_limit,
     torque mode accelerates by torque/(2*pi*I), stopped decays by friction."""
 
-    def __init__(self, clock, *, velocity=0.0, friction_nm=0.004, fail_spin_up=False):
+    def __init__(self, clock, *, velocity=0.0, friction_nm=0.004, fail_spin_up=False,
+                 drop_stop_replies=0, drop_query_every=0, mode_11_after_s=None):
         self.clock = clock
         self.velocity = velocity
         self.friction = friction_nm
         self.fail_spin_up = fail_spin_up
+        self.drop_stop_replies = drop_stop_replies
+        self.drop_query_every = drop_query_every
+        self.mode_11_after_s = mode_11_after_s
+        self.queries = 0
         self.mode = 0
         self.command = None
         self.commands = []
@@ -69,6 +75,8 @@ class FakeController:
 
     def result(self):
         self.clock.now += 0.001
+        if self.mode == 10 and self.mode_11_after_s is not None and self.clock.now >= self.mode_11_after_s:
+            self.mode = 11          # firmware watchdog fired: torque off, commands ignored until a stop
         self._integrate()
         q = 0.0
         if self.mode == 10 and self.command is not None:
@@ -80,16 +88,25 @@ class FakeController:
 
     async def set_stop(self, **kwargs):
         self.stops += 1
+        if self.drop_stop_replies > 0 and self.command is not None:
+            # lose the reply to the stop that ends a commanded phase (the cleanup stop)
+            self.drop_stop_replies -= 1
+            raise TimeoutError("stop reply lost")
         reply = self.result()
         self.mode = 0
         self.command = None
         return reply
 
     async def query(self):
+        self.queries += 1
+        if self.drop_query_every and self.queries % self.drop_query_every == 0:
+            raise TimeoutError("query reply lost")
         return self.result()
 
     async def set_position(self, **kwargs):
         self.commands.append(kwargs)
+        if self.mode == 11:
+            return self.result()    # ignored by the firmware until a stop
         self.command = kwargs
         self.mode = 10
         return self.result()
@@ -98,7 +115,8 @@ class FakeController:
 class FakeStream:
     def __init__(self):
         self.settings = {b"servo.timeout_mode": b"12", b"servopos.position_min": b"-1",
-                         b"servopos.position_max": b"1", b"servo.max_velocity": b"500"}
+                         b"servopos.position_max": b"1", b"servo.max_velocity": b"500",
+                         b"servo.flux_brake_min_voltage": b"34"}
         self.writes = []
         self.flushed = False
 
@@ -123,15 +141,16 @@ class FakeStream:
 class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
     def config(self, **overrides):
         config = load_config()
-        return replace(config, coast_down=replace(
-            config.coast_down, ladder_rpm=(60.0, 120.0), plateau_s=0.05, coast_stop_rev_s=0.2,
-            spin_up_timeout_s=0.5, coast_timeout_s=30.0, accel_target_rev_s=5.0,
-            accel_timeout_s=2.0, **overrides))
+        values = dict(ladder_rpm=(60.0, 120.0), plateau_s=0.05, coast_stop_rev_s=0.2,
+                      spin_up_timeout_s=0.5, coast_timeout_s=30.0, accel_target_rev_s=5.0,
+                      accel_timeout_s=2.0)
+        values.update(overrides)
+        return replace(config, coast_down=replace(config.coast_down, **values))
 
     async def execute(self, config, *, inputs=("GO", "GO", "GO", "GO", "GO", "GO"),
                       controller=None, interrupt_in_coast=False, expected_error=None, **kwargs):
-        clock = FakeClock()
-        controller = controller or FakeController(clock)
+        controller = controller or FakeController(FakeClock())
+        clock = controller.clock          # the experiment's perf_counter is the fake's physics clock
         stream = FakeStream()
         answers = iter(inputs)
         state = {"interrupted": False}
@@ -139,7 +158,7 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         async def wait(deadline):
             if interrupt_in_coast and controller.stops >= 1 and not state["interrupted"]:
                 state["interrupted"] = True
-                raise KeyboardInterrupt
+                asyncio.current_task().cancel()   # what asyncio.run does on a real SIGINT
             await clock.wait(deadline)
 
         with tempfile.TemporaryDirectory() as directory:
@@ -179,6 +198,8 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stream.settings[b"servopos.position_min"], b"-1")
         self.assertEqual(stream.settings[b"servopos.position_max"], b"1")
         self.assertEqual(stream.settings[b"servo.max_velocity"], b"500")
+        self.assertEqual(stream.settings[b"servo.flux_brake_min_voltage"], b"34")
+        self.assertIn(b"conf set servo.flux_brake_min_voltage 27", stream.writes)
         self.assertIn("overrides_set", events)
         self.assertIn("overrides_restored", events)
         self.assertFalse(any(b"conf write" in w for w in stream.writes))
@@ -186,7 +207,7 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         velocity_commands = [c for c in controller.commands if not c.get("feedforward_torque")]
         self.assertTrue(velocity_commands)
         self.assertTrue(all(c["maximum_torque"] == 0.10 and c["velocity_limit"] == 55.0
-                            for c in velocity_commands))
+                            and c["kp_scale"] == 0.0 for c in velocity_commands))
         self.assertTrue(all(c["watchdog_timeout"] == 0.1 for c in controller.commands))
         # the coast is a stop, never a braking command
         coast_rows = [r for r in rows if r["experiment_phase"] == "coast"]
@@ -248,14 +269,39 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         accel_rows = [r for r in rows if r["experiment_phase"] == "accel" and r["trial_id"] == "0"]
         self.assertGreaterEqual(abs(float(accel_rows[-1]["velocity_rev_s"])), 5.0 - 0.1)
 
-    async def test_keyboard_interrupt_during_coast_still_restores(self):
+    async def test_cancellation_during_coast_still_restores(self):
         controller, stream, meta, rows, events = await self.execute(
-            self.config(), interrupt_in_coast=True, expected_error=KeyboardInterrupt)
+            self.config(), interrupt_in_coast=True, expected_error=asyncio.CancelledError)
         self.assertEqual(meta["status"], "interrupted")
         self.assertGreaterEqual(controller.stops, 2)
         self.assertEqual(stream.settings[b"servo.timeout_mode"], b"12")
         self.assertIn("overrides_restored", events)
         self.assertLess(abs(float(rows[-1]["velocity_rev_s"])), 0.2)
+
+    async def test_cleanup_survives_lost_replies(self):
+        clock = FakeClock()
+        controller = FakeController(clock, fail_spin_up=True, drop_stop_replies=1, drop_query_every=7)
+        controller, stream, meta, rows, events = await self.execute(
+            self.config(), controller=controller, expected_error=SafetyStop)
+        self.assertEqual(meta["status"], "safety_stop")
+        self.assertNotIn("cleanup", meta["reason"])
+        self.assertIn("standstill", events)
+        self.assertIn("overrides_restored", events)
+        self.assertGreaterEqual(controller.stops, 2)
+
+    async def test_watchdog_timeout_during_plateau_is_a_safety_stop(self):
+        clock = FakeClock()
+        controller = FakeController(clock, mode_11_after_s=0.09)
+        controller, stream, meta, rows, events = await self.execute(
+            self.config(plateau_s=0.5), controller=controller, expected_error=SafetyStop)
+        self.assertEqual(meta["status"], "safety_stop")
+        self.assertIn("mode 11", meta["reason"])
+        self.assertIn("plateau", meta["reason"])
+        plateau_rows = [r for r in rows if r["experiment_phase"] == "plateau"]
+        # the flip at 0.09 s lands a few samples into the plateau; nothing after it is logged as plateau
+        self.assertLess(len(plateau_rows), 20)
+        self.assertEqual(plateau_rows[-1]["mode"], "11")
+        self.assertEqual(stream.settings[b"servo.timeout_mode"], b"12")
 
     async def test_ladder_override_above_cap_rejected(self):
         create = Mock()
@@ -275,6 +321,7 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
         args = experiment.velocity_arguments(-2.0, cfg, 0.1)
         self.assertTrue(math.isnan(args["position"]))
         self.assertEqual((args["velocity"], args["maximum_torque"], args["accel_limit"]), (-2.0, 0.10, 20.0))
+        self.assertEqual(args["kp_scale"], 0.0)   # no position windup across the ramp, so no brake at its end
         args = experiment.torque_arguments(-0.05, cfg, 0.1)
         self.assertEqual((args["feedforward_torque"], args["maximum_torque"], args["kp_scale"]), (-0.05, 0.05, 0.0))
 
