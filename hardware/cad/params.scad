@@ -1,4 +1,4 @@
-// All dimensions in mm, densities in g/mm^3. Source of truth: docs/hardware/cad-spec.md.
+// All dimensions in mm, densities in g/mm^3. Source of truth: docs/hardware/specs/cad.md.
 // Frame: origin at the axle centre on the rod mid-plane; Z up the upright rod;
 // Y along the axle away from the table edge; X along the table edge.
 
@@ -27,12 +27,26 @@ lap_len = 8;                   // rim half-lap length along the rim
 // ---- motor mj5208 ----
 motor_d = 63;
 motor_len = 25;
-rotor_bc_d = 17;
+rotor_bc_d = 17;               // Ø17 confirmed with rotor_gauge.scad 2026-10-28 (drawing: Ø16 or Ø17 by batch)
 rotor_n = 3;
 stator_bc_d = 25;              // 4x M3 on a Ø25 bolt circle (mjbots mj5208 drawing rev.3 2025-07-26); 2nd pattern 3x M2.5 on Ø32 unused
 stator_n = 4;
 flange_d = 70;
 flange_plate_t = 6;
+
+// ---- test disc (PNDLM-11, docs/hardware/specs/test-disc.md) ----
+td_d = 150;                    // outer diameter
+td_ring_w = 14;                // ring radial width
+td_ring_h = 10;                // ring axial height
+td_edge_r = 2;                 // ring cross-section corner radius
+td_hub_d = 40;                 // hub disc diameter
+td_web_h = 8;                  // hub and spoke height
+td_spokes = 3;
+td_spoke_w = 10;
+td_fillet = 6;                 // concave fillets at spoke junctions
+td_bore_d = 6.5;               // clears the Ø5 x 2 mm shaft stub; Ø10 left too little wall to the M3 holes
+td_cbore_d = 6;                // M3 socket head (Ø5.5) counterbore
+td_cbore_h = 4.5;              // leaves 3.5 mm under the head: M3x8 engages 4.5 mm of rotor thread
 
 // ---- pivot ----
 axle_d = 8;

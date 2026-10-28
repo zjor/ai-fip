@@ -1,0 +1,68 @@
+{
+  "part": "test_disc",
+  "youtrack": "PNDLM-11",
+  "spec": "docs/hardware/specs/test-disc.md",
+  "model": "hardware/cad/test_disc.scad",
+  "rendered": {
+    "date": "2026-10-28",
+    "tool": "hardware/cad/tools/stl_props.py (signed tetrahedra, axis z through origin)",
+    "stl_sha256_prefix": "32f38c56402ddec6",
+    "density_g_cm3": 1.25,
+    "volume_mm3": 78856.7,
+    "mass_g": 98.571,
+    "I_z_kg_m2": 0.000371,
+    "centroid_mm": [
+      0.0,
+      0.0,
+      4.7
+    ],
+    "size_mm": [
+      150.0,
+      150.0,
+      10.0
+    ],
+    "params": {
+      "td_d": 150,
+      "td_ring_w": 14,
+      "td_ring_h": 10,
+      "td_edge_r": 2,
+      "td_hub_d": 40,
+      "td_web_h": 8,
+      "td_spokes": 3,
+      "td_spoke_w": 10,
+      "td_fillet": 6,
+      "td_bore_d": 6.5,
+      "td_cbore_d": 6,
+      "td_cbore_h": 4.5,
+      "rotor_bc_d": 17,
+      "rotor_n": 3
+    }
+  },
+  "printed": {
+    "date": "2026-10-28",
+    "material": "PLA",
+    "mass_g": 93.9,
+    "I_z_kg_m2_scaled": 0.0003534,
+    "note": "I_z_scaled = rendered I_z * printed mass / rendered mass; geometry is fixed, only density differs",
+    "effective_density_g_cm3": 1.191
+  },
+  "measured": {
+    "method": null,
+    "I_z_kg_m2": null,
+    "uncertainty_kg_m2": null,
+    "source": null,
+    "note": "bifilar (docs/physics/moment-of-inertia-measurement.md) or acceleration run with K_t 0.0244 Nm/A"
+  },
+  "mounting": {
+    "screws": "3x M3x8 socket head",
+    "mass_g_total": 2.4,
+    "radius_m": 0.0085,
+    "I_z_kg_m2": 1.73e-07,
+    "note": "point masses on the rotor bolt circle; negligible"
+  },
+  "assembly": {
+    "I_z_kg_m2": 0.0003536,
+    "mass_g": 96.30000000000001,
+    "note": "disc + screws, excluding the motor rotor; rotor inertia comes from the bare-rotor coast-down"
+  }
+}

@@ -162,6 +162,35 @@ class StandTest(unittest.TestCase):
         self.assertAlmostEqual(self.pad["size"][2], 6.0, delta=0.01)
 
 
+class TestDiscTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.disc, _ = render("test_disc", "disc")
+
+    def test_mass(self):
+        mass = self.disc["volume_mm3"] * RHO_PLA
+        self.assertGreater(mass, 80.0)
+        self.assertLess(mass, 120.0)
+
+    def test_extents_and_bed_fit(self):
+        sx, sy, sz = self.disc["size"]
+        self.assertAlmostEqual(sx, 150.0, delta=0.5)
+        self.assertAlmostEqual(sy, 150.0, delta=0.5)
+        self.assertAlmostEqual(sz, 10.0, delta=0.01)      # ring height
+        self.assertAlmostEqual(self.disc["bbox_min"][2], 0.0, delta=0.01)
+        self.assertTrue(fits_bed(sx, sy), (sx, sy))
+
+    def test_inertia(self):
+        inertia = self.disc["i_axis_mm5"] * RHO_PLA * 1e-9
+        self.assertGreater(inertia, 3.0e-4)
+        self.assertLess(inertia, 4.5e-4)
+
+    def test_balanced(self):
+        cx, cy, _ = self.disc["centroid"]
+        self.assertAlmostEqual(cx, 0.0, delta=0.02)
+        self.assertAlmostEqual(cy, 0.0, delta=0.02)
+
+
 class AssemblyTest(unittest.TestCase):
     def test_assembly_renders_with_expected_height(self):
         scene, _ = render("assembly", None, axis="y")

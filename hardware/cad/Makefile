@@ -3,7 +3,7 @@ OSFLAGS  ?= --backend=manifold
 BUILD    := build
 PY       ?= python3
 
-PARTS := wheel_quadrant wheel_hub wheel_bolts beam motor_flange stand pad
+PARTS := wheel_quadrant wheel_hub wheel_bolts beam motor_flange stand pad test_disc rotor_gauge_16 rotor_gauge_17
 
 .PHONY: parts masses check view test clean
 
@@ -26,6 +26,12 @@ $(BUILD)/stand.stl: stand.scad params.scad lib.scad | $(BUILD)
 	$(OPENSCAD) $(OSFLAGS) -D 'part="stand"' -o $@ $<
 $(BUILD)/pad.stl: stand.scad params.scad lib.scad | $(BUILD)
 	$(OPENSCAD) $(OSFLAGS) -D 'part="pad"' -o $@ $<
+$(BUILD)/test_disc.stl: test_disc.scad params.scad lib.scad | $(BUILD)
+	$(OPENSCAD) $(OSFLAGS) -D 'part="disc"' -o $@ $<
+$(BUILD)/rotor_gauge_16.stl: rotor_gauge.scad params.scad lib.scad | $(BUILD)
+	$(OPENSCAD) $(OSFLAGS) -D 'bc=16' -o $@ $<
+$(BUILD)/rotor_gauge_17.stl: rotor_gauge.scad params.scad lib.scad | $(BUILD)
+	$(OPENSCAD) $(OSFLAGS) -D 'bc=17' -o $@ $<
 $(BUILD)/assembly.stl: assembly.scad wheel.scad rod.scad stand.scad params.scad lib.scad | $(BUILD)
 	$(OPENSCAD) $(OSFLAGS) -o $@ $<
 
@@ -33,6 +39,7 @@ masses: parts
 	$(PY) tools/stl_props.py --density 1.25e-3 --axis z $(BUILD)/wheel_quadrant.stl $(BUILD)/wheel_hub.stl
 	$(PY) tools/stl_props.py --density 7.85e-3 --axis z $(BUILD)/wheel_bolts.stl
 	$(PY) tools/stl_props.py --density 1.25e-3 --axis y $(BUILD)/beam.stl $(BUILD)/motor_flange.stl $(BUILD)/stand.stl $(BUILD)/pad.stl
+	$(PY) tools/stl_props.py --density 1.25e-3 --axis z $(BUILD)/test_disc.stl
 	$(PY) tools/mass_model.py
 
 # OpenSCAD exits non-zero when the intersection is empty; that is the pass case.

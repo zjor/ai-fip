@@ -1,7 +1,7 @@
 # Mechanics — OpenSCAD
 
 Parametric models of the reaction-wheel pendulum: wheel, rod, table-clamp
-stand. Design and rationale: [docs/hardware/cad-spec.md](../../docs/hardware/cad-spec.md).
+stand. Design and rationale: [docs/hardware/specs/cad.md](../../docs/hardware/specs/cad.md).
 All dimensions live in `params.scad`.
 
 ## Build
@@ -28,6 +28,8 @@ intersection of the pendulum at 0/90/180/270° with the stand and table is empty
 | motor flange | `rod.scad` / `flange` | 1 | 41.7 g | on edge (X up), brim (135 × 20 mm) | 4 perimeters, 50 % infill |
 | stand | `stand.scad` / `stand` | 1 | 151.6 g | on its side (X up) (98 × 74 mm) | 5 perimeters, 40 % infill, PETG preferred |
 | pad | `stand.scad` / `pad` | 1 | 3.4 g | flat | |
+| rotor gauge | `rotor_gauge.scad`, `bc=16` / `bc=17` | 1 each | 1.2 g | flat | 2 mm fit gauge for the rotor bolt pattern; the one that takes all three M3 without force wins |
+| test disc | `test_disc.scad` / `disc` | 1 | 98.6 g | flat, rotor face down | 4 perimeters, 100 % infill; bench only, [specs/test-disc.md](../../docs/hardware/specs/test-disc.md) |
 
 `wheel.scad / bolts` is not a print: it models the eight M6 tuning bolts
 (66.7 g steel) for the mass model.
