@@ -14,6 +14,10 @@ max_torque_nm = 0.15
 max_position_excursion_rev = 0.25
 max_friction_velocity_rev_s = 0.35
 max_friction_excursion_rev = 1.10
+# Tier B: retained rotating assembly (test disc) and guard, docs/hardware/specs/coast-down.md.
+# Only coast-down may use these; every other experiment keeps the Tier A values above.
+max_rotating_velocity_rev_s = 55.0
+max_rotating_torque_nm = 0.20
 
 [inspect]
 duration_s = 5.0
@@ -57,7 +61,7 @@ max_velocity_rev_s = 0.8
 max_excursion_rev = 0.05
 
 [torque_constant]
-# Held-rotor lever/scale fixture (docs/hardware/motor-torque-fixture-spec.md).
+# Held-rotor lever/scale fixture (docs/hardware/specs/motor-torque-fixture.md).
 # Q-current plateaus are typed interactively; these are the defaults and caps.
 sample_rate_hz = 200.0
 plateau_s = 3.0
@@ -93,3 +97,32 @@ rise_prehold_nm = 0.01
 rise_prehold_s = 0.25
 rise_sample_rate_hz = 400.0
 nominal_kt_nm_per_a = 0.025
+
+[coast_down]
+# Free coast-downs of the test disc from a speed ladder, plus torque-step spin-ups with
+# --accelerate (docs/hardware/specs/coast-down.md). The 24 V bench supply cannot sink
+# current, so the motor never brakes: every stop is set_stop() and friction.
+sample_rate_hz = 200.0
+ladder_rpm = [500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.0]
+direction = 1
+# ~4 A phase; 3000 rpm in about 3 s with the firmware ramp below
+spin_up_torque_nm = 0.10
+accel_limit_rev_s2 = 20.0
+spin_up_timeout_s = 15.0
+plateau_s = 3.0
+plateau_tolerance_rev_s = 0.5
+# below this the coast is over (12 rpm); must stay under the lowest ladder step
+coast_stop_rev_s = 0.2
+coast_timeout_s = 120.0
+# --accelerate: feedforward torque steps from rest, both directions, within the K_t linear range
+accel_torques_nm = [0.05, 0.10, 0.15]
+accel_target_rev_s = 30.0
+accel_timeout_s = 10.0
+# host stop thresholds and the firmware-side servo.max_velocity override (Tier B)
+max_velocity_rev_s = 55.0
+max_torque_nm = 0.20
+response_timeout_s = 0.05
+# assembly.I_z_kg_m2 of the weighed disc plus screws, copied into run.json
+inertia_record = "docs/hardware/measurements/2026-10-28-test-disc.json"
+# PNDLM-9 static torque constant for the plateau cross-check
+kt_nm_per_a = 0.0244

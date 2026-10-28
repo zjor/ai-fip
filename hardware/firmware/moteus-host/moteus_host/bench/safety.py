@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from .config import FrictionConfig, PositionStepConfig, SafetyConfig
+from .config import CoastDownConfig, FrictionConfig, PositionStepConfig, SafetyConfig
 
 
 class SafetyStop(RuntimeError):
@@ -30,6 +30,48 @@ def validate_friction(config: FrictionConfig, limits: SafetyConfig) -> None:
         raise ValueError("friction travel exceeds the Tier-A hard limit")
 
 
+def validate_coast_down(config: CoastDownConfig, limits: SafetyConfig) -> None:
+    """Tier B checks: every value must sit inside the tracked rotating caps."""
+    numeric = (
+        "sample_rate_hz", "spin_up_torque_nm", "accel_limit_rev_s2", "spin_up_timeout_s",
+        "plateau_s", "plateau_tolerance_rev_s", "coast_stop_rev_s", "coast_timeout_s",
+        "accel_target_rev_s", "accel_timeout_s", "max_velocity_rev_s", "max_torque_nm",
+        "response_timeout_s", "kt_nm_per_a",
+    )
+    for name in numeric:
+        value = getattr(config, name)
+        if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+            raise ValueError(f"coast_down.{name} must be finite and positive")
+    if not config.ladder_rpm:
+        raise ValueError("coast_down.ladder_rpm must list at least one speed")
+    for rpm in config.ladder_rpm:
+        if not math.isfinite(rpm) or rpm <= 0:
+            raise ValueError("coast_down.ladder_rpm entries must be finite and positive")
+        if rpm / 60.0 >= config.max_velocity_rev_s:
+            raise ValueError(
+                f"coast_down.ladder_rpm {rpm:g} rpm reaches the {config.max_velocity_rev_s:g} rev/s cap"
+            )
+    if config.max_velocity_rev_s > limits.max_rotating_velocity_rev_s:
+        raise ValueError("coast_down.max_velocity_rev_s exceeds the Tier-B rotating velocity cap")
+    if config.max_torque_nm > limits.max_rotating_torque_nm:
+        raise ValueError("coast_down.max_torque_nm exceeds the Tier-B rotating torque cap")
+    if config.spin_up_torque_nm > config.max_torque_nm:
+        raise ValueError("coast_down.spin_up_torque_nm exceeds coast_down.max_torque_nm")
+    for torque in config.accel_torques_nm:
+        if not math.isfinite(torque) or torque <= 0 or torque > config.max_torque_nm:
+            raise ValueError("coast_down.accel_torques_nm entries must be positive and within max_torque_nm")
+    if config.accel_target_rev_s >= config.max_velocity_rev_s:
+        raise ValueError("coast_down.accel_target_rev_s must stay below max_velocity_rev_s")
+    if config.coast_stop_rev_s >= min(config.ladder_rpm) / 60.0:
+        raise ValueError("coast_down.coast_stop_rev_s must be below the lowest ladder speed")
+    if config.direction not in (1, -1):
+        raise ValueError("coast_down.direction must be 1 or -1")
+    if not 50.0 <= config.sample_rate_hz <= 500.0:
+        raise ValueError("coast_down.sample_rate_hz must be within 50..500 Hz")
+    if config.response_timeout_s > 0.1:
+        raise ValueError("coast_down.response_timeout_s must be <= 100 ms")
+
+
 def check_state(
     state: dict[str, Any],
     limits: SafetyConfig,
@@ -37,6 +79,7 @@ def check_state(
     origin_position_rev: float | None = None,
     max_position_excursion_rev: float | None = None,
     max_abs_velocity_rev_s: float | None = None,
+    max_torque_nm: float | None = None,
 ) -> None:
     required_fields = (
         "mode",
@@ -93,7 +136,7 @@ def check_state(
         (
             "torque",
             abs(state["torque_nm"]) if state.get("torque_nm") is not None else None,
-            limits.max_torque_nm,
+            max_torque_nm or limits.max_torque_nm,
             "N·m",
         ),
         (
