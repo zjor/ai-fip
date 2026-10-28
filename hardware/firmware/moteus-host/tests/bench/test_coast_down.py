@@ -391,6 +391,14 @@ class CoastDownExperimentTest(unittest.IsolatedAsyncioTestCase):
                 await experiment.run(self.config(), Path("/nonexistent"), 1, ladder_rpm=(4000.0,))
         create.assert_not_called()
 
+    def test_spin_up_tolerance_scales_with_the_target(self):
+        cfg = self.config().coast_down
+        # a pure velocity loop settles 10-25 % below the target under load (26 rpm at a 30 rpm step,
+        # 2026-10-28); low steps must still ramp, high steps must not time out on the shortfall
+        self.assertAlmostEqual(experiment.spin_up_tolerance(0.5, cfg), 0.15)    # 30 % of a low target
+        self.assertAlmostEqual(experiment.spin_up_tolerance(5.0, cfg), 0.5)     # the configured floor
+        self.assertAlmostEqual(experiment.spin_up_tolerance(50.0, cfg), 5.0)    # 10 % of a high target
+
     def test_plan_steps_and_arguments(self):
         cfg = self.config().coast_down
         steps = experiment.plan_steps(cfg, accelerate=False)

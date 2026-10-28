@@ -147,6 +147,13 @@ def flux_brake_override(settings: dict[str, str]) -> tuple[str, str]:
                      + ") in the controller configuration; regeneration could reach the supply")
 
 
+def spin_up_tolerance(target_rev_s: float, cfg: CoastDownConfig) -> float:
+    """How close to the target counts as reached: at least 10 % of it (a pure velocity loop
+    settles below the target under load), never more than 30 % so low steps still ramp."""
+    target = abs(target_rev_s)
+    return min(max(cfg.plateau_tolerance_rev_s, 0.1 * target), 0.3 * target)
+
+
 def _same(reported: str, expected: str) -> bool:
     try:
         a, b = float(reported), float(expected)
@@ -346,8 +353,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *,
             recorder.event(time.perf_counter() - start, "operator_confirmed", value=trial)
             if step["kind"] == "ladder":
                 target = step["target_rev_s"]
-                # a low step must still ramp: never accept "reached" while more than 30 % away
-                tolerance = min(cfg.plateau_tolerance_rev_s, 0.3 * abs(target))
+                tolerance = spin_up_tolerance(target, cfg)
                 arguments = velocity_arguments(target, cfg, watchdog_s)
                 meta = dict(command_mode="velocity", command_velocity_rev_s=target,
                             maximum_torque_nm=cfg.spin_up_torque_nm, velocity_limit_rev_s=cfg.max_velocity_rev_s,
