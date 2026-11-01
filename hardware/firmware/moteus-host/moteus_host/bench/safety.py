@@ -107,6 +107,14 @@ def validate_torque_speed(config: TorqueSpeedConfig, limits: SafetyConfig) -> No
     for torque in config.torques_nm:
         if not math.isfinite(torque) or torque <= 0 or torque > config.max_torque_nm:
             raise ValueError("torque_speed.torques_nm entries must be positive and within max_torque_nm")
+    if max(config.torques_nm) > 0.95 * config.max_torque_nm:
+        raise ValueError("torque_speed.torques_nm must keep a 5 % margin under max_torque_nm "
+                         f"(top step {max(config.torques_nm):g} Nm > {0.95 * config.max_torque_nm:g} Nm); "
+                         "reported torque carries current noise")
+    top_current_a = max(config.torques_nm) / config.kt_nm_per_a
+    if top_current_a > limits.max_phase_current_a:
+        raise ValueError(f"torque_speed.torques_nm top step needs {top_current_a:.2f} A by kt_nm_per_a, "
+                         f"above safety.max_phase_current_a {limits.max_phase_current_a:g} A")
     if config.cap_margin_rev_s <= 2.0:
         raise ValueError("torque_speed.cap_margin_rev_s must exceed the firmware derate band (2.0 rev/s)")
     if config.min_saturation_rev_s >= config.max_velocity_rev_s - config.cap_margin_rev_s:

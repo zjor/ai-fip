@@ -142,7 +142,7 @@ class TorqueSpeedConfig:
     sample_rate_hz: float = 200.0
     bus_voltages_v: tuple[float, ...] = (11.0, 12.0, 13.2, 14.8, 16.0, 16.8)
     bus_tolerance_v: float = 0.2
-    torques_nm: tuple[float, ...] = (0.05, 0.10, 0.15, 0.20)
+    torques_nm: tuple[float, ...] = (0.05, 0.10, 0.15, 0.18)
     directions: tuple[int, ...] = (1, -1)
     saturation_alpha_rev_s2: float = 1.0
     saturation_settle_s: float = 0.5

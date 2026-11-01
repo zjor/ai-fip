@@ -139,7 +139,9 @@ sample_rate_hz = 200.0
 bus_voltages_v = [11.0, 12.0, 13.2, 14.8, 16.0, 16.8]
 # preflight: measured bus must be within this of --bus
 bus_tolerance_v = 0.2
-torques_nm = [0.05, 0.10, 0.15, 0.20]
+# top step keeps a 10 % margin under the 0.20 Nm Tier B cap (reported torque carries current
+# noise) and stays under the 8 A phase-current stop by the measured K_t (0.18 / 0.0244 = 7.4 A)
+torques_nm = [0.05, 0.10, 0.15, 0.18]
 directions = [1, -1]
 # saturated = acceleration below this for saturation_settle_s (5 % of the initial 21 rev/s2 at 0.05 Nm)
 saturation_alpha_rev_s2 = 1.0

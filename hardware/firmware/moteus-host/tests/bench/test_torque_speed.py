@@ -106,9 +106,8 @@ class TorqueSpeedExperimentTest(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(max(abs(float(r["velocity_rev_s"])) for r in rows), 66.7)
 
     async def test_supply_limited_step_stops_cleanly(self):
-        # The fake reports q = feedforward / 0.0244 = 8.2 A at 0.20 Nm, above the 8 A phase
-        # current limit; the firmware's own K_t (≈ 0.028 Nm/A) draws ≈ 7.1 A on the real motor.
-        config = self.config(torques_nm=(0.20,), directions=(1, -1), safety={"max_phase_current_a": 9.0})
+        # q = 0.18 / 0.0244 = 7.4 A: above the 5 A sag point, under the 8 A phase-current stop
+        config = self.config(torques_nm=(0.18,), directions=(1, -1))
         controller = FakeController(FakeClock(), bus_v=12.0, no_load_rev_s=40.0,
                                     sag_above_a=5.0, sag_to_v=10.6)
         controller, stream, meta, rows, events = await self.execute(config, controller=controller)
@@ -192,7 +191,7 @@ class TorqueSpeedExperimentTest(unittest.IsolatedAsyncioTestCase):
         text = output.getvalue()
         self.assertTrue(text.startswith("Dry run (no connection): Torque-speed at 12 V"), text)
         self.assertIn("12 V", text)
-        self.assertIn("0.05, 0.1, 0.15, 0.2", text)
+        self.assertIn("0.05, 0.1, 0.15, 0.18", text)
 
     def test_cli_requires_bus(self):
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):

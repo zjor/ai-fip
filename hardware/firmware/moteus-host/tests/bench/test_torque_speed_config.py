@@ -19,7 +19,7 @@ class TorqueSpeedConfigTest(unittest.TestCase):
     def test_tracked_defaults_match_spec_and_pass_validation(self) -> None:
         cfg = self.cfg
         self.assertEqual(cfg.bus_voltages_v, (11.0, 12.0, 13.2, 14.8, 16.0, 16.8))
-        self.assertEqual(cfg.torques_nm, (0.05, 0.10, 0.15, 0.20))
+        self.assertEqual(cfg.torques_nm, (0.05, 0.10, 0.15, 0.18))
         self.assertEqual(cfg.directions, (1, -1))
         self.assertEqual(cfg.max_velocity_rev_s, 66.7)
         self.assertEqual(cfg.max_torque_nm, 0.20)
@@ -47,6 +47,13 @@ class TorqueSpeedConfigTest(unittest.TestCase):
     def test_rejects_torque_above_tier_b(self) -> None:
         self.assert_rejected(torques_nm=(0.05, 0.25))
         self.assert_rejected(max_torque_nm=0.25)
+
+    def test_rejects_top_torque_without_5_percent_margin(self) -> None:
+        self.assert_rejected(torques_nm=(0.05, 0.20))
+
+    def test_rejects_top_torque_above_phase_current_stop(self) -> None:
+        # 0.18 Nm / 0.02 Nm/A = 9 A > 8 A
+        self.assert_rejected(kt_nm_per_a=0.02)
 
     def test_rejects_cap_margin_below_derate_band(self) -> None:
         # must exceed servo.max_velocity_derate (2.0 rev/s)

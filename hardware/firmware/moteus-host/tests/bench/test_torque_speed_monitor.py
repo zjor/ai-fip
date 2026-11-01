@@ -128,7 +128,7 @@ class StepMonitorTest(unittest.TestCase):
         self.assertEqual(
             [(s["trial"], s["torque_nm"], s["direction"]) for s in steps],
             [(1, 0.05, 1), (2, -0.05, -1), (3, 0.10, 1), (4, -0.10, -1),
-             (5, 0.15, 1), (6, -0.15, -1), (7, 0.20, 1), (8, -0.20, -1)],
+             (5, 0.15, 1), (6, -0.15, -1), (7, 0.18, 1), (8, -0.18, -1)],
         )
         one_way = experiment.plan_steps(
             experiment.resolve(self.cfg, torques_nm=(0.15, 0.05), direction=-1))
@@ -163,7 +163,7 @@ class StepMonitorTest(unittest.TestCase):
     def test_expected_noload(self) -> None:
         self.assertAlmostEqual(experiment.expected_noload_rev_s(self.cfg, 12.0), 45.6)
         text = experiment.describe(self.cfg, 12.0, 45.6)
-        for part in ("12 V", "0.05, 0.1, 0.15, 0.2", "+1", "-1", "66.7 rev/s", "4002 rpm",
+        for part in ("12 V", "0.05, 0.1, 0.15, 0.18", "+1", "-1", "66.7 rev/s", "4002 rpm",
                      "1 V", "2736 rpm", "GO"):
             self.assertIn(part, text)
 
