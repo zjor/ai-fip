@@ -9,7 +9,7 @@ import statistics
 from pathlib import Path
 from typing import Any
 
-from . import coast_down
+from . import coast_down, torque_speed
 from .plots import Series, write_line_plot
 
 
@@ -239,6 +239,8 @@ def analyze(run_directory: Path) -> Path:
         return analyze_friction(run_directory)
     if experiment == "coast-down":
         return coast_down.analyze(run_directory)
+    if experiment == "torque-speed":
+        return torque_speed.analyze(run_directory)
     raise ValueError(f"no analysis for experiment {experiment!r}")
 
 
