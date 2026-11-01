@@ -7,7 +7,7 @@ import asyncio
 from collections.abc import Sequence
 from pathlib import Path
 
-from .analysis import summarize
+from .analysis import envelope, summarize
 from .config import DEFAULT_CONFIG_PATH, load_config
 from .experiments import (
     coast_down, friction, inspect, position_step, response_timing, torque_constant, torque_speed,
@@ -100,12 +100,18 @@ def build_parser() -> argparse.ArgumentParser:
         "analyze", help="analyze a completed recorded run"
     )
     analyze_parser.add_argument("run_directory", type=Path)
+    envelope_parser = subparsers.add_parser(
+        "envelope", help="pool torque-speed runs at several bus voltages into the envelope"
+    )
+    envelope_parser.add_argument("run_directory", type=Path, nargs="+")
     return parser
 
 
 async def run(args: argparse.Namespace) -> str:
     if args.experiment == "analyze":
         return str(summarize.analyze(args.run_directory))
+    if args.experiment == "envelope":
+        return str(envelope.analyze(args.run_directory, output_root=args.output_root))
     config = load_config(args.config)
     controller_id = args.id or config.common.controller_id
     output_root = args.output_root or (
@@ -152,7 +158,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         output = asyncio.run(run(args))
         label = ("Dry run (no connection)" if getattr(args, "dry_run", False)
-                 else "Analysis written" if args.experiment == "analyze" else "Recorded run")
+                 else "Analysis written" if args.experiment in ("analyze", "envelope") else "Recorded run")
         print(f"{label}: {output}")
         return 0
     except SafetyStop as exc:
