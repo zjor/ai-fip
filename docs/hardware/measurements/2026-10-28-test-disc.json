@@ -47,11 +47,11 @@
     "effective_density_g_cm3": 1.191
   },
   "measured": {
-    "method": null,
-    "I_z_kg_m2": null,
-    "uncertainty_kg_m2": null,
-    "source": null,
-    "note": "bifilar (docs/physics/moment-of-inertia-measurement.md) or acceleration run with K_t 0.0244 Nm/A"
+    "method": "acceleration run: K_t*i_q / (alpha_accel + |alpha_coast|) per 0.25 s window, six torque steps 0.05/0.10/0.15 Nm both directions (bench coast-down --accelerate)",
+    "I_z_kg_m2": 0.0003776,
+    "uncertainty_kg_m2": 9.9e-06,
+    "source": "hardware/firmware/moteus-host/logs/bench/20261101T105228Z_coast-down; docs/hardware/measurements/2026-11-01-rotating-losses.json",
+    "note": "total rotating inertia: disc + screws + motor rotor and hub. Disc-only cannot be separated; the excess over the scaled render is 0.000024 kg m2 (6.8 %), the rotor share. K_t 0.0244 Nm/A from 2026-10-26-torque-constant.json"
   },
   "mounting": {
     "screws": "3x M3x8 socket head",

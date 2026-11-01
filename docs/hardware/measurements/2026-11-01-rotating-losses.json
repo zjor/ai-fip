@@ -1,0 +1,722 @@
+{
+  "measurement": "rotating losses and effective inertia of the test-disc assembly",
+  "youtrack": "PNDLM-11",
+  "date": "2026-11-01",
+  "spec": "docs/hardware/specs/coast-down.md",
+  "bench": {
+    "supply": "24 V / 5 A lab supply, no sink; stops are free coasts",
+    "bus_voltage_v": [
+      24.2,
+      24.3
+    ],
+    "controller_temperature_c": [
+      19.3,
+      28.0
+    ],
+    "ambient": "not recorded; controller started at 19-23 C each run",
+    "guard": "closed",
+    "stand": "rail anchor fitted before the 3000 rpm steps (hardware/cad/rail-anchor)",
+    "firmware_abi_version": 65792,
+    "kt_nm_per_a": 0.0244,
+    "kt_source": "docs/hardware/measurements/2026-10-26-torque-constant.json"
+  },
+  "inertia": {
+    "disc_plus_screws_kg_m2": 0.0003536,
+    "disc_source": "docs/hardware/measurements/2026-10-28-test-disc.json",
+    "effective_total_kg_m2": 0.0003775614690163258,
+    "effective_sd_kg_m2": 9.928112199241443e-06,
+    "effective_rel_sd": 0.02629535324435384,
+    "ratio_effective_to_disc": 1.06776433545341,
+    "rotor_and_hub_kg_m2": 2.39614690163258e-05,
+    "method": "per 0.25 s window of the torque step: kt*|i_q| / (2*pi*(|alpha_accel| + |alpha_coast| at the same speed)); no loss model needed, the coast at matched speed supplies the losses",
+    "trials": [
+      {
+        "I_eff_kg_m2": 0.000387380177071906,
+        "torque_nm": 0.05,
+        "trial": 0,
+        "windows": 9
+      },
+      {
+        "I_eff_kg_m2": 0.0003876297407595581,
+        "torque_nm": -0.05,
+        "trial": 1,
+        "windows": 9
+      },
+      {
+        "I_eff_kg_m2": 0.0003833507769231114,
+        "torque_nm": 0.1,
+        "trial": 2,
+        "windows": 4
+      },
+      {
+        "I_eff_kg_m2": 0.00037228501873867747,
+        "torque_nm": -0.1,
+        "trial": 3,
+        "windows": 4
+      },
+      {
+        "I_eff_kg_m2": 0.00036378200855012284,
+        "torque_nm": 0.15,
+        "trial": 4,
+        "windows": 3
+      },
+      {
+        "I_eff_kg_m2": 0.00037094109205457865,
+        "torque_nm": -0.15,
+        "trial": 5,
+        "windows": 3
+      }
+    ],
+    "note": "six torque steps (0.05, 0.10, 0.15 Nm, both directions) from rest to 30 rev/s; spread 2.6 % with no trend in torque or direction"
+  },
+  "loss_model": {
+    "form": "tau_loss = a + b*omega + c*omega^2, omega in rad/s, tau in Nm; symmetric in direction",
+    "basis": "effective inertia above, applied to every coast window of the four ladder runs",
+    "pooled": {
+      "a_nm": 0.004430409326757174,
+      "b_nm_s": 3.777724532042613e-05,
+      "c_nm_s2": 9.695281075829283e-09,
+      "a_se": 6.581156275512895e-05,
+      "b_se": 1.3863413705080615e-06,
+      "c_se": 5.58178226037064e-09,
+      "rmse_nm": 0.0007181914279894192,
+      "n": 505
+    },
+    "by_direction": {
+      "plus": {
+        "a_nm": 0.004412299089793691,
+        "b_nm_s": 3.794892474289167e-05,
+        "c_nm_s2": 7.32575352382235e-09,
+        "a_se": 8.493008637496983e-05,
+        "b_se": 1.7907051813478518e-06,
+        "c_se": 7.265363647535969e-09,
+        "rmse_nm": 0.0006984112760818488,
+        "n": 293
+      },
+      "minus": {
+        "a_nm": 0.004450461944033104,
+        "b_nm_s": 3.7722631357678813e-05,
+        "c_nm_s2": 1.209287526375294e-08,
+        "a_se": 0.00010396933563959605,
+        "b_se": 2.189595366313416e-06,
+        "c_se": 8.72758266613679e-09,
+        "rmse_nm": 0.0007403927243805305,
+        "n": 212
+      }
+    },
+    "windows": 505,
+    "uncertainty_note": "standard errors are statistical (0.25 s windows, non-overlapping); add the 2.6 % inertia uncertainty, which scales a, b and c together",
+    "table": [
+      {
+        "speed_rpm": 500,
+        "loss_nm": 0.00644,
+        "windage_nm": 3e-05
+      },
+      {
+        "speed_rpm": 1000,
+        "loss_nm": 0.00849,
+        "windage_nm": 0.00011
+      },
+      {
+        "speed_rpm": 1500,
+        "loss_nm": 0.0106,
+        "windage_nm": 0.00024
+      },
+      {
+        "speed_rpm": 2000,
+        "loss_nm": 0.01277,
+        "windage_nm": 0.00043
+      },
+      {
+        "speed_rpm": 2500,
+        "loss_nm": 0.01498,
+        "windage_nm": 0.00066
+      },
+      {
+        "speed_rpm": 3000,
+        "loss_nm": 0.01726,
+        "windage_nm": 0.00096
+      }
+    ],
+    "loss_map_1rev_s_bins": [
+      {
+        "speed_rev_s": 0.5,
+        "n": 47,
+        "tau_mean_nm": 0.0038431176378906687,
+        "tau_sd_nm": 0.002197334312528002
+      },
+      {
+        "speed_rev_s": 1.5,
+        "n": 25,
+        "tau_mean_nm": 0.005139927810936077,
+        "tau_sd_nm": 0.0001613369303426561
+      },
+      {
+        "speed_rev_s": 2.5,
+        "n": 23,
+        "tau_mean_nm": 0.005305143921308983,
+        "tau_sd_nm": 0.00018809706173332486
+      },
+      {
+        "speed_rev_s": 3.5,
+        "n": 23,
+        "tau_mean_nm": 0.005420556926411643,
+        "tau_sd_nm": 0.00022636398862533452
+      },
+      {
+        "speed_rev_s": 4.5,
+        "n": 25,
+        "tau_mean_nm": 0.005717415436300098,
+        "tau_sd_nm": 0.0001959349857812419
+      },
+      {
+        "speed_rev_s": 5.5,
+        "n": 20,
+        "tau_mean_nm": 0.006017744204326144,
+        "tau_sd_nm": 0.00014802001168096024
+      },
+      {
+        "speed_rev_s": 6.5,
+        "n": 24,
+        "tau_mean_nm": 0.0061917317119945916,
+        "tau_sd_nm": 0.0001513681159059235
+      },
+      {
+        "speed_rev_s": 7.5,
+        "n": 18,
+        "tau_mean_nm": 0.006385478391517739,
+        "tau_sd_nm": 0.0002353066470884541
+      },
+      {
+        "speed_rev_s": 8.5,
+        "n": 20,
+        "tau_mean_nm": 0.006586633229037126,
+        "tau_sd_nm": 0.00020947924412408373
+      },
+      {
+        "speed_rev_s": 9.5,
+        "n": 15,
+        "tau_mean_nm": 0.0068559046679184015,
+        "tau_sd_nm": 0.0001526001337266162
+      },
+      {
+        "speed_rev_s": 10.5,
+        "n": 15,
+        "tau_mean_nm": 0.007081184925811205,
+        "tau_sd_nm": 0.0001475442991255983
+      },
+      {
+        "speed_rev_s": 11.5,
+        "n": 17,
+        "tau_mean_nm": 0.007341568023249353,
+        "tau_sd_nm": 0.00022617042705875846
+      },
+      {
+        "speed_rev_s": 12.5,
+        "n": 15,
+        "tau_mean_nm": 0.007527966018995857,
+        "tau_sd_nm": 0.0001654769163227775
+      },
+      {
+        "speed_rev_s": 13.5,
+        "n": 13,
+        "tau_mean_nm": 0.007698449120834496,
+        "tau_sd_nm": 0.0001451118067529391
+      },
+      {
+        "speed_rev_s": 14.5,
+        "n": 13,
+        "tau_mean_nm": 0.007841449335281907,
+        "tau_sd_nm": 0.00012194702040189015
+      },
+      {
+        "speed_rev_s": 15.5,
+        "n": 16,
+        "tau_mean_nm": 0.008109520146296663,
+        "tau_sd_nm": 0.00020078035312071598
+      },
+      {
+        "speed_rev_s": 16.5,
+        "n": 13,
+        "tau_mean_nm": 0.008364832520658512,
+        "tau_sd_nm": 0.00013313807864600137
+      },
+      {
+        "speed_rev_s": 17.5,
+        "n": 10,
+        "tau_mean_nm": 0.008593657486566186,
+        "tau_sd_nm": 0.00015245518708922951
+      },
+      {
+        "speed_rev_s": 18.5,
+        "n": 11,
+        "tau_mean_nm": 0.008849364666546268,
+        "tau_sd_nm": 0.0001580287853281305
+      },
+      {
+        "speed_rev_s": 19.5,
+        "n": 10,
+        "tau_mean_nm": 0.009071436856689534,
+        "tau_sd_nm": 0.00016947090654026803
+      },
+      {
+        "speed_rev_s": 20.5,
+        "n": 10,
+        "tau_mean_nm": 0.009392012080336184,
+        "tau_sd_nm": 0.0002054020415755683
+      },
+      {
+        "speed_rev_s": 21.5,
+        "n": 10,
+        "tau_mean_nm": 0.009574675608937627,
+        "tau_sd_nm": 0.00016765163197580255
+      },
+      {
+        "speed_rev_s": 22.5,
+        "n": 9,
+        "tau_mean_nm": 0.009777252140632443,
+        "tau_sd_nm": 8.322101616853752e-05
+      },
+      {
+        "speed_rev_s": 23.5,
+        "n": 9,
+        "tau_mean_nm": 0.010145116950637164,
+        "tau_sd_nm": 0.00019438268851234596
+      },
+      {
+        "speed_rev_s": 24.5,
+        "n": 10,
+        "tau_mean_nm": 0.010336607488068382,
+        "tau_sd_nm": 0.00021921337470106881
+      },
+      {
+        "speed_rev_s": 25.5,
+        "n": 7,
+        "tau_mean_nm": 0.010590689971841387,
+        "tau_sd_nm": 0.00011745725548069763
+      },
+      {
+        "speed_rev_s": 26.5,
+        "n": 4,
+        "tau_mean_nm": 0.010752706495982364,
+        "tau_sd_nm": 2.152962185636912e-05
+      },
+      {
+        "speed_rev_s": 27.5,
+        "n": 6,
+        "tau_mean_nm": 0.010983179024434032,
+        "tau_sd_nm": 0.00010242593709138414
+      },
+      {
+        "speed_rev_s": 28.5,
+        "n": 6,
+        "tau_mean_nm": 0.011306888340047389,
+        "tau_sd_nm": 8.440705081017518e-05
+      },
+      {
+        "speed_rev_s": 29.5,
+        "n": 7,
+        "tau_mean_nm": 0.011651990362228358,
+        "tau_sd_nm": 0.00016154292895623676
+      },
+      {
+        "speed_rev_s": 30.5,
+        "n": 5,
+        "tau_mean_nm": 0.012009280282744419,
+        "tau_sd_nm": 0.0002289273060357747
+      },
+      {
+        "speed_rev_s": 31.5,
+        "n": 4,
+        "tau_mean_nm": 0.012176800596404646,
+        "tau_sd_nm": 0.00013798053882431346
+      },
+      {
+        "speed_rev_s": 32.5,
+        "n": 5,
+        "tau_mean_nm": 0.012522226196209615,
+        "tau_sd_nm": 0.00021372902802752774
+      },
+      {
+        "speed_rev_s": 33.5,
+        "n": 5,
+        "tau_mean_nm": 0.012639716682420674,
+        "tau_sd_nm": 0.00015262694608351348
+      },
+      {
+        "speed_rev_s": 34.5,
+        "n": 5,
+        "tau_mean_nm": 0.013020999739853333,
+        "tau_sd_nm": 0.00010098274759649442
+      },
+      {
+        "speed_rev_s": 35.5,
+        "n": 2,
+        "tau_mean_nm": 0.013470143828170987,
+        "tau_sd_nm": 7.402273217405277e-05
+      },
+      {
+        "speed_rev_s": 36.5,
+        "n": 3,
+        "tau_mean_nm": 0.013528854024948127,
+        "tau_sd_nm": 0.00014761880459746772
+      },
+      {
+        "speed_rev_s": 37.5,
+        "n": 5,
+        "tau_mean_nm": 0.013853566185309158,
+        "tau_sd_nm": 0.0001599753075497142
+      },
+      {
+        "speed_rev_s": 38.5,
+        "n": 2,
+        "tau_mean_nm": 0.014298056643225449,
+        "tau_sd_nm": 0.00021449318162373497
+      },
+      {
+        "speed_rev_s": 39.5,
+        "n": 3,
+        "tau_mean_nm": 0.014383987491397307,
+        "tau_sd_nm": 0.0001776899400381762
+      },
+      {
+        "speed_rev_s": 40.5,
+        "n": 5,
+        "tau_mean_nm": 0.014821634865063531,
+        "tau_sd_nm": 0.0002690542200372011
+      },
+      {
+        "speed_rev_s": 41.5,
+        "n": 2,
+        "tau_mean_nm": 0.015201810237019261,
+        "tau_sd_nm": 0.0001992397120939889
+      },
+      {
+        "speed_rev_s": 43.5,
+        "n": 2,
+        "tau_mean_nm": 0.0156827921875229,
+        "tau_sd_nm": 0.0003684354420111763
+      },
+      {
+        "speed_rev_s": 45.5,
+        "n": 2,
+        "tau_mean_nm": 0.01621534295168471,
+        "tau_sd_nm": 0.00033096933279700195
+      },
+      {
+        "speed_rev_s": 47.5,
+        "n": 2,
+        "tau_mean_nm": 0.016882692125988454,
+        "tau_sd_nm": 0.00038656439436011997
+      },
+      {
+        "speed_rev_s": 48.5,
+        "n": 2,
+        "tau_mean_nm": 0.017598399967430088,
+        "tau_sd_nm": 9.663629283951006e-05
+      }
+    ]
+  },
+  "plateau_cross_check": {
+    "note": "velocity-mode plateau current x K_t against the coast loss at the same speed, both on the effective inertia; the plateau reads 4-14 % high with no clear trend in speed or direction (about 1 mNm). Cause not resolved: K_t at speed, or a q-current offset (the mode-0 reading shows about -1.2 A with open phases). The coast is the primary measurement.",
+    "rows": [
+      {
+        "run_id": "20261028T191114Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 495,
+        "plateau_current_x_kt_nm": 0.007410425603370751,
+        "coast_loss_disc_basis_nm": 0.006205204219898123,
+        "coast_loss_effective_basis_nm": 0.006625695760212215,
+        "gap_pct": 11.8,
+        "q_current_sd_a": 0.29675396931598674
+      },
+      {
+        "run_id": "20261028T191114Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 994,
+        "plateau_current_x_kt_nm": 0.0092105454531233,
+        "coast_loss_disc_basis_nm": 0.0080155745401463,
+        "coast_loss_effective_basis_nm": 0.008558744622136587,
+        "gap_pct": 7.6,
+        "q_current_sd_a": 0.42053259953401473
+      },
+      {
+        "run_id": "20261028T191114Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 1491,
+        "plateau_current_x_kt_nm": 0.011100776496685125,
+        "coast_loss_disc_basis_nm": 0.009181669707351554,
+        "coast_loss_effective_basis_nm": 0.009803859453422938,
+        "gap_pct": 13.2,
+        "q_current_sd_a": 0.5021658449984421
+      },
+      {
+        "run_id": "20261101T104259Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 1491,
+        "plateau_current_x_kt_nm": 0.011077291030075893,
+        "coast_loss_disc_basis_nm": 0.009835415847530797,
+        "coast_loss_effective_basis_nm": 0.01050190626634666,
+        "gap_pct": 5.5,
+        "q_current_sd_a": 0.5048559178064496
+      },
+      {
+        "run_id": "20261101T104259Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 1987,
+        "plateau_current_x_kt_nm": 0.013097085294242703,
+        "coast_loss_disc_basis_nm": 0.011808250902819542,
+        "coast_loss_effective_basis_nm": 0.012608429178116238,
+        "gap_pct": 3.9,
+        "q_current_sd_a": 0.5684338240364728
+      },
+      {
+        "run_id": "20261101T104259Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 2483,
+        "plateau_current_x_kt_nm": 0.01552725996000652,
+        "coast_loss_disc_basis_nm": 0.013820501715589113,
+        "coast_loss_effective_basis_nm": 0.014757038829978723,
+        "gap_pct": 5.2,
+        "q_current_sd_a": 0.6023305941113607
+      },
+      {
+        "run_id": "20261101T104531Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 2484,
+        "plateau_current_x_kt_nm": 0.015474297357295923,
+        "coast_loss_disc_basis_nm": 0.01391461938585844,
+        "coast_loss_effective_basis_nm": 0.014857534321628275,
+        "gap_pct": 4.2,
+        "q_current_sd_a": 0.6126659277948856
+      },
+      {
+        "run_id": "20261101T104531Z_coast-down",
+        "direction": 1,
+        "speed_rpm": 2978,
+        "plateau_current_x_kt_nm": 0.01854573599702921,
+        "coast_loss_disc_basis_nm": 0.01610198767454534,
+        "coast_loss_effective_basis_nm": 0.017193128168789908,
+        "gap_pct": 7.9,
+        "q_current_sd_a": 0.6578330775932749
+      },
+      {
+        "run_id": "20261101T104928Z_coast-down",
+        "direction": -1,
+        "speed_rpm": 495,
+        "plateau_current_x_kt_nm": 0.007356663489478552,
+        "coast_loss_disc_basis_nm": 0.006031553372329529,
+        "coast_loss_effective_basis_nm": 0.006440277578357214,
+        "gap_pct": 14.2,
+        "q_current_sd_a": 0.2987530294804716
+      },
+      {
+        "run_id": "20261101T104928Z_coast-down",
+        "direction": -1,
+        "speed_rpm": 994,
+        "plateau_current_x_kt_nm": 0.008961870554981871,
+        "coast_loss_disc_basis_nm": 0.007968702371693542,
+        "coast_loss_effective_basis_nm": 0.008508696192337368,
+        "gap_pct": 5.3,
+        "q_current_sd_a": 0.4084224787869389
+      },
+      {
+        "run_id": "20261101T104928Z_coast-down",
+        "direction": -1,
+        "speed_rpm": 1491,
+        "plateau_current_x_kt_nm": 0.011494319821077294,
+        "coast_loss_disc_basis_nm": 0.009960652541657681,
+        "coast_loss_effective_basis_nm": 0.010635629541825434,
+        "gap_pct": 8.1,
+        "q_current_sd_a": 0.5159383536889016
+      },
+      {
+        "run_id": "20261101T104928Z_coast-down",
+        "direction": -1,
+        "speed_rpm": 1988,
+        "plateau_current_x_kt_nm": 0.013950286732973423,
+        "coast_loss_disc_basis_nm": 0.012012814326041087,
+        "coast_loss_effective_basis_nm": 0.012826854705770465,
+        "gap_pct": 8.8,
+        "q_current_sd_a": 0.5817831695390489
+      },
+      {
+        "run_id": "20261101T104928Z_coast-down",
+        "direction": -1,
+        "speed_rpm": 2483,
+        "plateau_current_x_kt_nm": 0.016754176017295886,
+        "coast_loss_disc_basis_nm": 0.014120036624139227,
+        "coast_loss_effective_basis_nm": 0.015076871522551834,
+        "gap_pct": 11.1,
+        "q_current_sd_a": 0.6236782692429604
+      },
+      {
+        "run_id": "20261101T104928Z_coast-down",
+        "direction": -1,
+        "speed_rpm": 2978,
+        "plateau_current_x_kt_nm": 0.018863822977122472,
+        "coast_loss_disc_basis_nm": 0.01628801729777993,
+        "coast_loss_effective_basis_nm": 0.017391763965817635,
+        "gap_pct": 8.5,
+        "q_current_sd_a": 0.6539945594216617
+      }
+    ]
+  },
+  "runs": [
+    {
+      "run_id": "20261028T191114Z_coast-down",
+      "direction": 1,
+      "steps": "ladder 500,1000,1500",
+      "inertia_basis": "disc_only",
+      "fit_as_analyzed": {
+        "a_nm": 0.003772376357358971,
+        "a_se": 0.00019904780762092754,
+        "b_nm_s": 5.30485570947196e-05,
+        "b_se": 7.577561209291699e-06,
+        "c_nm_s2": -1.1787801659659009e-07,
+        "c_se": 5.5610979525049285e-08,
+        "n": 75,
+        "rmse_nm": 0.0008047489033181756
+      },
+      "envelope": {
+        "bus_voltage_v": {
+          "max": 24.3,
+          "min": 24.200000000000003
+        },
+        "controller_temperature_c": {
+          "max": 28.0,
+          "min": 22.700000000000003
+        },
+        "fault_samples": 0,
+        "peak_abs_q_current_a": 3.420581817626953,
+        "peak_speed_rpm": 1502.2504806518555
+      }
+    },
+    {
+      "run_id": "20261101T104259Z_coast-down",
+      "direction": 1,
+      "steps": "ladder 1500,2000,2500",
+      "inertia_basis": "disc_only",
+      "fit_as_analyzed": {
+        "a_nm": 0.004180796809388211,
+        "a_se": 0.00014059373470704905,
+        "b_nm_s": 3.4951962927261356e-05,
+        "b_se": 3.133023997981178e-06,
+        "c_nm_s2": 8.150075751484177e-09,
+        "c_se": 1.4053060773161951e-08,
+        "n": 120,
+        "rmse_nm": 0.0006775335051579113
+      },
+      "envelope": {
+        "bus_voltage_v": {
+          "max": 24.3,
+          "min": 24.200000000000003
+        },
+        "controller_temperature_c": {
+          "max": 26.1,
+          "min": 19.3
+        },
+        "fault_samples": 0,
+        "peak_abs_q_current_a": 3.8672738075256348,
+        "peak_speed_rpm": 2500.132827758789
+      }
+    },
+    {
+      "run_id": "20261101T104531Z_coast-down",
+      "direction": 1,
+      "steps": "ladder 2500,3000",
+      "inertia_basis": "disc_only",
+      "fit_as_analyzed": {
+        "a_nm": 0.004204880874955872,
+        "a_se": 9.857799062367604e-05,
+        "b_nm_s": 3.317331847979388e-05,
+        "b_se": 1.8048027606369289e-06,
+        "c_nm_s2": 1.5977506027962967e-08,
+        "c_se": 6.530153250113258e-09,
+        "n": 98,
+        "rmse_nm": 0.00042404387870485213
+      },
+      "envelope": {
+        "bus_voltage_v": {
+          "max": 24.3,
+          "min": 24.200000000000003
+        },
+        "controller_temperature_c": {
+          "max": 26.0,
+          "min": 20.1
+        },
+        "fault_samples": 0,
+        "peak_abs_q_current_a": 3.9172637462615967,
+        "peak_speed_rpm": 2999.6424865722656
+      }
+    },
+    {
+      "run_id": "20261101T104928Z_coast-down",
+      "direction": -1,
+      "steps": "ladder 500..3000 (default)",
+      "inertia_basis": "disc_only",
+      "fit_as_analyzed": {
+        "a_nm": 0.004168018912284864,
+        "a_se": 9.737105107134622e-05,
+        "b_nm_s": 3.532861147835651e-05,
+        "b_se": 2.050635419831322e-06,
+        "c_nm_s2": 1.1325415976379316e-08,
+        "c_se": 8.173697487686505e-09,
+        "n": 212,
+        "rmse_nm": 0.0006934046210357212
+      },
+      "envelope": {
+        "bus_voltage_v": {
+          "max": 24.3,
+          "min": 24.200000000000003
+        },
+        "controller_temperature_c": {
+          "max": 27.0,
+          "min": 20.700000000000003
+        },
+        "fault_samples": 0,
+        "peak_abs_q_current_a": 3.8151841163635254,
+        "peak_speed_rpm": 3000.4488372802734
+      }
+    },
+    {
+      "run_id": "20261101T105228Z_coast-down",
+      "direction": 0,
+      "steps": "--accelerate 0.05/0.10/0.15 Nm both directions",
+      "inertia_basis": "effective",
+      "fit_as_analyzed": {
+        "a_nm": 0.004363110247708511,
+        "a_se": 0.0001119674018647385,
+        "b_nm_s": 4.2822433232629734e-05,
+        "b_se": 3.1305251533313656e-06,
+        "c_nm_s2": -2.392301005225492e-08,
+        "c_se": 1.733174401848237e-08,
+        "n": 231,
+        "rmse_nm": 0.0007250670179309176
+      },
+      "envelope": {
+        "bus_voltage_v": {
+          "max": 24.3,
+          "min": 24.200000000000003
+        },
+        "controller_temperature_c": {
+          "max": 27.0,
+          "min": 20.5
+        },
+        "fault_samples": 0,
+        "peak_abs_q_current_a": 6.284858703613281,
+        "peak_speed_rpm": 1833.3225631713867
+      }
+    }
+  ],
+  "acceptance": {
+    "loss_vs_speed_with_uncertainty": true,
+    "acceleration_estimate_with_uncertainty": true,
+    "assembly_inertia_measured": true,
+    "run_provenance": true,
+    "both_directions": true,
+    "ladder_to_3000_rpm": true,
+    "no_fault_or_safety_stop": true,
+    "direction_asymmetry_within_fit_se": true
+  }
+}
