@@ -1,7 +1,8 @@
 # Coast-down bench experiment — design
 
 Status: implemented 2026-10-28 (`bench coast-down`, `bench analyze`; plan
-`.claude/plans/2026-10-28-coast-down-bench.md`). YouTrack: PNDLM-11 (T-005.B). Parent spec:
+`.claude/plans/2026-10-28-coast-down-bench.md`). Session plumbing now lives in
+`experiments/tier_b.py` (2026-11-01), behaviour unchanged. YouTrack: PNDLM-11 (T-005.B). Parent spec:
 [motor-bench.md](motor-bench.md) §6 step 5. Inertia:
 [test-disc.md](test-disc.md),
 [measurements/2026-10-28-test-disc.json](../measurements/2026-10-28-test-disc.json).

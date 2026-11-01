@@ -180,6 +180,40 @@ disc inertia and its provenance are copied from
 `docs/hardware/measurements/2026-10-28-test-disc.json` into `run.json`; the
 analysis recovers the motor rotor's share from the acceleration trials.
 
+The torque-speed envelope needs an adjustable lab supply that can deliver at
+least 8 A, with the disc rated to 4000 rpm, the stand anchored and the guard
+closed ([spec](../../../docs/hardware/specs/torque-speed.md)). Set the supply to
+the run voltage before each run. The tool refuses to start when the measured bus
+is not within ±0.2 V of `--bus`:
+
+```shell
+poetry run bench torque-speed --dry-run --bus 11.0   # print settings, no connection
+poetry run bench torque-speed --bus 11.0             # shakedown; then 12.0, 13.2, 14.8, 16.0, 16.8
+poetry run bench analyze logs/bench/<run-id>         # per run
+poetry run bench envelope logs/bench/<run1> logs/bench/<run2> ...
+```
+
+Go up the voltages in that order; the tool warns when `--bus` skips one with no
+completed run. Torques 0.05, 0.10, 0.15 and 0.18 Nm run from rest in +1 then −1,
+each step waiting for `GO`. Each step ends with one reason, written to
+`events.csv` and `run.json`:
+
+- `saturated`: acceleration stays near zero above 300 rpm (no-load speed), then
+  the torque is held for 1 s.
+- `velocity-capped`: speed reached 63.7 rev/s; 16.8 V may end this way, then the
+  no-load speed is a lower bound.
+- `supply-limited`: the bus fell more than 1 V below `--bus`.
+- `timeout`: the step took more than 15 s.
+
+The nominal torques are labels only: the firmware's K_t differs from the measured
+one, so the analysis uses measured current and acceleration. `analyze` writes
+`summary.json` (no-load and knee speeds per direction, supply-limited windows
+flagged and excluded), `torque-vs-speed.csv` and `plots/torque-vs-speed.svg` and
+`plots/speed-vs-time.svg`. `envelope` writes `<timestamp>_envelope/summary.json`
+and `plots/envelope.svg`: the no-load line in rpm/V with its points and lower
+bounds, and `r_max` per knee for two Kv candidates (values above 1 are reported,
+not clipped).
+
 Analyze a completed friction or coast-down run offline with:
 
 ```shell
