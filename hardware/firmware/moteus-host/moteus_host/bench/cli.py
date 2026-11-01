@@ -10,7 +10,7 @@ from pathlib import Path
 from .analysis import summarize
 from .config import DEFAULT_CONFIG_PATH, load_config
 from .experiments import (
-    coast_down, friction, inspect, position_step, response_timing, torque_constant,
+    coast_down, friction, inspect, position_step, response_timing, torque_constant, torque_speed,
 )
 from .safety import SafetyStop
 
@@ -22,6 +22,16 @@ def _ladder(text: str) -> tuple[float, ...]:
         raise argparse.ArgumentTypeError(f"ladder must be comma-separated rpm values, got {text!r}") from exc
     if not values:
         raise argparse.ArgumentTypeError("ladder must list at least one rpm value")
+    return values
+
+
+def _torques(text: str) -> tuple[float, ...]:
+    try:
+        values = tuple(float(item) for item in text.split(",") if item.strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"torques must be comma-separated Nm values, got {text!r}") from exc
+    if not values:
+        raise argparse.ArgumentTypeError("torques must list at least one Nm value")
     return values
 
 
@@ -72,6 +82,20 @@ def build_parser() -> argparse.ArgumentParser:
                               help="override the configured ladder direction")
     coast_parser.add_argument("--ladder", type=_ladder, metavar="RPM,RPM,...",
                               help="override the configured speed ladder, e.g. 20,50,100")
+    speed_parser = subparsers.add_parser(
+        "torque-speed",
+        help="torque steps from rest to saturation at one bus voltage (Tier B, guard required)",
+    )
+    speed_parser.add_argument("--bus", type=float, required=True, metavar="V",
+                              help="the lab supply voltage set for this run; checked at preflight")
+    speed_parser.add_argument("--torques", type=_torques, metavar="NM,NM,...",
+                              help="override the configured torques, e.g. 0.05,0.1")
+    speed_parser.add_argument("--direction", type=int, choices=(1, -1),
+                              help="run only this direction")
+    speed_parser.add_argument("--dry-run", action="store_true",
+                              help="validate and print settings without connecting")
+    speed_parser.add_argument("--allow-any-bus", action="store_true",
+                              help="accept a --bus outside the configured bus_voltages_v")
     analyze_parser = subparsers.add_parser(
         "analyze", help="analyze a completed recorded run"
     )
@@ -111,6 +135,15 @@ async def run(args: argparse.Namespace) -> str:
             return coast_down.describe(cfg, accelerate=args.accelerate)
         return await coast_down.run(config, output_root, controller_id, accelerate=args.accelerate,
                                     ladder_rpm=args.ladder, direction=args.direction)
+    if args.experiment == "torque-speed":
+        cfg = torque_speed.resolve(config.torque_speed, torques_nm=args.torques, direction=args.direction)
+        torque_speed.validate(cfg, config.safety)
+        torque_speed.check_bus(cfg, args.bus, args.allow_any_bus)
+        if args.dry_run:
+            return torque_speed.describe(cfg, args.bus, torque_speed.expected_noload_rev_s(cfg, args.bus))
+        return await torque_speed.run(config, output_root, controller_id, bus_v=args.bus,
+                                      allow_any_bus=args.allow_any_bus, torques_nm=args.torques,
+                                      direction=args.direction)
     raise ValueError(f"unknown experiment {args.experiment}")
 
 

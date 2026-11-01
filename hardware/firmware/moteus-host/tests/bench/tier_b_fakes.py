@@ -25,11 +25,21 @@ class FakeClock:
 
 class FakeController:
     """Integrates disc speed from the last command: velocity mode ramps at accel_limit,
-    torque mode accelerates by torque/(2*pi*I), stopped decays by friction."""
+    torque mode accelerates by torque/(2*pi*I), stopped decays by friction.
+
+    Torque-speed extras: with no_load_rev_s the torque tapers from 80 % of no-load to zero
+    (a voltage limit) and friction acts; VOLTAGE reports bus_v, or sag_to_v while
+    |q| > sag_above_a; stuck reports velocity 0 for any command."""
 
     def __init__(self, clock, *, velocity=0.0, friction_nm=0.004, fail_spin_up=False,
                  drop_stop_replies=0, drop_query_every=0, mode_11_after_s=None, noise=0.0,
-                 enable_s=0.0):
+                 enable_s=0.0, bus_v=24.0, no_load_rev_s=None, sag_above_a=None, sag_to_v=None,
+                 stuck=False):
+        self.bus_v = bus_v
+        self.no_load_rev_s = no_load_rev_s
+        self.sag_above_a = sag_above_a
+        self.sag_to_v = sag_to_v
+        self.stuck = stuck
         self.clock = clock
         self.enable_s = enable_s         # firmware enable sequence: modes 2, 3 before position mode 10
         self.enabled_at = None
@@ -54,8 +64,16 @@ class FakeController:
         if dt <= 0.0:
             return
         if self.mode == 10 and self.command is not None:
-            if math.isnan(self.command["position"]) and self.command.get("feedforward_torque", 0.0):
-                self.velocity += self.command["feedforward_torque"] / (2 * math.pi * INERTIA) * dt
+            torque = self.command.get("feedforward_torque", 0.0)
+            if math.isnan(self.command["position"]) and torque and self.no_load_rev_s is not None:
+                taper = min(1.0, max(0.0, (self.no_load_rev_s - abs(self.velocity)) / (0.2 * self.no_load_rev_s)))
+                available = torque * taper
+                if self.velocity == 0.0 and abs(available) <= self.friction:
+                    return
+                friction = math.copysign(self.friction, self.velocity if self.velocity else available)
+                self.velocity += (available - friction) / (2 * math.pi * INERTIA) * dt
+            elif math.isnan(self.command["position"]) and torque:
+                self.velocity += torque / (2 * math.pi * INERTIA) * dt
             else:
                 # a failing spin-up reaches only 30 % of the target (supply current-limited)
                 target = self.command["velocity"] * (0.3 if self.fail_spin_up else 1.0)
@@ -70,6 +88,8 @@ class FakeController:
         if self.mode == 10 and self.mode_11_after_s is not None and self.clock.now >= self.mode_11_after_s:
             self.mode = 11          # firmware watchdog fired: torque off, commands ignored until a stop
         self._integrate()
+        if self.stuck:
+            self.velocity = 0.0
         mode = self.mode
         if mode == 10 and self.enabled_at is not None and self.clock.now - self.enabled_at < self.enable_s:
             mode = 2 if self.clock.now - self.enabled_at < self.enable_s / 4 else 3
@@ -78,8 +98,11 @@ class FakeController:
             q = self.command.get("feedforward_torque", 0.0) / KT or 0.5
         self.reads += 1
         reported = self.velocity + (self.noise if self.reads % 2 else -self.noise)
+        voltage = self.bus_v
+        if self.sag_above_a is not None and abs(q) > self.sag_above_a:
+            voltage = self.sag_to_v
         values = dict(MODE=mode, FAULT=0, POSITION=1.0, VELOCITY=reported,
-                      TORQUE=q * KT, Q_CURRENT=q, D_CURRENT=0.0, VOLTAGE=24.0, POWER=0.0,
+                      TORQUE=q * KT, Q_CURRENT=q, D_CURRENT=0.0, VOLTAGE=voltage, POWER=0.0,
                       TEMPERATURE=25.0, HOME_STATE=1, TRAJECTORY_COMPLETE=1)
         return SimpleNamespace(values={getattr(moteus.Register, k): v for k, v in values.items()})
 
