@@ -29,16 +29,18 @@ class FakeController:
 
     Torque-speed extras: with no_load_rev_s the torque tapers from 80 % of no-load to zero
     (a voltage limit) and friction acts; VOLTAGE reports bus_v, or sag_to_v while
-    |q| > sag_above_a; stuck reports velocity 0 for any command."""
+    |q| > sag_above_a, or sag_to_v once the commanded phase has run sag_after_s (independent
+    of q); stuck reports velocity 0 for any command."""
 
     def __init__(self, clock, *, velocity=0.0, friction_nm=0.004, fail_spin_up=False,
                  drop_stop_replies=0, drop_query_every=0, mode_11_after_s=None, noise=0.0,
                  enable_s=0.0, bus_v=24.0, no_load_rev_s=None, sag_above_a=None, sag_to_v=None,
-                 stuck=False):
+                 stuck=False, sag_after_s=None):
         self.bus_v = bus_v
         self.no_load_rev_s = no_load_rev_s
         self.sag_above_a = sag_above_a
         self.sag_to_v = sag_to_v
+        self.sag_after_s = sag_after_s
         self.stuck = stuck
         self.clock = clock
         self.enable_s = enable_s         # firmware enable sequence: modes 2, 3 before position mode 10
@@ -100,6 +102,9 @@ class FakeController:
         reported = self.velocity + (self.noise if self.reads % 2 else -self.noise)
         voltage = self.bus_v
         if self.sag_above_a is not None and abs(q) > self.sag_above_a:
+            voltage = self.sag_to_v
+        if (self.sag_after_s is not None and self.mode == 10 and self.enabled_at is not None
+                and self.clock.now - self.enabled_at >= self.sag_after_s):
             voltage = self.sag_to_v
         values = dict(MODE=mode, FAULT=0, POSITION=1.0, VELOCITY=reported,
                       TORQUE=q * KT, Q_CURRENT=q, D_CURRENT=0.0, VOLTAGE=voltage, POWER=0.0,

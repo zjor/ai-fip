@@ -36,8 +36,11 @@ def _available(torque: float, v: float, no_load_rev_s: float) -> float:
 
 def _create_run(root: Path, *, bus_v=12.0, no_load_rev_s=40.0, torques=(0.05,), reasons=("saturated",),
                 sag_from_rev_s=None, inertia=3.776e-4, a=4.43e-3, b=3.78e-5, c=9.7e-9,
-                experiment="torque-speed", cap_rev_s=None) -> Path:
-    """Synthetic torque-speed run in the Task 4 layout; a None reason is a step declined at GO."""
+                experiment="torque-speed", cap_rev_s=None, sag_in_hold_from_s=None) -> Path:
+    """Synthetic torque-speed run in the Task 4 layout; a None reason is a step declined at GO.
+
+    sag_in_hold_from_s: hold rows from that time after the hold start report bus_v - 0.6 V and a
+    speed 5 % low (the supply folds back)."""
     run = root / "test_torque_speed"
     run.mkdir()
     cap = cap_rev_s if cap_rev_s is not None else 0.9 * no_load_rev_s
@@ -97,7 +100,10 @@ def _create_run(root: Path, *, bus_v=12.0, no_load_rev_s=40.0, torques=(0.05,), 
             hold_start = clock["t"]
             while clock["t"] - hold_start < HOLD_S:
                 available = _available(magnitude, v, no_load_rev_s)
-                write("hold", trial, sign, v, available, bus(v))
+                if sag_in_hold_from_s is not None and clock["t"] - hold_start >= sag_in_hold_from_s:
+                    write("hold", trial, sign, 0.95 * v, available, bus_v - 0.6)
+                else:
+                    write("hold", trial, sign, v, available, bus(v))
                 v += (available - _loss(v, a, b, c)) / (2.0 * math.pi * inertia) * DT
                 clock["t"] += DT
         event("coast_start", trial)
@@ -159,9 +165,24 @@ class TorqueSpeedAnalysisTests(unittest.TestCase):
         for step in summary["steps"]:
             low = step["low_speed"]
             self.assertIsNotNone(low)
-            self.assertGreaterEqual(low["windows"], 2)
+            self.assertGreaterEqual(low["n_rows"], 10)
             self.assertLess(abs(low["tau_nm"] - 0.05) / 0.05, 0.03)
+            self.assertGreater(low["tau_se_nm"], 0.0)
             self.assertLess(abs(low["q_current_a"] - 0.05 / KT) / (0.05 / KT), 0.03)
+            self.assertTrue(5.0 < low["speed_rev_s"] < 0.5 * RPM_PER_V * 12.0 / 60.0)
+
+    def test_high_torque_step_at_11_v_still_has_a_reference_and_knee(self):
+        # 0.18 Nm crosses the 5..20.9 rev/s band in about 0.2 s: fewer than two 0.25 s windows
+        v_nl = RPM_PER_V * 11.0 / 60.0
+        summary = _summary(_create_run(self.root, bus_v=11.0, no_load_rev_s=v_nl, torques=(0.18,),
+                                       reasons=("saturated",)))
+        step = summary["steps"][0]
+        low, knee = step["low_speed"], step["knee"]
+        self.assertIsNotNone(low)
+        self.assertLess(abs(low["tau_nm"] - 0.18) / 0.18, 0.03)
+        self.assertIsNotNone(knee)
+        # one window span = the speed distance between the bracketing windows
+        self.assertLessEqual(abs(knee["speed_rev_s"] - 0.82 * v_nl), 2.0 * knee["speed_se_rev_s"])
 
     def test_knee_at_ten_percent_drop(self):
         summary = _summary(_create_run(self.root, torques=(0.05, -0.05), reasons=("saturated", "saturated")))
@@ -172,6 +193,43 @@ class TorqueSpeedAnalysisTests(unittest.TestCase):
             self.assertLessEqual(abs(knee["speed_rev_s"] - 0.82 * 40.0), 2.0 * knee["speed_se_rev_s"])
             self.assertAlmostEqual(knee["tau_nm"], 0.9 * step["low_speed"]["tau_nm"])
             self.assertGreater(knee["q_current_a"], 0.0)
+
+    def test_knee_carries_the_measured_bus(self):
+        summary = _summary(_create_run(self.root, torques=(0.05,), reasons=("saturated",)))
+        self.assertEqual(summary["steps"][0]["knee"]["bus_v"], 12.0)
+
+    def test_knee_fallback_uses_the_first_window_below_the_threshold(self):
+        def window(speed, tau, *, alpha=8.0, current=2.0, bus=12.0, flagged=False):
+            return {"speed_rev_s": speed, "alpha_rev_s2": alpha, "tau_nm": tau, "q_current_a": current,
+                    "bus_v": bus, "supply_limited": flagged}
+
+        reference = 0.05
+        windows = [window(10.0, 0.050), window(18.0, 0.049),     # inside the band: skipped
+                   window(24.0, 0.040, alpha=6.0, current=1.6, bus=11.9), window(27.0, 0.030)]
+        point = torque_speed.knee(windows, reference, after_rev_s=20.0)
+        self.assertEqual(point["speed_rev_s"], 24.0)
+        self.assertEqual(point["speed_se_rev_s"], 6.0 * torque_speed.WINDOW_S / 2.0)
+        self.assertEqual(point["q_current_a"], 1.6)
+        self.assertEqual(point["tau_nm"], 0.040)
+        self.assertEqual(point["bus_v"], 11.9)
+
+    def test_knee_skips_a_flagged_window_between_the_bracketing_pair(self):
+        def window(speed, tau, *, current=2.0, bus=12.0, flagged=False):
+            return {"speed_rev_s": speed, "alpha_rev_s2": 8.0, "tau_nm": tau, "q_current_a": current,
+                    "bus_v": bus, "supply_limited": flagged}
+
+        reference = 0.05
+        windows = [window(22.0, 0.048, current=2.0, bus=12.0),
+                   window(25.0, 0.030, bus=11.5, flagged=True),     # flagged: not a bracket
+                   window(28.0, 0.040, current=1.6, bus=11.8)]
+        point = torque_speed.knee(windows, reference, after_rev_s=20.0)
+        threshold = 0.9 * reference
+        fraction = (0.048 - threshold) / (0.048 - 0.040)
+        self.assertAlmostEqual(point["speed_rev_s"], 22.0 + fraction * 6.0)
+        self.assertEqual(point["speed_se_rev_s"], 3.0)
+        self.assertAlmostEqual(point["q_current_a"], 1.8)
+        self.assertAlmostEqual(point["tau_nm"], threshold)
+        self.assertAlmostEqual(point["bus_v"], 11.9)
 
     def test_no_load_from_hold(self):
         summary = _summary(_create_run(self.root, torques=(0.05, -0.05), reasons=("saturated", "saturated")))
@@ -184,10 +242,27 @@ class TorqueSpeedAnalysisTests(unittest.TestCase):
             self.assertEqual(no_load["bus_v"], 12.0)
             self.assertIsNotNone(no_load["loss_bias_rev_s"])
             self.assertGreater(no_load["loss_bias_rev_s"], 0.0)
+            self.assertEqual(no_load["hold_rows_dropped"], 0)
         by_direction = summary["no_load_by_direction"]
         self.assertAlmostEqual(by_direction["positive"]["speed_rev_s"], by_direction["negative"]["speed_rev_s"],
                                places=2)
         self.assertAlmostEqual(by_direction["difference_rev_s"], 0.0, places=2)
+
+    def test_sagging_hold_rows_are_dropped_from_the_no_load_mean(self):
+        run = _create_run(self.root, torques=(0.05,), reasons=("saturated",), sag_in_hold_from_s=0.5)
+        with (run / "telemetry.csv").open(newline="") as source:
+            hold = [r for r in csv.DictReader(source) if r["experiment_phase"] == "hold"]
+        clean = [abs(float(r["velocity_rev_s"])) for r in hold if float(r["bus_voltage_v"]) == 12.0]
+        no_load = _summary(run)["steps"][0]["no_load"]
+        expected = sum(clean) / len(clean)
+        self.assertLess(abs(no_load["speed_rev_s"] - expected) / expected, 0.005)
+        self.assertEqual(no_load["hold_rows_dropped"], len(hold) - len(clean))
+        self.assertGreater(no_load["hold_rows_dropped"], 0)
+        self.assertEqual(no_load["bus_v"], 12.0)
+
+    def test_hold_with_every_row_sagging_has_no_no_load(self):
+        run = _create_run(self.root, torques=(0.05,), reasons=("saturated",), sag_in_hold_from_s=0.0)
+        self.assertIsNone(_summary(run)["steps"][0]["no_load"])
 
     def test_velocity_capped_is_lower_bound(self):
         run = _create_run(self.root, torques=(0.05,), reasons=("velocity-capped",), cap_rev_s=35.0)

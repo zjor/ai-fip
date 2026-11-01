@@ -150,7 +150,7 @@ class TorqueSpeedConfig:
     hold_s: float = 1.0
     step_timeout_s: float = 15.0
     cap_margin_rev_s: float = 3.0
-    sag_stop_v: float = 1.0
+    sag_stop_v: float = 0.8
     coast_stop_rev_s: float = 0.2
     coast_settle_s: float = 0.25
     coast_timeout_s: float = 120.0

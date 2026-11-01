@@ -167,10 +167,15 @@ class StepMonitor:
         return False
 
 
-def check_bus(cfg: TorqueSpeedConfig, bus_v: float, allow_any_bus: bool = False) -> None:
-    """--bus must name an entry of bus_voltages_v unless --allow-any-bus."""
+def check_bus(cfg: TorqueSpeedConfig, bus_v: float, allow_any_bus: bool = False, *,
+              min_bus_voltage_v: float) -> None:
+    """--bus must name an entry of bus_voltages_v unless --allow-any-bus; with or without the flag
+    its sag stop must sit one 0.1 V telemetry step above the safety floor."""
     if not math.isfinite(bus_v) or bus_v <= 0:
         raise ValueError(f"--bus must be finite and positive, got {bus_v!r}")
+    if bus_v - cfg.sag_stop_v + _VOLT_EPS_V < min_bus_voltage_v + 0.1:
+        raise ValueError(f"--bus {bus_v:g} V minus sag_stop_v {cfg.sag_stop_v:g} V is {bus_v - cfg.sag_stop_v:.2f} V, "
+                         f"not one 0.1 V telemetry step above safety.min_bus_voltage_v {min_bus_voltage_v:g} V")
     if allow_any_bus:
         return
     if not any(abs(bus_v - v) <= _VOLT_EPS_V for v in cfg.bus_voltages_v):
@@ -218,7 +223,7 @@ async def run(config: BenchConfig, output_root: Path, controller_id: int, *, bus
     warning = ramp_warning(output_root, bus_v, cfg)
     if warning:
         print(warning, flush=True)
-    check_bus(cfg, bus_v, allow_any_bus)
+    check_bus(cfg, bus_v, allow_any_bus, min_bus_voltage_v=config.safety.min_bus_voltage_v)
     noload_rev_s = expected_noload_rev_s(cfg, bus_v)
     watchdog_s = config.common.watchdog_timeout_s
     resolved = {"controller_id": controller_id, **asdict(cfg), "bus_v": bus_v,

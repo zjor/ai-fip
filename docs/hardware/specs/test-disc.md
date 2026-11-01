@@ -69,6 +69,24 @@ Ring height is set by stiffness and flatness, not strength: 10 mm keeps the
 ring stiff against wobble with only three spokes. 8 mm would also hold.
 Reserve: ≥ 10× on every stress figure above.
 
+Rating extended to 4000 rpm (ω = 419 rad/s) on 2026-11-01 for the
+torque-speed envelope ([torque-speed.md](torque-speed.md)), with the measured
+total inertia 0.000378 kg·m²:
+
+| Quantity | Value |
+|---|---|
+| Hoop stress in the ring | ≈ 1.2 MPa |
+| Ring mass on three spokes | ≈ 900 N total, ≈ 300 N per spoke |
+| Spoke tension | ≈ 3.7 MPa |
+| Tip speed | 31 m/s |
+| Stored energy | ≈ 33 J |
+| Radial force from 1 g of imbalance at r = 70 mm | ≈ 12 N |
+
+Reserve stays ≥ 10× on every stress figure. The disc has run 3000 rpm in
+both directions without vibration growth or fault (PNDLM-11); the 4000 rpm
+figures are estimates, not FEA, and the first approach is in 0.05 Nm steps
+with the guard closed.
+
 ## 5. Expected mass and inertia
 
 From `make masses` (PLA 1.25 g/cm³): mass ≈ 100 g, I_z ≈ 0.00038 kg·m²,

@@ -105,7 +105,7 @@ Defaults (`bench.toml [torque_speed]`, my calls):
 | Key | Value | Note |
 |---|---|---|
 | `sample_rate_hz` | 200 | as coast-down |
-| `bus_voltages_v` | 11.0, 12.0, 13.2, 14.8, 16.0, 16.8 | the accepted values of `--bus`; any other value needs `--bus` plus `--allow-any-bus`. 11.0 V is the shakedown point: no-load ≈ 2500 rpm, inside the range already run; lower is pointless because of the 10 V safety floor and the 1 V sag stop |
+| `bus_voltages_v` | 11.0, 12.0, 13.2, 14.8, 16.0, 16.8 | the accepted values of `--bus`; any other value needs `--bus` plus `--allow-any-bus`. 11.0 V is the shakedown point: no-load ≈ 2500 rpm, inside the range already run; lower is pointless because of the 10 V safety floor and the 0.8 V sag stop |
 | `bus_tolerance_v` | 0.2 | preflight check against `--bus` |
 | `torques_nm` | 0.05, 0.10, 0.15, 0.18 | `--torques` overrides; each ≤ Tier B cap. The top step keeps a 10 % margin under the 0.20 Nm Tier B cap (reported torque carries current noise) and stays under the 8 A phase-current stop by the measured K_t (0.18 / 0.0244 = 7.4 A) |
 | `directions` | +1, −1 | `--direction` restricts to one |
@@ -115,7 +115,7 @@ Defaults (`bench.toml [torque_speed]`, my calls):
 | `hold_s` | 1.0 | plateau current and bus voltage at no-load |
 | `step_timeout_s` | 15 | 0.05 Nm reaches 2740 rpm in ≈ 2.5 s plus the taper |
 | `cap_margin_rev_s` | 3.0 | step ends *velocity-capped* at 63.7 rev/s, below the firmware derate band that starts at `max_velocity − max_velocity_derate` = 64.7 rev/s |
-| `sag_stop_v` | 1.0 | step ends *supply-limited* when the bus drops this far below `--bus`; checked every sample |
+| `sag_stop_v` | 0.8 | step ends *supply-limited* when the bus drops this far below `--bus`; checked every sample. At 11.0 V the stop is 10.2 V, one 0.1 V telemetry step above the 10.0 V `min_bus_voltage_v` floor, so a fold-back ends the step *supply-limited* before the safety check trips; `validate` requires `--bus` − `sag_stop_v` ≥ floor + 0.1 V for the listed voltages and for any `--bus` |
 | `coast_stop_rev_s`, `coast_settle_s`, `coast_timeout_s` | 0.2, 0.25, 120 | as coast-down |
 | `max_velocity_rev_s` | 66.7 | 4000 rpm, host stop and `servo.max_velocity` override |
 | `max_torque_nm` | 0.20 | Tier B cap |
@@ -156,21 +156,25 @@ Defaults (`bench.toml [torque_speed]`, my calls):
 - **Supply-limited flag** per window: mean bus voltage below `--bus` −
   `sag_threshold_v`. Flagged windows are kept in the table and excluded from
   fits.
-- **No-load speed** per direction: the mean speed over the hold phase of the
-  lowest-torque saturated step; uncertainty = sd over the hold plus the
+- **No-load speed** per direction: the mean over every saturated step in that
+  direction of its hold-phase mean speed (the plateau does not depend on the
+  command); hold rows whose bus is below `--bus` − `sag_threshold_v` are
+  dropped and counted; uncertainty = sd over the hold plus the
   loss-induced bias (the loss torque at that speed divided by the slope of the
   taper). Velocity-capped steps give a lower bound and are marked so.
-- **Low-speed torque** per step: the mean delivered torque τ(ω) over the
-  windows between `min_saturation_rev_s` and 50 % of the expected no-load
-  speed at this bus, and the mean q-current there. This, not the nominal
+- **Low-speed torque** per step: the delivered torque from one line fit of
+  |v| against time over the raw torque-phase rows (bus not sagging) between
+  `min_saturation_rev_s` and 50 % of the expected no-load speed at this bus,
+  at their mean speed, and the mean q-current there (a 0.18 Nm step crosses
+  that band in less than two 0.25 s windows). This, not the nominal
   command, is the reference for the knee and the fit (the firmware's K_t
   differs from the measured one by about 14 %).
 - **Knee speed** per step and direction: the speed at which the windowed
   delivered torque first falls below 90 % of the step's low-speed torque,
   with the window half-width as uncertainty; the crossing is interpolated
   linearly between the two bracketing windows at 90 % of the low-speed torque.
-  Its current for the fit is the
-  measured q-current in the windows just before the knee.
+  Its current and bus voltage for the fit are the mean measured q-current and
+  bus voltage of the two bracketing windows.
 - **Plateau current**: mean q-current and bus voltage over the hold, for the
   record.
 - Direction symmetry: no-load and knee reported per direction; the mean is
@@ -189,9 +193,15 @@ Defaults (`bench.toml [torque_speed]`, my calls):
   L_q = 44.8 µH from the controller config dump, p = 14. v_per_hz is taken
   from the measured K_t (Kv = 8.27 / 0.0244 = 339 rpm/V, ±3 % from PNDLM-9),
   not fitted: with only no-load speeds, r_max and v_per_hz are degenerate.
-  The single fitted parameter is r_max, from the no-load speeds (i_q ≈ loss
-  current) and the knee points (i_q = command / K_t) at all voltages; the
-  K_t uncertainty is propagated into r_max.
+  The single fitted parameter is r_max. Its samples are every saturated
+  no-load point (i_q = the hold's mean q-current, the loss current; V_bus =
+  the hold's measured bus) and every knee (i_q and V_bus = the measured
+  q-current and bus of the bracketing windows) at all voltages; the nominal
+  `--bus` is used only when no bus was measured, and the point is marked so.
+  r_max is reported per Kv candidate as mean, sd and se, with the mean per
+  group (no-load, knee). For the Kv from K_t, the K_t uncertainty (±3 %) is
+  propagated: `kt_term` is half the change of the mean r_max between
+  Kv·1.03 and Kv·0.97, and the reported se is √(se_scatter² + kt_term²).
 - The fit is degenerate between r_max and v_per_hz, so the **primary
   deliverable** is the measured quantity: no-load speed versus V_bus, slope
   (rpm/V, "effective no-load Kv") and intercept with standard errors, plus the

@@ -144,7 +144,8 @@ async def run(args: argparse.Namespace) -> str:
     if args.experiment == "torque-speed":
         cfg = torque_speed.resolve(config.torque_speed, torques_nm=args.torques, direction=args.direction)
         torque_speed.validate(cfg, config.safety)
-        torque_speed.check_bus(cfg, args.bus, args.allow_any_bus)
+        torque_speed.check_bus(cfg, args.bus, args.allow_any_bus,
+                               min_bus_voltage_v=config.safety.min_bus_voltage_v)
         if args.dry_run:
             return torque_speed.describe(cfg, args.bus, torque_speed.expected_noload_rev_s(cfg, args.bus))
         return await torque_speed.run(config, output_root, controller_id, bus_v=args.bus,

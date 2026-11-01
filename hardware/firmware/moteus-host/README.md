@@ -202,17 +202,19 @@ each step waiting for `GO`. Each step ends with one reason, written to
   the torque is held for 1 s.
 - `velocity-capped`: speed reached 63.7 rev/s; 16.8 V may end this way, then the
   no-load speed is a lower bound.
-- `supply-limited`: the bus fell more than 1 V below `--bus`.
+- `supply-limited`: the bus fell more than 0.8 V below `--bus` (at 11.0 V the stop is
+  10.2 V, one telemetry step above the 10.0 V safety floor).
 - `timeout`: the step took more than 15 s.
 
 The nominal torques are labels only: the firmware's K_t differs from the measured
 one, so the analysis uses measured current and acceleration. `analyze` writes
 `summary.json` (no-load and knee speeds per direction, supply-limited windows
-flagged and excluded), `torque-vs-speed.csv` and `plots/torque-vs-speed.svg` and
+flagged and excluded), `torque-vs-speed.csv`, `plots/torque-vs-speed.svg` and
 `plots/speed-vs-time.svg`. `envelope` writes `<timestamp>_envelope/summary.json`
 and `plots/envelope.svg`: the no-load line in rpm/V with its points and lower
-bounds, and `r_max` per knee for two Kv candidates (values above 1 are reported,
-not clipped).
+bounds, and `r_max` from the knees and saturated no-load points at their measured
+bus voltage, for two Kv candidates, with the K_t uncertainty in the standard error
+of the K_t-derived one (values above 1 are reported, not clipped).
 
 Analyze a completed friction or coast-down run offline with:
 

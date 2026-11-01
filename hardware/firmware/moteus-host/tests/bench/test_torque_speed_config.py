@@ -24,7 +24,7 @@ class TorqueSpeedConfigTest(unittest.TestCase):
         self.assertEqual(cfg.max_velocity_rev_s, 66.7)
         self.assertEqual(cfg.max_torque_nm, 0.20)
         self.assertEqual(cfg.cap_margin_rev_s, 3.0)
-        self.assertEqual(cfg.sag_stop_v, 1.0)
+        self.assertEqual(cfg.sag_stop_v, 0.8)
         self.assertEqual(cfg.sag_threshold_v, 0.3)
         self.assertEqual(cfg.bus_tolerance_v, 0.2)
         self.assertEqual(cfg.saturation_alpha_rev_s2, 1.0)
@@ -60,8 +60,13 @@ class TorqueSpeedConfigTest(unittest.TestCase):
         self.assert_rejected(cap_margin_rev_s=1.0)
 
     def test_rejects_sag_stop_reaching_safety_floor(self) -> None:
-        # min(bus_voltages_v) - sag_stop_v must stay >= safety.min_bus_voltage_v
+        # min(bus_voltages_v) - sag_stop_v must stay one 0.1 V telemetry step above
+        # safety.min_bus_voltage_v: 11.0 - 1.0 = 10.0 < 10.1
         self.assert_rejected(sag_stop_v=1.5)
+        self.assert_rejected(sag_stop_v=1.0)
+        with self.assertRaisesRegex(ValueError, "one 0.1 V telemetry step above the floor"):
+            validate_torque_speed(replace(self.cfg, sag_stop_v=1.0), self.limits)
+        validate_torque_speed(replace(self.cfg, sag_stop_v=0.9), self.limits)
 
     def test_rejects_empty_or_non_finite_lists(self) -> None:
         self.assert_rejected(bus_voltages_v=())

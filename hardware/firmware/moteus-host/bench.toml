@@ -153,8 +153,10 @@ hold_s = 1.0
 step_timeout_s = 15.0
 # velocity-capped at max_velocity - margin = 63.7 rev/s, below the firmware derate band (64.7)
 cap_margin_rev_s = 3.0
-# supply-limited when the bus drops this far below --bus; 11 V - 1 V stays above the 10 V floor
-sag_stop_v = 1.0
+# supply-limited when the bus drops this far below --bus. At 11.0 V the stop is 10.2 V, one 0.1 V
+# telemetry step above the 10.0 V min_bus_voltage_v floor, so a fold-back ends the step
+# supply-limited before the safety check trips
+sag_stop_v = 0.8
 coast_stop_rev_s = 0.2
 coast_settle_s = 0.25
 coast_timeout_s = 120.0

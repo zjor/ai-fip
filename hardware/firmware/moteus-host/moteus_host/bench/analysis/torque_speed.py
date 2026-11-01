@@ -7,7 +7,8 @@ rotating-losses record. The nominal torque command is never used as a torque
 value (the firmware's K_t differs from the measured one by about 14 %); it
 appears in the outputs only as a label. Windows whose mean bus voltage sags
 below bus_v - sag_threshold_v are flagged, kept in the table and excluded from
-the low-speed reference, the knee and the no-load slope.
+the knee and the no-load slope. The low-speed reference is fitted over the raw
+rows of the band (rows with a sagging bus excluded), not over windows.
 """
 
 from __future__ import annotations
@@ -27,7 +28,6 @@ from .plots import Series, write_line_plot
 ANALYSIS_VERSION = 1
 KNEE_FRACTION = 0.9
 BAND_FRACTION = 0.5
-MIN_REFERENCE_WINDOWS = 2
 MIN_TAPER_WINDOWS = 3
 CSV_FIELDS = ("trial", "torque_cmd_nm", "direction", "time_s", "speed_rev_s", "alpha_rev_s2",
               "tau_nm", "tau_se_nm", "q_current_a", "bus_v", "supply_limited")
@@ -71,17 +71,40 @@ def delivered_torque_windows(rows: list[dict], *, inertia: float, inertia_rel_sd
     return result
 
 
-def low_speed_torque(windows: list[dict], *, min_rev_s: float, expected_noload_rev_s: float) -> dict | None:
-    """Mean delivered torque and q-current over unflagged windows in the low-speed band."""
+def low_speed_torque(rows: list[dict], *, min_rev_s: float, expected_noload_rev_s: float, inertia: float,
+                     inertia_rel_sd: float, loss_fit: dict, bus_v: float, sag_threshold_v: float) -> dict | None:
+    """Delivered torque over the raw torque-phase rows in the low-speed band.
+
+    Rows count when their bus is not sagging (bus >= bus_v - sag_threshold_v, or not reported) and
+    min_rev_s < |v| < BAND_FRACTION * expected_noload_rev_s. One line fit of |v| against time over
+    those rows gives alpha; tau = I_eff * 2*pi * alpha + loss(2*pi * mean |v|). Raw rows instead of
+    WINDOW_S windows, because a high-torque step crosses the band in less than two windows.
+    """
     upper = BAND_FRACTION * expected_noload_rev_s
-    band = [w for w in windows if not w["supply_limited"] and min_rev_s < w["speed_rev_s"] < upper]
-    if len(band) < MIN_REFERENCE_WINDOWS:
+    times, speeds, currents = [], [], []
+    for row in rows:
+        t, v, bus = _value(row, "host_time_s"), _value(row, "velocity_rev_s"), _value(row, "bus_voltage_v")
+        if t is None or v is None or (bus is not None and bus < bus_v - sag_threshold_v):
+            continue
+        if not min_rev_s < abs(v) < upper:
+            continue
+        times.append(t)
+        speeds.append(abs(v))
+        current = _value(row, "q_current_a")
+        if current is not None:
+            currents.append(abs(current))
+    if len(speeds) < 2 * MIN_WINDOW_SAMPLES:
         return None
-    currents = [w["q_current_a"] for w in band if w["q_current_a"] is not None]
+    alpha, _ = _linear_fit(times, speeds)
+    speed = statistics.fmean(speeds)
+    tau = inertia * TWO_PI * abs(alpha) + _model(loss_fit, TWO_PI * speed)
+    rmse = float(loss_fit.get("rmse_nm", 0.0) or 0.0)
     return {
-        "tau_nm": statistics.fmean(w["tau_nm"] for w in band),
+        "tau_nm": tau,
+        "tau_se_nm": math.hypot(tau * inertia_rel_sd, rmse),
         "q_current_a": statistics.fmean(currents) if currents else None,
-        "windows": len(band),
+        "n_rows": len(speeds),
+        "speed_rev_s": speed,
     }
 
 
@@ -90,7 +113,8 @@ def knee(windows: list[dict], reference_tau_nm: float | None, *, after_rev_s: fl
 
     The first unflagged window below 0.9*reference and the last unflagged window before it at or above
     0.9*reference bracket the crossing; speed is interpolated linearly in tau between them, with half
-    their speed distance as the uncertainty and the mean of their q-currents. With no window at or above
+    their speed distance as the uncertainty and the mean of their q-currents and bus voltages (the
+    measured bus, for the voltage-circle fit). With no window at or above
     0.9*reference after the band, the first window below it is used as is, with half its fitted speed
     span (alpha * WINDOW_S / 2) as the uncertainty.
     """
@@ -110,14 +134,17 @@ def knee(windows: list[dict], reference_tau_nm: float | None, *, after_rev_s: fl
                 "speed_se_rev_s": window["alpha_rev_s2"] * WINDOW_S / 2.0,
                 "q_current_a": window["q_current_a"],
                 "tau_nm": window["tau_nm"],
+                "bus_v": window.get("bus_v"),
             }
         fraction = (above["tau_nm"] - threshold) / (above["tau_nm"] - window["tau_nm"])
         currents = [w["q_current_a"] for w in (above, window) if w["q_current_a"] is not None]
+        voltages = [w.get("bus_v") for w in (above, window) if w.get("bus_v") is not None]
         return {
             "speed_rev_s": above["speed_rev_s"] + fraction * (window["speed_rev_s"] - above["speed_rev_s"]),
             "speed_se_rev_s": abs(window["speed_rev_s"] - above["speed_rev_s"]) / 2.0,
             "q_current_a": statistics.fmean(currents) if currents else None,
             "tau_nm": threshold,
+            "bus_v": statistics.fmean(voltages) if voltages else None,
         }
     return None
 
@@ -134,8 +161,13 @@ def _taper_slope(windows: list[dict], knee_point: dict | None) -> float | None:
 
 
 def no_load(hold_rows: list[dict], reason: str | None, windows: list[dict], knee: dict | None,
-            *, loss_fit: dict | None = None, torque_rows: list[dict] | None = None) -> dict | None:
-    """No-load speed of one step: the hold mean when saturated, a lower bound when velocity-capped."""
+            *, loss_fit: dict | None = None, torque_rows: list[dict] | None = None,
+            bus_v: float | None = None, sag_threshold_v: float | None = None) -> dict | None:
+    """No-load speed of one step: the hold mean when saturated, a lower bound when velocity-capped.
+
+    With bus_v and sag_threshold_v, hold rows whose bus is below bus_v - sag_threshold_v are
+    dropped (the supply folded back and the speed with it); no row left gives None.
+    """
     if reason == "velocity-capped":
         speeds = [abs(v) for v in (_value(r, "velocity_rev_s") for r in torque_rows or []) if v is not None]
         if not speeds:
@@ -143,6 +175,11 @@ def no_load(hold_rows: list[dict], reason: str | None, windows: list[dict], knee
         return {"speed_rev_s": max(speeds), "lower_bound": True}
     if reason != "saturated":
         return None
+    total = len(hold_rows)
+    if bus_v is not None and sag_threshold_v is not None:
+        hold_rows = [r for r in hold_rows
+                     if _value(r, "bus_voltage_v") is None or _value(r, "bus_voltage_v") >= bus_v - sag_threshold_v]
+    dropped = total - len(hold_rows)
     speeds = [abs(v) for v in (_value(r, "velocity_rev_s") for r in hold_rows) if v is not None]
     if not speeds:
         return None
@@ -160,6 +197,7 @@ def no_load(hold_rows: list[dict], reason: str | None, windows: list[dict], knee
         "q_current_a": statistics.fmean(currents) if currents else None,
         "bus_v": statistics.fmean(voltages) if voltages else None,
         "loss_bias_rev_s": bias,
+        "hold_rows_dropped": dropped,
     }
 
 
@@ -256,7 +294,9 @@ def analyze(run_directory: Path) -> Path:
         hold_rows = [r for r in trial_rows if r["experiment_phase"] == "hold"]
         windows = delivered_torque_windows(torque_rows, inertia=inertia, inertia_rel_sd=inertia_rel_sd,
                                            loss_fit=loss_fit, bus_v=bus_v, sag_threshold_v=sag_threshold_v)
-        low = low_speed_torque(windows, min_rev_s=min_rev_s, expected_noload_rev_s=expected_noload_rev_s)
+        low = low_speed_torque(torque_rows, min_rev_s=min_rev_s, expected_noload_rev_s=expected_noload_rev_s,
+                               inertia=inertia, inertia_rel_sd=inertia_rel_sd, loss_fit=loss_fit, bus_v=bus_v,
+                               sag_threshold_v=sag_threshold_v)
         knee_point = knee(windows, low["tau_nm"] if low else None, after_rev_s=band_upper_rev_s)
         torque_cmd = float(step["torque_nm"])
         direction = int(step.get("direction", 1 if torque_cmd > 0 else -1))
@@ -267,7 +307,8 @@ def analyze(run_directory: Path) -> Path:
             "reason": reason,
             "low_speed": low,
             "knee": knee_point,
-            "no_load": no_load(hold_rows, reason, windows, knee_point, loss_fit=loss_fit, torque_rows=torque_rows),
+            "no_load": no_load(hold_rows, reason, windows, knee_point, loss_fit=loss_fit, torque_rows=torque_rows,
+                               bus_v=bus_v, sag_threshold_v=sag_threshold_v),
             "windows_flagged": sum(w["supply_limited"] for w in windows),
         })
         table.extend({"trial": trial, "torque_cmd_nm": torque_cmd, "direction": direction, **w} for w in windows)
@@ -296,10 +337,13 @@ def analyze(run_directory: Path) -> Path:
             "supply_limited": f"window mean bus voltage < bus_v - sag_threshold_v ({bus_v - sag_threshold_v:g} V); "
                               "kept in the table, excluded from the reference, knee and no-load slope",
             "low_speed_band_rev_s": [min_rev_s, band_upper_rev_s],
+            "low_speed": "one line fit of |v| over time across the raw torque-phase rows in the band with bus >= "
+                         "bus_v - sag_threshold_v; tau at their mean speed; null below 2 * min_window_samples rows",
             "knee": f"speed at tau = {KNEE_FRACTION:g} * low-speed torque, interpolated between the unflagged "
                     f"windows at or above {band_upper_rev_s:g} rev/s that bracket it; uncertainty half their "
                     "speed distance (half the window's span when no window above the threshold precedes it)",
-            "no_load": "mean |v| over the hold of a saturated step; max |v| as a lower bound when velocity-capped; "
+            "no_load": "mean |v| over the hold rows of a saturated step with bus >= bus_v - sag_threshold_v "
+                       "(sagging rows dropped and counted); max |v| as a lower bound when velocity-capped; "
                        "loss_bias = loss(omega_noload) / |d tau / d speed| over the taper",
         },
         "bus_v": bus_v,

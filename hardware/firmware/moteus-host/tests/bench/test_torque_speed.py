@@ -19,6 +19,9 @@ from moteus_host.bench.safety import SafetyStop
 
 from .tier_b_fakes import SNAPSHOT, FakeClock, FakeController, FakeStream
 
+# the 0.10 Nm step to 40 rev/s saturates about 2.0 s into the command; 2.5 s is inside the 1 s hold
+SAG_AFTER_S = 2.5
+
 
 class TorqueSpeedExperimentTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -119,6 +122,23 @@ class TorqueSpeedExperimentTest(unittest.IsolatedAsyncioTestCase):
         # no retries and no extra safety stops
         self.assertEqual(controller.stops, 2 * len(steps) + 3)
 
+    async def test_hold_ending_by_sag_writes_hold_end(self):
+        # the step saturates with the bus at 12.0 V; the supply folds back to 10.6 V during the hold
+        controller = FakeController(FakeClock(), bus_v=12.0, no_load_rev_s=40.0, sag_after_s=SAG_AFTER_S,
+                                    sag_to_v=10.6)
+        controller, stream, meta, rows, events = await self.execute(self.config(), controller=controller)
+        self.assertEqual(meta["status"], "completed")
+        self.assertEqual(meta["resolved_config"]["steps"][0]["reason"], "saturated")
+        hold_end = [e for e in events if e["event"] == "hold_end"]
+        self.assertEqual(len(hold_end), 1)
+        self.assertEqual(hold_end[0]["note"], "supply-limited")
+        names = self.names(events)
+        self.assertLess(names.index("hold_start"), names.index("hold_end"))
+        self.assertLess(names.index("hold_end"), names.index("coast_start"))
+        hold = [r for r in rows if r["experiment_phase"] == "hold"]
+        self.assertTrue(hold)
+        self.assertEqual(float(hold[-1]["bus_voltage_v"]), 10.6)
+
     async def test_stuck_rotor_times_out_cleanly(self):
         config = self.config(step_timeout_s=0.5, saturation_settle_s=0.25)
         controller = FakeController(FakeClock(), bus_v=12.0, no_load_rev_s=40.0, stuck=True)
@@ -154,6 +174,16 @@ class TorqueSpeedExperimentTest(unittest.IsolatedAsyncioTestCase):
             self.config(), controller=controller, bus=12.5, allow_any_bus=True)
         self.assertEqual(meta["status"], "completed")
         self.assertTrue(meta["resolved_config"]["allow_any_bus"])
+
+    async def test_bus_too_close_to_floor_rejected_even_with_flag(self):
+        # 10.5 V - 0.8 V sag stop = 9.7 V, below the 10.0 V floor + one 0.1 V telemetry step
+        create = Mock()
+        with (patch.object(tier_b, "create_controller", create), tempfile.TemporaryDirectory() as directory,
+              contextlib.redirect_stdout(io.StringIO())):
+            with self.assertRaisesRegex(ValueError, "10.5.*0.8"):
+                await experiment.run(self.config(), Path(directory), 1, bus_v=10.5, allow_any_bus=True)
+            self.assertFalse(any(Path(directory).iterdir()))
+        create.assert_not_called()
 
     async def test_overrides_use_66_7_and_restore(self):
         controller = FakeController(FakeClock(), bus_v=12.0, no_load_rev_s=40.0)

@@ -84,16 +84,24 @@ class StepMonitorTest(unittest.TestCase):
         self.assertEqual(monitor.reason, "timeout")
 
     def test_sag_wins(self) -> None:
-        monitor = self.monitor()
-        # 11.0 V is exactly --bus - sag_stop_v: not below it, so no stop.
-        self.assertFalse(monitor(state(30.0, bus=11.0), 1.0))
-        self.assertIsNone(monitor.reason)
-        # A lost voltage reading is no information, not a trigger.
-        self.assertFalse(monitor(state(30.1, bus=None), 1.005))
-        self.assertIsNone(monitor.reason)
-        # 10.9 V while also at the cap margin and past the timeout: sag is checked first.
-        self.assertTrue(monitor(state(63.7, bus=10.9), self.cfg.step_timeout_s))
-        self.assertEqual(monitor.reason, "supply-limited")
+        cfg = self.cfg
+        floor = load_config().safety.min_bus_voltage_v
+        for bus in cfg.bus_voltages_v:
+            with self.subTest(bus=bus):
+                monitor = experiment.StepMonitor(cfg, bus, DERATE)
+                k = round((bus - cfg.sag_stop_v) * 10)
+                # k * 0.1 V is exactly --bus - sag_stop_v: not below it, so no stop.
+                self.assertFalse(monitor(state(30.0, bus=round(k * 0.1, 1)), 1.0))
+                self.assertIsNone(monitor.reason)
+                # A lost voltage reading is no information, not a trigger.
+                self.assertFalse(monitor(state(30.1, bus=None), 1.005))
+                self.assertIsNone(monitor.reason)
+                # one telemetry step lower, while also at the cap margin and past the timeout:
+                # sag is checked first, and the reading is still at or above the safety floor
+                low = round((k - 1) * 0.1, 1)
+                self.assertGreaterEqual(low, floor)
+                self.assertTrue(monitor(state(63.7, bus=low), cfg.step_timeout_s))
+                self.assertEqual(monitor.reason, "supply-limited")
 
     def test_cap_margin(self) -> None:
         monitor = self.monitor()
@@ -164,7 +172,7 @@ class StepMonitorTest(unittest.TestCase):
         self.assertAlmostEqual(experiment.expected_noload_rev_s(self.cfg, 12.0), 45.6)
         text = experiment.describe(self.cfg, 12.0, 45.6)
         for part in ("12 V", "0.05, 0.1, 0.15, 0.18", "+1", "-1", "66.7 rev/s", "4002 rpm",
-                     "1 V", "2736 rpm", "GO"):
+                     "0.8 V", "2736 rpm", "GO"):
             self.assertIn(part, text)
 
 

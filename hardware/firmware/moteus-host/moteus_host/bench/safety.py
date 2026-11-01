@@ -119,8 +119,12 @@ def validate_torque_speed(config: TorqueSpeedConfig, limits: SafetyConfig) -> No
         raise ValueError("torque_speed.cap_margin_rev_s must exceed the firmware derate band (2.0 rev/s)")
     if config.min_saturation_rev_s >= config.max_velocity_rev_s - config.cap_margin_rev_s:
         raise ValueError("torque_speed.min_saturation_rev_s must stay below the velocity-capped threshold")
-    if min(config.bus_voltages_v) - config.sag_stop_v < limits.min_bus_voltage_v:
-        raise ValueError("torque_speed.sag_stop_v reaches the safety min_bus_voltage_v at the lowest bus voltage")
+    # the sag stop must sit one 0.1 V telemetry step above the floor (1e-6 V float slack), so a
+    # fold-back ends the step supply-limited before check_state trips on min_bus_voltage_v
+    if min(config.bus_voltages_v) - config.sag_stop_v + 1e-6 < limits.min_bus_voltage_v + 0.1:
+        raise ValueError(f"torque_speed.sag_stop_v {config.sag_stop_v:g} V at the lowest bus voltage "
+                         f"{min(config.bus_voltages_v):g} V must stay one 0.1 V telemetry step above the floor "
+                         f"(safety.min_bus_voltage_v {limits.min_bus_voltage_v:g} V)")
     if max(config.bus_voltages_v) > limits.max_bus_voltage_v:
         raise ValueError("torque_speed.bus_voltages_v exceeds the safety max_bus_voltage_v")
     if config.saturation_settle_s >= config.step_timeout_s:

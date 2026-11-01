@@ -1,8 +1,8 @@
 """Tier B session: the connect, override, stop and restore plumbing shared by the
 spinning-disc experiments (coast-down, torque-speed).
 
-The 24 V bench supply cannot sink current, so the motor never brakes: every
-deceleration is set_stop() and friction. For the run the firmware watchdog is set
+The bench supply (24 V fixed or the adjustable lab supply) cannot sink current,
+so the motor never brakes: every deceleration is set_stop() and friction. For the run the firmware watchdog is set
 to torque-off (servo.timeout_mode 0), the position bounds are opened (NaN),
 servo.max_velocity derates torque above the Tier B speed and the flux brake burns
 any regeneration in the windings below the supply's limit; all of them are
