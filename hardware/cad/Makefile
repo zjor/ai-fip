@@ -3,7 +3,7 @@ OSFLAGS  ?= --backend=manifold
 BUILD    := build
 PY       ?= python3
 
-PARTS := wheel_quadrant wheel_hub wheel_bolts beam motor_flange stand pad test_disc rotor_gauge_16 rotor_gauge_17
+PARTS := wheel_quadrant wheel_hub wheel_bolts beam motor_flange stand pad test_disc rotor_gauge_16 rotor_gauge_17 rail_anchor
 
 .PHONY: parts masses check view test clean
 
@@ -32,6 +32,8 @@ $(BUILD)/rotor_gauge_16.stl: rotor_gauge.scad params.scad lib.scad | $(BUILD)
 	$(OPENSCAD) $(OSFLAGS) -D 'bc=16' -o $@ $<
 $(BUILD)/rotor_gauge_17.stl: rotor_gauge.scad params.scad lib.scad | $(BUILD)
 	$(OPENSCAD) $(OSFLAGS) -D 'bc=17' -o $@ $<
+$(BUILD)/rail_anchor.stl: rail-anchor/rail_anchor.scad | $(BUILD)
+	$(OPENSCAD) $(OSFLAGS) -o $@ $<
 $(BUILD)/assembly.stl: assembly.scad wheel.scad rod.scad stand.scad params.scad lib.scad | $(BUILD)
 	$(OPENSCAD) $(OSFLAGS) -o $@ $<
 

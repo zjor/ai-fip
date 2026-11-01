@@ -16,7 +16,7 @@ BED = 220.0
 
 def render(scad_name: str, part: str | None = None, axis: str = "z"):
     BUILD.mkdir(exist_ok=True)
-    out = BUILD / f"test_{scad_name}_{part or 'scene'}.stl"
+    out = BUILD / f"test_{scad_name.replace('/', '_')}_{part or 'scene'}.stl"
     cmd = ["openscad", "--backend=manifold", "-o", str(out)]
     if part is not None:
         cmd += ["-D", f'part="{part}"']
@@ -189,6 +189,34 @@ class TestDiscTest(unittest.TestCase):
         cx, cy, _ = self.disc["centroid"]
         self.assertAlmostEqual(cx, 0.0, delta=0.02)
         self.assertAlmostEqual(cy, 0.0, delta=0.02)
+
+
+class RailAnchorTest(unittest.TestCase):
+    """hardware/cad/rail-anchor: L-foot anchoring a 10x10 rail end to the base plate."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.anchor, _ = render("rail-anchor/rail_anchor")
+
+    def test_envelope(self):
+        sx, sy, sz = self.anchor["size"]
+        self.assertAlmostEqual(sx, 14.0, delta=0.01)   # beam 10 + two 2 mm gussets
+        self.assertAlmostEqual(sy, 22.0, delta=0.01)   # rail face to foot tip
+        self.assertAlmostEqual(sz, 10.0, delta=0.01)   # flush with the rail top
+        self.assertAlmostEqual(self.anchor["bbox_min"][2], 0.0, delta=0.01)  # prints flat
+
+    def test_holes_remove_material(self):
+        k = 3.0   # gusset_k; area under (1-s)/(1+ks) on [0,1] = ((1+k) ln(1+k) - k) / k^2
+        gusset = 7 * 19 * ((1 + k) * math.log(1 + k) - k) / k ** 2 * 2
+        solid = 14 * 3 * 10 + 14 * 19 * 3 + 2 * gusset   # plate + foot + two gussets
+        v = self.anchor["volume_mm3"]
+        self.assertLess(v, solid - 100, v)    # M3 + wood screw hole + countersinks + head relief
+        self.assertGreater(v, solid - 300, v)
+
+    def test_mass(self):
+        mass = self.anchor["volume_mm3"] * RHO_PLA
+        self.assertGreater(mass, 1.0)
+        self.assertLess(mass, 2.0)
 
 
 class AssemblyTest(unittest.TestCase):

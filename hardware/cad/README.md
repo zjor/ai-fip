@@ -30,6 +30,7 @@ intersection of the pendulum at 0/90/180/270° with the stand and table is empty
 | pad | `stand.scad` / `pad` | 1 | 3.4 g | flat | |
 | rotor gauge | `rotor_gauge.scad`, `bc=16` / `bc=17` | 1 each | 1.2 g | flat | 2 mm fit gauge for the rotor bolt pattern; the one that takes all three M3 without force wins |
 | test disc | `test_disc.scad` / `disc` | 1 | 98.6 g | flat, rotor face down | 4 perimeters, 100 % infill; bench only, [specs/test-disc.md](../../docs/hardware/specs/test-disc.md) |
+| rail anchor | [`rail-anchor/rail_anchor.scad`](rail-anchor/README.md) | 2 per rail | 1.5 g | flat, foot on the bed | 4 perimeters; bench stand only, fixes a 10x10 rail end to the base plate |
 
 `wheel.scad / bolts` is not a print: it models the eight M6 tuning bolts
 (66.7 g steel) for the mass model.
