@@ -5,7 +5,13 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from .config import CoastDownConfig, FrictionConfig, PositionStepConfig, SafetyConfig
+from .config import (
+    CoastDownConfig,
+    FrictionConfig,
+    PositionStepConfig,
+    SafetyConfig,
+    TorqueSpeedConfig,
+)
 
 
 class SafetyStop(RuntimeError):
@@ -72,6 +78,53 @@ def validate_coast_down(config: CoastDownConfig, limits: SafetyConfig) -> None:
         raise ValueError("coast_down.sample_rate_hz must be within 50..500 Hz")
     if config.response_timeout_s > 0.1:
         raise ValueError("coast_down.response_timeout_s must be <= 100 ms")
+
+
+def validate_torque_speed(config: TorqueSpeedConfig, limits: SafetyConfig) -> None:
+    """Tier B checks for the torque-speed envelope run (specs/torque-speed.md section 4)."""
+    numeric = (
+        "sample_rate_hz", "bus_tolerance_v", "saturation_alpha_rev_s2", "saturation_settle_s",
+        "min_saturation_rev_s", "hold_s", "step_timeout_s", "cap_margin_rev_s", "sag_stop_v",
+        "coast_stop_rev_s", "coast_settle_s", "coast_timeout_s", "max_velocity_rev_s",
+        "max_torque_nm", "sag_threshold_v", "response_timeout_s", "kt_nm_per_a",
+        "expected_noload_rpm_per_v",
+    )
+    for name in numeric:
+        value = getattr(config, name)
+        if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+            raise ValueError(f"torque_speed.{name} must be finite and positive")
+    if not config.bus_voltages_v:
+        raise ValueError("torque_speed.bus_voltages_v must list at least one voltage")
+    for volts in config.bus_voltages_v:
+        if not math.isfinite(volts) or volts <= 0:
+            raise ValueError("torque_speed.bus_voltages_v entries must be finite and positive")
+    if not config.torques_nm:
+        raise ValueError("torque_speed.torques_nm must list at least one torque")
+    if config.max_velocity_rev_s > limits.max_rotating_velocity_rev_s:
+        raise ValueError("torque_speed.max_velocity_rev_s exceeds the Tier-B rotating velocity cap")
+    if config.max_torque_nm > limits.max_rotating_torque_nm:
+        raise ValueError("torque_speed.max_torque_nm exceeds the Tier-B rotating torque cap")
+    for torque in config.torques_nm:
+        if not math.isfinite(torque) or torque <= 0 or torque > config.max_torque_nm:
+            raise ValueError("torque_speed.torques_nm entries must be positive and within max_torque_nm")
+    if config.cap_margin_rev_s <= 2.0:
+        raise ValueError("torque_speed.cap_margin_rev_s must exceed the firmware derate band (2.0 rev/s)")
+    if config.min_saturation_rev_s >= config.max_velocity_rev_s - config.cap_margin_rev_s:
+        raise ValueError("torque_speed.min_saturation_rev_s must stay below the velocity-capped threshold")
+    if min(config.bus_voltages_v) - config.sag_stop_v < limits.min_bus_voltage_v:
+        raise ValueError("torque_speed.sag_stop_v reaches the safety min_bus_voltage_v at the lowest bus voltage")
+    if max(config.bus_voltages_v) > limits.max_bus_voltage_v:
+        raise ValueError("torque_speed.bus_voltages_v exceeds the safety max_bus_voltage_v")
+    if config.saturation_settle_s >= config.step_timeout_s:
+        raise ValueError("torque_speed.saturation_settle_s must be below step_timeout_s")
+    if config.coast_settle_s >= config.coast_timeout_s:
+        raise ValueError("torque_speed.coast_settle_s must be below coast_timeout_s")
+    if not config.directions or any(d not in (1, -1) for d in config.directions):
+        raise ValueError("torque_speed.directions must be a subset of 1 and -1")
+    if not 50.0 <= config.sample_rate_hz <= 500.0:
+        raise ValueError("torque_speed.sample_rate_hz must be within 50..500 Hz")
+    if config.response_timeout_s > 0.1:
+        raise ValueError("torque_speed.response_timeout_s must be <= 100 ms")
 
 
 def check_state(

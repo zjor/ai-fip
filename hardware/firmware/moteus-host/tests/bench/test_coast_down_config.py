@@ -23,7 +23,7 @@ class CoastDownConfigTest(unittest.TestCase):
         self.assertEqual(self.cfg.max_torque_nm, 0.20)
         self.assertEqual(self.cfg.kt_nm_per_a, 0.0244)
         self.assertEqual(self.cfg.coast_settle_s, 0.25)
-        self.assertEqual(self.limits.max_rotating_velocity_rev_s, 55.0)
+        self.assertEqual(self.limits.max_rotating_velocity_rev_s, 70.0)
         self.assertEqual(self.limits.max_rotating_torque_nm, 0.20)
         self.assertTrue((REPO_ROOT / self.cfg.inertia_record).is_file())
 
@@ -41,7 +41,7 @@ class CoastDownConfigTest(unittest.TestCase):
             validate_coast_down(cfg, self.limits)
 
     def test_rejects_velocity_cap_above_tier_b(self) -> None:
-        cfg = replace(self.cfg, max_velocity_rev_s=60.0)
+        cfg = replace(self.cfg, max_velocity_rev_s=75.0)
         with self.assertRaisesRegex(ValueError, "velocity"):
             validate_coast_down(cfg, self.limits)
 

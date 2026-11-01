@@ -33,8 +33,8 @@ class SafetyConfig:
     max_position_excursion_rev: float
     max_friction_velocity_rev_s: float
     max_friction_excursion_rev: float
-    # Tier B (retained rotating assembly and guard): docs/hardware/specs/coast-down.md
-    max_rotating_velocity_rev_s: float = 55.0
+    # Tier B (retained rotating assembly and guard): docs/hardware/specs/coast-down.md, torque-speed.md
+    max_rotating_velocity_rev_s: float = 70.0
     max_rotating_torque_nm: float = 0.20
 
 
@@ -136,6 +136,34 @@ class CoastDownConfig:
 
 
 @dataclass(frozen=True)
+class TorqueSpeedConfig:
+    """Tier B torque-speed envelope runs on the test disc (specs/torque-speed.md)."""
+
+    sample_rate_hz: float = 200.0
+    bus_voltages_v: tuple[float, ...] = (11.0, 12.0, 13.2, 14.8, 16.0, 16.8)
+    bus_tolerance_v: float = 0.2
+    torques_nm: tuple[float, ...] = (0.05, 0.10, 0.15, 0.20)
+    directions: tuple[int, ...] = (1, -1)
+    saturation_alpha_rev_s2: float = 1.0
+    saturation_settle_s: float = 0.5
+    min_saturation_rev_s: float = 5.0
+    hold_s: float = 1.0
+    step_timeout_s: float = 15.0
+    cap_margin_rev_s: float = 3.0
+    sag_stop_v: float = 1.0
+    coast_stop_rev_s: float = 0.2
+    coast_settle_s: float = 0.25
+    coast_timeout_s: float = 120.0
+    max_velocity_rev_s: float = 66.7
+    max_torque_nm: float = 0.20
+    sag_threshold_v: float = 0.3
+    response_timeout_s: float = 0.05
+    loss_record: str = "docs/hardware/measurements/2026-11-01-rotating-losses.json"
+    kt_nm_per_a: float = 0.0244
+    expected_noload_rpm_per_v: float = 228.0
+
+
+@dataclass(frozen=True)
 class BenchConfig:
     common: CommonConfig
     safety: SafetyConfig
@@ -145,6 +173,7 @@ class BenchConfig:
     response_timing: ResponseTimingConfig = ResponseTimingConfig()
     torque_constant: TorqueConstantConfig = TorqueConstantConfig()
     coast_down: CoastDownConfig = CoastDownConfig()
+    torque_speed: TorqueSpeedConfig = TorqueSpeedConfig()
 
 
 def _coast_down(section: dict[str, Any]) -> CoastDownConfig:
@@ -155,6 +184,16 @@ def _coast_down(section: dict[str, Any]) -> CoastDownConfig:
     if "direction" in values:
         values["direction"] = int(values["direction"])
     return CoastDownConfig(**values)
+
+
+def _torque_speed(section: dict[str, Any]) -> TorqueSpeedConfig:
+    values = dict(section)
+    for key in ("bus_voltages_v", "torques_nm"):
+        if key in values:
+            values[key] = tuple(float(item) for item in values[key])
+    if "directions" in values:
+        values["directions"] = tuple(int(item) for item in values["directions"])
+    return TorqueSpeedConfig(**values)
 
 
 def _positive(section: dict[str, Any], key: str) -> float:
@@ -176,6 +215,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BenchConfig:
         response_timing=ResponseTimingConfig(**document.get("response_timing", {})),
         torque_constant=TorqueConstantConfig(**document.get("torque_constant", {})),
         coast_down=_coast_down(document.get("coast_down", {})),
+        torque_speed=_torque_speed(document.get("torque_speed", {})),
         common=CommonConfig(
             controller_id=int(common["controller_id"]),
             watchdog_timeout_s=_positive(common, "watchdog_timeout_s"),
@@ -204,7 +244,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> BenchConfig:
             max_friction_excursion_rev=_positive(
                 safety, "max_friction_excursion_rev"
             ),
-            max_rotating_velocity_rev_s=float(safety.get("max_rotating_velocity_rev_s", 55.0)),
+            max_rotating_velocity_rev_s=float(safety.get("max_rotating_velocity_rev_s", 70.0)),
             max_rotating_torque_nm=float(safety.get("max_rotating_torque_nm", 0.20)),
         ),
         inspect=InspectConfig(

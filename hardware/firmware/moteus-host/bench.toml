@@ -15,8 +15,9 @@ max_position_excursion_rev = 0.25
 max_friction_velocity_rev_s = 0.35
 max_friction_excursion_rev = 1.10
 # Tier B: retained rotating assembly (test disc) and guard, docs/hardware/specs/coast-down.md.
-# Only coast-down may use these; every other experiment keeps the Tier A values above.
-max_rotating_velocity_rev_s = 55.0
+# Only coast-down and torque-speed may use these; every other experiment keeps the Tier A
+# values above. 70 rev/s follows the disc rating (docs/hardware/specs/torque-speed.md section 4).
+max_rotating_velocity_rev_s = 70.0
 max_rotating_torque_nm = 0.20
 
 [inspect]
@@ -129,3 +130,41 @@ response_timeout_s = 0.05
 inertia_record = "docs/hardware/measurements/2026-10-28-test-disc.json"
 # PNDLM-9 static torque constant for the plateau cross-check
 kt_nm_per_a = 0.0244
+
+[torque_speed]
+# Torque-speed envelope: constant feedforward torque steps from rest to no-load speed, one run
+# per bus voltage (docs/hardware/specs/torque-speed.md). Supply cannot sink: no braking.
+sample_rate_hz = 200.0
+# accepted values of --bus; 11.0 V is the shakedown point (no-load about 2500 rpm)
+bus_voltages_v = [11.0, 12.0, 13.2, 14.8, 16.0, 16.8]
+# preflight: measured bus must be within this of --bus
+bus_tolerance_v = 0.2
+torques_nm = [0.05, 0.10, 0.15, 0.20]
+directions = [1, -1]
+# saturated = acceleration below this for saturation_settle_s (5 % of the initial 21 rev/s2 at 0.05 Nm)
+saturation_alpha_rev_s2 = 1.0
+saturation_settle_s = 0.5
+# 300 rpm; below this "no acceleration" means stuck, not no-load
+min_saturation_rev_s = 5.0
+# keep the torque after a saturated end so plateau current and bus voltage are on record
+hold_s = 1.0
+step_timeout_s = 15.0
+# velocity-capped at max_velocity - margin = 63.7 rev/s, below the firmware derate band (64.7)
+cap_margin_rev_s = 3.0
+# supply-limited when the bus drops this far below --bus; 11 V - 1 V stays above the 10 V floor
+sag_stop_v = 1.0
+coast_stop_rev_s = 0.2
+coast_settle_s = 0.25
+coast_timeout_s = 120.0
+# host stop and servo.max_velocity override (Tier B, 4000 rpm)
+max_velocity_rev_s = 66.7
+max_torque_nm = 0.20
+# analysis: windows with bus below --bus - this are supply-limited
+sag_threshold_v = 0.3
+response_timeout_s = 0.05
+# inertia.effective_total_kg_m2 and pooled a, b, c of the rotating-loss measurement
+loss_record = "docs/hardware/measurements/2026-11-01-rotating-losses.json"
+# PNDLM-9 static torque constant
+kt_nm_per_a = 0.0244
+# 2740 rpm / 12 V, model with Kv 330; used only to size the low-speed band and the operator prompt
+expected_noload_rpm_per_v = 228.0
