@@ -1,6 +1,9 @@
 # Torque-speed envelope bench experiment — design
 
-Status: implemented 2026-11-01 (`bench torque-speed`, `bench analyze`, `bench envelope`; plan
+Status: measured 2026-11-04, record
+[measurements/2026-11-04-torque-speed.json](../measurements/2026-11-04-torque-speed.json)
+(248.3 ± 1.0 rpm/V, r_max = 1.00 with Kv 339 from the measured K_t); tool implemented
+2026-11-01 (`bench torque-speed`, `bench analyze`, `bench envelope`; plan
 `.claude/plans/2026-11-01-torque-speed-bench.md`). YouTrack: PNDLM-12 (T-005.D). Parent spec:
 [motor-bench.md](motor-bench.md) §6 step 6. Builds on
 [coast-down.md](coast-down.md) (sequence, overrides, Tier B safety) and the
@@ -31,8 +34,8 @@ earlier and the swing-up strategy in the feasibility doc is wrong.
 
 - **Adjustable bus.** The adjustable lab supply (up to 20 A, confirmed
   2026-11-01), set by hand to each voltage of the sweep with its current limit
-  at 8 A or more (the 0.18 Nm top step draws 0.18 / 0.0244 = 7.4 A by the
-  measured K_t, ≈ 6.4 A by the firmware's). It cannot sink current, so the
+  at 8 A or more (the 0.15 Nm top step draws 0.15 / 0.0244 = 6.1 A by the
+  measured K_t, with current-noise peaks at 6.5 A). It cannot sink current, so the
   disc is never braked by the motor: every stop is `set_stop()` and a free
   coast, as in coast-down. The 24 V / 5 A supply of PNDLM-11 is not used.
 - **Disc rated to 4000 rpm.** [test-disc.md](test-disc.md) §4 is extended
@@ -107,7 +110,7 @@ Defaults (`bench.toml [torque_speed]`, my calls):
 | `sample_rate_hz` | 200 | as coast-down |
 | `bus_voltages_v` | 11.0, 12.0, 13.2, 14.8, 16.0, 16.8 | the accepted values of `--bus`; any other value needs `--bus` plus `--allow-any-bus`. 11.0 V is the shakedown point: no-load ≈ 2500 rpm, inside the range already run; lower is pointless because of the 10 V safety floor and the 0.8 V sag stop |
 | `bus_tolerance_v` | 0.2 | preflight check against `--bus` |
-| `torques_nm` | 0.05, 0.10, 0.15, 0.18 | `--torques` overrides; each ≤ Tier B cap. The top step keeps a 10 % margin under the 0.20 Nm Tier B cap (reported torque carries current noise) and stays under the 8 A phase-current stop by the measured K_t (0.18 / 0.0244 = 7.4 A) |
+| `torques_nm` | 0.05, 0.10, 0.15 | `--torques` overrides; each ≤ Tier B cap. The reported torque carries about +0.03 Nm of current noise: a 0.18 Nm step tripped the 0.20 Nm Tier B cap on one sample (2026-11-04), so 0.15 Nm is the top step (peaks 0.18 Nm reported, 6.5 A) |
 | `directions` | +1, −1 | `--direction` restricts to one |
 | `saturation_alpha_rev_s2` | 1.0 | at 0.05 Nm the initial acceleration is ≈ 21 rev/s²; 1 rev/s² is 5 % of that |
 | `saturation_settle_s` | 0.5 | |
@@ -119,7 +122,6 @@ Defaults (`bench.toml [torque_speed]`, my calls):
 | `coast_stop_rev_s`, `coast_settle_s`, `coast_timeout_s` | 0.2, 0.25, 120 | as coast-down |
 | `max_velocity_rev_s` | 66.7 | 4000 rpm, host stop and `servo.max_velocity` override |
 | `max_torque_nm` | 0.20 | Tier B cap |
-| `sag_threshold_v` | 0.3 | analysis: windows with bus below `--bus` − 0.3 V are *supply-limited* |
 | `inertia_record`, `loss_record` | the 2026-11-01 record | `effective_total_kg_m2`, pooled a, b, c |
 | `kt_nm_per_a` | 0.0244 | PNDLM-9 |
 
@@ -151,30 +153,39 @@ Defaults (`bench.toml [torque_speed]`, my calls):
 
 - **Delivered torque per window** of the torque phase: τ(ω) = I_eff·α(ω) +
   τ_loss(ω), with I_eff and the pooled a, b, c from the record, over
-  non-overlapping 0.25 s windows (coast-down helpers). The uncertainty per
-  window combines the inertia relative sd (2.6 %) and the loss fit rmse.
+  non-overlapping speed windows: a window closes after 1.5 rev/s of speed and
+  at least 10 rows, so it is short in time under hard acceleration (about
+  3 rev/s at 0.15 Nm) and long on the plateau. Fixed 0.25 s windows spanned
+  16 rev/s at 0.15 Nm and could not place the knee (2026-11-04). The
+  uncertainty per window combines the inertia relative sd (2.6 %) and the
+  loss fit rmse.
 - **Supply-limited flag** per window: mean bus voltage below `--bus` −
-  `sag_threshold_v`. Flagged windows are kept in the table and excluded from
-  fits.
+  `sag_stop_v`, the host's own stop level. The lead drop at the step
+  currents (about 0.1 Ω, 0.6 V at 6 A) stays above it and is not a sag; the
+  measured bus travels with every knee and no-load point, so the drop does
+  not bias the voltage-circle fit. Flagged windows are kept in the table and
+  excluded from fits.
 - **No-load speed** per direction: the mean over every saturated step in that
   direction of its hold-phase mean speed (the plateau does not depend on the
-  command); hold rows whose bus is below `--bus` − `sag_threshold_v` are
+  command); hold rows whose bus is below `--bus` − `sag_stop_v` are
   dropped and counted; uncertainty = sd over the hold plus the
   loss-induced bias (the loss torque at that speed divided by the slope of the
   taper). Velocity-capped steps give a lower bound and are marked so.
 - **Low-speed torque** per step: the delivered torque from one line fit of
   |v| against time over the raw torque-phase rows (bus not sagging) between
   `min_saturation_rev_s` and 50 % of the expected no-load speed at this bus,
-  at their mean speed, and the mean q-current there (a 0.18 Nm step crosses
-  that band in less than two 0.25 s windows). This, not the nominal
+  at their mean speed, and the mean q-current there (one fit over the whole
+  band at any torque). This, not the nominal
   command, is the reference for the knee and the fit (the firmware's K_t
   differs from the measured one by about 14 %).
 - **Knee speed** per step and direction: the speed at which the windowed
-  delivered torque first falls below 90 % of the step's low-speed torque,
-  with the window half-width as uncertainty; the crossing is interpolated
-  linearly between the two bracketing windows at 90 % of the low-speed torque.
-  Its current and bus voltage for the fit are the mean measured q-current and
-  bus voltage of the two bracketing windows.
+  delivered torque falls below 90 % of the step's low-speed torque for good:
+  the last window at or above the threshold and the next one bracket the
+  crossing, which is interpolated linearly in torque between them, with half
+  their speed distance as uncertainty. A single noisy window below the
+  threshold with full torque after it is not a knee (the voltage limit never
+  lets the torque recover). The knee carries the mean q-current and the mean
+  measured bus voltage of the two bracketing windows.
 - **Plateau current**: mean q-current and bus voltage over the hold, for the
   record.
 - Direction symmetry: no-load and knee reported per direction; the mean is

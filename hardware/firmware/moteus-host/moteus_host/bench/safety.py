@@ -86,7 +86,7 @@ def validate_torque_speed(config: TorqueSpeedConfig, limits: SafetyConfig) -> No
         "sample_rate_hz", "bus_tolerance_v", "saturation_alpha_rev_s2", "saturation_settle_s",
         "min_saturation_rev_s", "hold_s", "step_timeout_s", "cap_margin_rev_s", "sag_stop_v",
         "coast_stop_rev_s", "coast_settle_s", "coast_timeout_s", "max_velocity_rev_s",
-        "max_torque_nm", "sag_threshold_v", "response_timeout_s", "kt_nm_per_a",
+        "max_torque_nm", "response_timeout_s", "kt_nm_per_a",
         "expected_noload_rpm_per_v",
     )
     for name in numeric:
@@ -139,6 +139,31 @@ def validate_torque_speed(config: TorqueSpeedConfig, limits: SafetyConfig) -> No
         raise ValueError("torque_speed.response_timeout_s must be <= 100 ms")
 
 
+FAULT_MODE = 1
+LIMIT_CODE_MIN = 96
+FAULT_NAMES = {
+    32: "calibration fault",
+    33: "motor driver fault",
+    34: "over voltage",
+    35: "encoder fault",
+    36: "motor not configured",
+    37: "pwm cycle overrun",
+    38: "over temperature",
+    39: "outside limit",
+    40: "under voltage",
+    41: "config changed",
+    42: "theta invalid",
+    43: "position invalid",
+    44: "driver enable fault",
+    45: "stop position deprecated",
+    46: "timing violation",
+    47: "bemf feedforward no accel",
+    48: "invalid limits",
+    49: "position control error",
+    50: "velocity control error",
+}
+
+
 def check_state(
     state: dict[str, Any],
     limits: SafetyConfig,
@@ -166,8 +191,14 @@ def check_state(
         )
 
     fault = state.get("fault")
-    if fault not in (None, 0):
-        raise SafetyStop(f"moteus fault {fault}")
+    mode = state.get("mode")
+    if fault not in (None, 0) and (mode == FAULT_MODE or fault < LIMIT_CODE_MIN):
+        name = FAULT_NAMES.get(fault, "unknown")
+        raise SafetyStop(f"moteus fault {fault} ({name})")
+    # Codes >= 96 in a control mode are limit indicators (96 max_velocity,
+    # 97 max_power, 98 bus voltage, 99 max_current, ...), not faults; they stay
+    # in the telemetry `fault` column and the voltage/current/torque checks
+    # below still apply.
 
     voltage = state.get("bus_voltage_v")
     if voltage is not None and not (

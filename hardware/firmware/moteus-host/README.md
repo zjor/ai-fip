@@ -194,7 +194,7 @@ poetry run bench envelope logs/bench/<run1> logs/bench/<run2> ...
 ```
 
 Go up the voltages in that order; the tool warns when `--bus` skips one with no
-completed run. Torques 0.05, 0.10, 0.15 and 0.18 Nm run from rest in +1 then −1,
+completed run. Torques 0.05, 0.10 and 0.15 Nm run from rest in +1 then −1,
 each step waiting for `GO`. Each step ends with one reason, written to
 `events.csv` and `run.json`:
 

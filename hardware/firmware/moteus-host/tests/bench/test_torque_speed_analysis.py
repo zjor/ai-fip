@@ -20,7 +20,7 @@ SATURATION_ALPHA_REV_S2 = 0.5
 HOLD_S = 1.0
 COAST_S = 1.0
 TIMEOUT_S = 3.0
-CSV_HEADER = ["trial", "torque_cmd_nm", "direction", "time_s", "speed_rev_s", "alpha_rev_s2",
+CSV_HEADER = ["trial", "torque_cmd_nm", "direction", "time_s", "speed_rev_s", "alpha_rev_s2", "span_rev_s",
               "tau_nm", "tau_se_nm", "q_current_a", "bus_v", "supply_limited"]
 
 
@@ -130,7 +130,7 @@ def _create_run(root: Path, *, bus_v=12.0, no_load_rev_s=40.0, torques=(0.05,), 
             "records": {"inertia_kg_m2": inertia, "inertia_rel_sd": 0.026,
                         "loss_fit": {"a_nm": a, "b_nm_s": b, "c_nm_s2": c, "rmse_nm": 2e-4},
                         "source": "docs/hardware/records/test.json"},
-            "sag_threshold_v": SAG_THRESHOLD_V,
+            "sag_stop_v": SAG_THRESHOLD_V,
             "kt_nm_per_a": 0.0278,
             "expected_noload_rpm_per_v": RPM_PER_V,
             "min_saturation_rev_s": MIN_SATURATION_REV_S,
@@ -172,7 +172,7 @@ class TorqueSpeedAnalysisTests(unittest.TestCase):
             self.assertTrue(5.0 < low["speed_rev_s"] < 0.5 * RPM_PER_V * 12.0 / 60.0)
 
     def test_high_torque_step_at_11_v_still_has_a_reference_and_knee(self):
-        # 0.18 Nm crosses the 5..20.9 rev/s band in about 0.2 s: fewer than two 0.25 s windows
+        # 0.18 Nm crosses the 5..20.9 rev/s band in about 0.2 s: the reference is a raw-row fit
         v_nl = RPM_PER_V * 11.0 / 60.0
         summary = _summary(_create_run(self.root, bus_v=11.0, no_load_rev_s=v_nl, torques=(0.18,),
                                        reasons=("saturated",)))
@@ -206,9 +206,10 @@ class TorqueSpeedAnalysisTests(unittest.TestCase):
         reference = 0.05
         windows = [window(10.0, 0.050), window(18.0, 0.049),     # inside the band: skipped
                    window(24.0, 0.040, alpha=6.0, current=1.6, bus=11.9), window(27.0, 0.030)]
+        windows[2]["span_rev_s"] = 1.6
         point = torque_speed.knee(windows, reference, after_rev_s=20.0)
         self.assertEqual(point["speed_rev_s"], 24.0)
-        self.assertEqual(point["speed_se_rev_s"], 6.0 * torque_speed.WINDOW_S / 2.0)
+        self.assertEqual(point["speed_se_rev_s"], 0.8)
         self.assertEqual(point["q_current_a"], 1.6)
         self.assertEqual(point["tau_nm"], 0.040)
         self.assertEqual(point["bus_v"], 11.9)
@@ -230,6 +231,35 @@ class TorqueSpeedAnalysisTests(unittest.TestCase):
         self.assertAlmostEqual(point["q_current_a"], 1.8)
         self.assertAlmostEqual(point["tau_nm"], threshold)
         self.assertAlmostEqual(point["bus_v"], 11.9)
+
+    def test_knee_ignores_a_noisy_dip_with_full_torque_after_it(self):
+        def window(speed, tau):
+            return {"speed_rev_s": speed, "alpha_rev_s2": 8.0, "tau_nm": tau, "q_current_a": 2.0,
+                    "bus_v": 12.0, "supply_limited": False, "span_rev_s": 2.0}
+
+        reference = 0.05
+        windows = [window(22.0, 0.050), window(24.0, 0.041),     # noisy dip below 0.045
+                   window(26.0, 0.050), window(28.0, 0.050), window(30.0, 0.030), window(31.0, 0.018)]
+        point = torque_speed.knee(windows, reference, after_rev_s=20.0)
+        fraction = (0.050 - 0.045) / (0.050 - 0.030)
+        self.assertAlmostEqual(point["speed_rev_s"], 28.0 + fraction * 2.0)
+        self.assertEqual(point["speed_se_rev_s"], 1.0)
+
+    def test_knee_is_none_when_the_torque_never_falls(self):
+        windows = [{"speed_rev_s": v, "alpha_rev_s2": 8.0, "tau_nm": 0.05, "q_current_a": 2.0, "bus_v": 12.0,
+                    "supply_limited": False, "span_rev_s": 2.0} for v in (22.0, 24.0, 26.0)]
+        self.assertIsNone(torque_speed.knee(windows, 0.05, after_rev_s=20.0))
+
+    def test_speed_windows_close_on_span_and_sample_count(self):
+        times = [0.005 * i for i in range(60)]
+        speeds = [0.5 * i for i in range(40)] + [19.5] * 20     # 100 rev/s^2 then a plateau
+        windows = torque_speed.speed_windows(times, speeds, span_rev_s=1.5, min_samples=10)
+        for lo, hi, _, _, slope in windows[:-1]:
+            self.assertGreaterEqual(hi - lo, 10)
+            self.assertAlmostEqual(slope, 100.0)
+        lo, hi, _, mean_v, slope = windows[-1]
+        self.assertEqual(hi, 60)                                 # the plateau is one window
+        self.assertLess(slope, 100.0)
 
     def test_no_load_from_hold(self):
         summary = _summary(_create_run(self.root, torques=(0.05, -0.05), reasons=("saturated", "saturated")))

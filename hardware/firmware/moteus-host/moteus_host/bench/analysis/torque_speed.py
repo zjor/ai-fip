@@ -1,13 +1,16 @@
 """Delivered torque versus speed, knee and no-load speed from one torque-speed run.
 
-Design: docs/hardware/specs/torque-speed.md §5. Per non-overlapping WINDOW_S
-window of a torque step, the delivered torque is tau = I_eff * 2*pi * alpha +
-tau_loss(2*pi * speed), with I_eff and the pooled loss fit taken from the
-rotating-losses record. The nominal torque command is never used as a torque
+Design: docs/hardware/specs/torque-speed.md §5. Per non-overlapping speed
+window of a torque step (SPEED_WINDOW_REV_S of |v| and at least
+MIN_SPEED_WINDOW_SAMPLES rows, so a window is short in time where the wheel
+accelerates hard and long on the plateau), the delivered torque is
+tau = I_eff * 2*pi * alpha + tau_loss(2*pi * speed), with I_eff and the pooled
+loss fit taken from the rotating-losses record. The nominal torque command is never used as a torque
 value (the firmware's K_t differs from the measured one by about 14 %); it
 appears in the outputs only as a label. Windows whose mean bus voltage sags
-below bus_v - sag_threshold_v are flagged, kept in the table and excluded from
-the knee and the no-load slope. The low-speed reference is fitted over the raw
+below bus_v - sag_stop_v (the host's supply-limited stop level; the lead drop
+at the step currents stays above it) are flagged, kept in the table and
+excluded from the knee and the no-load slope. The low-speed reference is fitted over the raw
 rows of the band (rows with a sagging bus excluded), not over windows.
 """
 
@@ -21,16 +24,18 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from .coast_down import ANALYZABLE_STATUS, TWO_PI, WINDOW_S, MIN_WINDOW_SAMPLES, _linear_fit, _model, _windows
+from .coast_down import ANALYZABLE_STATUS, TWO_PI, MIN_WINDOW_SAMPLES, _linear_fit, _model
 from .plots import Series, write_line_plot
 
 
 ANALYSIS_VERSION = 1
 KNEE_FRACTION = 0.9
+SPEED_WINDOW_REV_S = 1.5
+MIN_SPEED_WINDOW_SAMPLES = 10
 BAND_FRACTION = 0.5
 MIN_TAPER_WINDOWS = 3
 CSV_FIELDS = ("trial", "torque_cmd_nm", "direction", "time_s", "speed_rev_s", "alpha_rev_s2",
-              "tau_nm", "tau_se_nm", "q_current_a", "bus_v", "supply_limited")
+              "span_rev_s", "tau_nm", "tau_se_nm", "q_current_a", "bus_v", "supply_limited")
 PALETTE = ("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#17becf")
 FLAGGED_COLOR = "#b0b0b0"
 
@@ -42,6 +47,29 @@ def _value(row: dict[str, Any], field: str) -> float | None:
     return float(value)
 
 
+def speed_windows(times: list[float], speeds: list[float], *, span_rev_s: float = SPEED_WINDOW_REV_S,
+                  min_samples: int = MIN_SPEED_WINDOW_SAMPLES) -> list[tuple[int, int, float, float, float]]:
+    """Non-overlapping windows as (lo, hi, mean time, mean speed, slope); hi exclusive.
+
+    A window closes once it holds min_samples rows and its speed has advanced by span_rev_s from its
+    first row; rows left at the end that cannot fill a window are dropped. On the plateau the speed
+    stops advancing, so the last window takes every remaining row and its slope is the plateau's.
+    """
+    result = []
+    lo = 0
+    n = len(times)
+    while lo < n:
+        hi = lo + 1
+        while hi < n and (hi - lo < min_samples or speeds[hi - 1] - speeds[lo] < span_rev_s):
+            hi += 1
+        if hi - lo >= min_samples:
+            xs, ys = times[lo:hi], speeds[lo:hi]
+            slope, _ = _linear_fit(xs, ys)
+            result.append((lo, hi, sum(xs) / len(xs), sum(ys) / len(ys), slope))
+        lo = hi
+    return result
+
+
 def delivered_torque_windows(rows: list[dict], *, inertia: float, inertia_rel_sd: float, loss_fit: dict,
                              bus_v: float, sag_threshold_v: float) -> list[dict]:
     """Windows of one trial's torque-phase rows; time_s is from the first row of the phase."""
@@ -49,10 +77,10 @@ def delivered_torque_windows(rows: list[dict], *, inertia: float, inertia_rel_sd
     if not usable:
         return []
     times = [float(r["host_time_s"]) for r in usable]
-    velocities = [float(r["velocity_rev_s"]) for r in usable]
+    speeds = [abs(float(r["velocity_rev_s"])) for r in usable]
     rmse = float(loss_fit.get("rmse_nm", 0.0) or 0.0)
     result = []
-    for lo, hi, mean_t, mean_v, slope in _windows(times, velocities):
+    for lo, hi, mean_t, mean_v, slope in speed_windows(times, speeds):
         speed, alpha = abs(mean_v), abs(slope)
         tau = inertia * TWO_PI * alpha + _model(loss_fit, TWO_PI * speed)
         currents = [c for c in (_value(r, "q_current_a") for r in usable[lo:hi]) if c is not None]
@@ -62,6 +90,7 @@ def delivered_torque_windows(rows: list[dict], *, inertia: float, inertia_rel_sd
             "time_s": mean_t - times[0],
             "speed_rev_s": speed,
             "alpha_rev_s2": alpha,
+            "span_rev_s": speeds[hi - 1] - speeds[lo],
             "tau_nm": tau,
             "tau_se_nm": math.hypot(tau * inertia_rel_sd, rmse),
             "q_current_a": abs(statistics.fmean(currents)) if currents else None,
@@ -78,7 +107,7 @@ def low_speed_torque(rows: list[dict], *, min_rev_s: float, expected_noload_rev_
     Rows count when their bus is not sagging (bus >= bus_v - sag_threshold_v, or not reported) and
     min_rev_s < |v| < BAND_FRACTION * expected_noload_rev_s. One line fit of |v| against time over
     those rows gives alpha; tau = I_eff * 2*pi * alpha + loss(2*pi * mean |v|). Raw rows instead of
-    WINDOW_S windows, because a high-torque step crosses the band in less than two windows.
+    windows, so the reference is one fit over the whole band at any torque.
     """
     upper = BAND_FRACTION * expected_noload_rev_s
     times, speeds, currents = [], [], []
@@ -109,44 +138,46 @@ def low_speed_torque(rows: list[dict], *, min_rev_s: float, expected_noload_rev_
 
 
 def knee(windows: list[dict], reference_tau_nm: float | None, *, after_rev_s: float = 0.0) -> dict | None:
-    """Speed where the delivered torque crosses 0.9*reference, after the band (speed >= after_rev_s).
+    """Speed where the delivered torque falls through 0.9*reference for good, after the band.
 
-    The first unflagged window below 0.9*reference and the last unflagged window before it at or above
-    0.9*reference bracket the crossing; speed is interpolated linearly in tau between them, with half
-    their speed distance as the uncertainty and the mean of their q-currents and bus voltages (the
-    measured bus, for the voltage-circle fit). With no window at or above
-    0.9*reference after the band, the first window below it is used as is, with half its fitted speed
-    span (alpha * WINDOW_S / 2) as the uncertainty.
+    Over the unflagged windows at or above after_rev_s, the last window at or above 0.9*reference
+    and the next unflagged window after it bracket the crossing: once the voltage limit bites the
+    torque never recovers, so a single noisy window below the threshold with full torque after it is
+    not the knee. Speed is interpolated linearly in tau between the pair, with half their speed
+    distance as the uncertainty and the mean of their q-currents and bus voltages (the measured bus,
+    for the voltage-circle fit). With no window at or above 0.9*reference after the band, the first
+    window below it is used as is, with half its speed span as the uncertainty. None when the torque
+    never falls below the threshold.
     """
     if reference_tau_nm is None:
         return None
     threshold = KNEE_FRACTION * reference_tau_nm
-    above: dict | None = None
-    for window in windows:
-        if window["supply_limited"] or window["speed_rev_s"] < after_rev_s:
-            continue
-        if window["tau_nm"] >= threshold:
-            above = window
-            continue
-        if above is None:
-            return {
-                "speed_rev_s": window["speed_rev_s"],
-                "speed_se_rev_s": window["alpha_rev_s2"] * WINDOW_S / 2.0,
-                "q_current_a": window["q_current_a"],
-                "tau_nm": window["tau_nm"],
-                "bus_v": window.get("bus_v"),
-            }
-        fraction = (above["tau_nm"] - threshold) / (above["tau_nm"] - window["tau_nm"])
-        currents = [w["q_current_a"] for w in (above, window) if w["q_current_a"] is not None]
-        voltages = [w.get("bus_v") for w in (above, window) if w.get("bus_v") is not None]
+    candidates = [w for w in windows if not w["supply_limited"] and w["speed_rev_s"] >= after_rev_s]
+    if not candidates:
+        return None
+    last_above = max((i for i, w in enumerate(candidates) if w["tau_nm"] >= threshold), default=None)
+    if last_above is None:
+        window = candidates[0]
         return {
-            "speed_rev_s": above["speed_rev_s"] + fraction * (window["speed_rev_s"] - above["speed_rev_s"]),
-            "speed_se_rev_s": abs(window["speed_rev_s"] - above["speed_rev_s"]) / 2.0,
-            "q_current_a": statistics.fmean(currents) if currents else None,
-            "tau_nm": threshold,
-            "bus_v": statistics.fmean(voltages) if voltages else None,
+            "speed_rev_s": window["speed_rev_s"],
+            "speed_se_rev_s": window.get("span_rev_s", 0.0) / 2.0,
+            "q_current_a": window["q_current_a"],
+            "tau_nm": window["tau_nm"],
+            "bus_v": window.get("bus_v"),
         }
-    return None
+    if last_above + 1 >= len(candidates):
+        return None
+    above, window = candidates[last_above], candidates[last_above + 1]
+    fraction = (above["tau_nm"] - threshold) / (above["tau_nm"] - window["tau_nm"])
+    currents = [w["q_current_a"] for w in (above, window) if w["q_current_a"] is not None]
+    voltages = [w.get("bus_v") for w in (above, window) if w.get("bus_v") is not None]
+    return {
+        "speed_rev_s": above["speed_rev_s"] + fraction * (window["speed_rev_s"] - above["speed_rev_s"]),
+        "speed_se_rev_s": abs(window["speed_rev_s"] - above["speed_rev_s"]) / 2.0,
+        "q_current_a": statistics.fmean(currents) if currents else None,
+        "tau_nm": threshold,
+        "bus_v": statistics.fmean(voltages) if voltages else None,
+    }
 
 
 def _taper_slope(windows: list[dict], knee_point: dict | None) -> float | None:
@@ -267,7 +298,7 @@ def analyze(run_directory: Path) -> Path:
     inertia = float(records["inertia_kg_m2"])
     inertia_rel_sd = float(records["inertia_rel_sd"])
     loss_fit = records["loss_fit"]
-    sag_threshold_v = float(resolved["sag_threshold_v"])
+    sag_threshold_v = float(resolved["sag_stop_v"])
     min_rev_s = float(resolved["min_saturation_rev_s"])
     expected_noload_rev_s = float(resolved["expected_noload_rpm_per_v"]) * bus_v / 60.0
     band_upper_rev_s = BAND_FRACTION * expected_noload_rev_s
@@ -329,20 +360,25 @@ def analyze(run_directory: Path) -> Path:
             "analyzed_trials": [s["trial"] for s in step_summaries],
         },
         "method": {
-            "window_s": WINDOW_S,
-            "min_window_samples": MIN_WINDOW_SAMPLES,
+            "window_span_rev_s": SPEED_WINDOW_REV_S,
+            "min_window_samples": MIN_SPEED_WINDOW_SAMPLES,
+            "windows": "non-overlapping windows of the torque phase closing after window_span_rev_s of |v| "
+                       "and at least min_window_samples rows, so they are short in time under hard "
+                       "acceleration and long on the plateau",
             "delivered_torque": "I_eff * 2*pi * |alpha| + (a + b*omega + c*omega^2) at the window's mean speed; "
                                 "the nominal command is a label only",
             "tau_se": "tau * inertia_rel_sd, with the loss fit rmse added in quadrature when recorded",
-            "supply_limited": f"window mean bus voltage < bus_v - sag_threshold_v ({bus_v - sag_threshold_v:g} V); "
+            "supply_limited": f"window mean bus voltage < bus_v - sag_stop_v ({bus_v - sag_threshold_v:g} V; the lead "
+                              "drop at the step currents stays above it); "
                               "kept in the table, excluded from the reference, knee and no-load slope",
             "low_speed_band_rev_s": [min_rev_s, band_upper_rev_s],
             "low_speed": "one line fit of |v| over time across the raw torque-phase rows in the band with bus >= "
-                         "bus_v - sag_threshold_v; tau at their mean speed; null below 2 * min_window_samples rows",
-            "knee": f"speed at tau = {KNEE_FRACTION:g} * low-speed torque, interpolated between the unflagged "
-                    f"windows at or above {band_upper_rev_s:g} rev/s that bracket it; uncertainty half their "
+                         f"bus_v - sag_stop_v; tau at their mean speed; null below {2 * MIN_WINDOW_SAMPLES} rows",
+            "knee": f"speed at tau = {KNEE_FRACTION:g} * low-speed torque, interpolated between the last unflagged "
+                    f"window at or above the threshold (speed >= {band_upper_rev_s:g} rev/s) and the next one, so "
+                    "a single noisy window with full torque after it is not a knee; uncertainty half their "
                     "speed distance (half the window's span when no window above the threshold precedes it)",
-            "no_load": "mean |v| over the hold rows of a saturated step with bus >= bus_v - sag_threshold_v "
+            "no_load": "mean |v| over the hold rows of a saturated step with bus >= bus_v - sag_stop_v "
                        "(sagging rows dropped and counted); max |v| as a lower bound when velocity-capped; "
                        "loss_bias = loss(omega_noload) / |d tau / d speed| over the taper",
         },

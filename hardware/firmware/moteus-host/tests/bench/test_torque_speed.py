@@ -88,7 +88,7 @@ class TorqueSpeedExperimentTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(resolved["allow_any_bus"])
         self.assertEqual(resolved["derate_rev_s"], 2.0)
         self.assertIn("inertia_kg_m2", resolved["records"])
-        for key in ("sag_threshold_v", "kt_nm_per_a"):
+        for key in ("sag_stop_v", "kt_nm_per_a"):
             self.assertIn(key, resolved)
         # the hold keeps the same torque command; nothing below it is ever sent
         torques = {c["feedforward_torque"] for c in controller.commands}
@@ -221,7 +221,7 @@ class TorqueSpeedExperimentTest(unittest.IsolatedAsyncioTestCase):
         text = output.getvalue()
         self.assertTrue(text.startswith("Dry run (no connection): Torque-speed at 12 V"), text)
         self.assertIn("12 V", text)
-        self.assertIn("0.05, 0.1, 0.15, 0.18", text)
+        self.assertIn("0.05, 0.1, 0.15", text)
 
     def test_cli_requires_bus(self):
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):

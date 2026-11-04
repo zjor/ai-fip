@@ -156,7 +156,6 @@ class TorqueSpeedConfig:
     coast_timeout_s: float = 120.0
     max_velocity_rev_s: float = 66.7
     max_torque_nm: float = 0.20
-    sag_threshold_v: float = 0.3
     response_timeout_s: float = 0.05
     loss_record: str = "docs/hardware/measurements/2026-11-01-rotating-losses.json"
     kt_nm_per_a: float = 0.0244

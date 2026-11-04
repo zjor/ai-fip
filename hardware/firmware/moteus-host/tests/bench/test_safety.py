@@ -57,3 +57,26 @@ class SafetyTest(unittest.TestCase):
         self.state["bus_voltage_v"] = None
         with self.assertRaisesRegex(SafetyStop, "bus_voltage_v"):
             check_state(self.state, self.limits)
+
+    def test_limit_indicator_in_control_mode_is_not_a_fault(self) -> None:
+        # moteus reports 96..103 during valid control modes to say which
+        # limit is active; 98 is the bus-voltage limit, i.e. saturation.
+        self.state.update({"mode": 10, "fault": 98})
+        check_state(self.state, self.limits)
+
+    def test_fault_mode_with_code_stops(self) -> None:
+        self.state.update({"mode": 1, "fault": 33})
+        with self.assertRaises(SafetyStop) as ctx:
+            check_state(self.state, self.limits)
+        self.assertIn("33 (motor driver fault)", str(ctx.exception))
+
+    def test_fault_mode_with_limit_code_stops(self) -> None:
+        self.state.update({"mode": 1, "fault": 98})
+        with self.assertRaises(SafetyStop):
+            check_state(self.state, self.limits)
+
+    def test_hard_fault_code_outside_fault_mode_stops(self) -> None:
+        self.state.update({"mode": 10, "fault": 40})
+        with self.assertRaises(SafetyStop):
+            check_state(self.state, self.limits)
+

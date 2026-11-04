@@ -139,9 +139,10 @@ sample_rate_hz = 200.0
 bus_voltages_v = [11.0, 12.0, 13.2, 14.8, 16.0, 16.8]
 # preflight: measured bus must be within this of --bus
 bus_tolerance_v = 0.2
-# top step keeps a 10 % margin under the 0.20 Nm Tier B cap (reported torque carries current
-# noise) and stays under the 8 A phase-current stop by the measured K_t (0.18 / 0.0244 = 7.4 A)
-torques_nm = [0.05, 0.10, 0.15, 0.18]
+# top step: the reported torque carries about +0.03 Nm of current noise, and a 0.18 Nm step
+# tripped the 0.20 Nm Tier B cap on one sample (2026-11-04); 0.15 Nm peaks at 0.18 Nm reported
+# and 6.5 A, under the 8 A phase-current stop
+torques_nm = [0.05, 0.10, 0.15]
 directions = [1, -1]
 # saturated = acceleration below this for saturation_settle_s (5 % of the initial 21 rev/s2 at 0.05 Nm)
 saturation_alpha_rev_s2 = 1.0
@@ -163,8 +164,6 @@ coast_timeout_s = 120.0
 # host stop and servo.max_velocity override (Tier B, 4000 rpm)
 max_velocity_rev_s = 66.7
 max_torque_nm = 0.20
-# analysis: windows with bus below --bus - this are supply-limited
-sag_threshold_v = 0.3
 response_timeout_s = 0.05
 # inertia.effective_total_kg_m2 and pooled a, b, c of the rotating-loss measurement
 loss_record = "docs/hardware/measurements/2026-11-01-rotating-losses.json"
