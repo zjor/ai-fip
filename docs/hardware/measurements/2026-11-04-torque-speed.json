@@ -1,0 +1,743 @@
+{
+  "measurement": "torque-speed and voltage envelope of mj5208 + moteus r4.11 with the test disc",
+  "youtrack": "PNDLM-12",
+  "date": "2026-11-04",
+  "spec": "docs/hardware/specs/torque-speed.md",
+  "bench": {
+    "supply": "adjustable lab supply, current limit >= 8 A, no sink; every stop is a free coast",
+    "lead_drop": "about 0.1 ohm between supply and controller: the bus under load is 0.2-0.6 V below the set voltage; the analysis uses the measured bus",
+    "bus_set_v": [
+      11.0,
+      12.0,
+      13.2,
+      14.8,
+      16.0
+    ],
+    "bus_16_8_v": "not run: 16.0 V already ended every step velocity-capped at the 63.7 rev/s host stop, 16.8 V would too",
+    "controller_temperature_c": [
+      19.0,
+      26.8
+    ],
+    "guard": "closed",
+    "firmware_abi_version": 65792,
+    "software_git": "7655511 with uncommitted analysis fixes (fault-code handling, speed windows); analysis re-run on 2026-11-04",
+    "kt_nm_per_a": 0.0244,
+    "kt_source": "docs/hardware/measurements/2026-10-26-torque-constant.json",
+    "inertia_and_loss_source": "docs/hardware/measurements/2026-11-01-rotating-losses.json"
+  },
+  "no_load_line": {
+    "slope_rpm_per_v": 248.3,
+    "slope_se_rpm_per_v": 1.0,
+    "intercept_rpm": 6.4,
+    "intercept_se_rpm": 12.4,
+    "rmse_rpm": 6.5,
+    "n": 24,
+    "bus": "measured hold-phase bus, not the set voltage",
+    "by_direction_slope_rpm_per_v": {
+      "negative": 248.3,
+      "positive": 248.2
+    },
+    "note": "intercept consistent with zero (0.5 se); no curvature seen between 10.8 and 14.6 V"
+  },
+  "r_max": {
+    "model": "moteus voltage circle: v_per_hz = 60/(sqrt3 Kv), V_eff = 0.5 V_bus r_max (1 - m), (v_per_hz f + R iq)^2 + (pi p L iq f)^2 <= V_eff^2",
+    "inputs": {
+      "kt_nm_per_a": 0.0244,
+      "kt_rel_sd": 0.03,
+      "l_h": 4.47669e-05,
+      "m": 0.15,
+      "poles": 14,
+      "r_ohm": 0.0466712
+    },
+    "kv_from_measured_kt": {
+      "kv": 338.9,
+      "r_max": 0.9959,
+      "se": 0.0294,
+      "se_scatter": 0.0012,
+      "kt_term": 0.0294,
+      "n": 48,
+      "by_group": {
+        "knee": 0.9885,
+        "no_load": 1.0034
+      }
+    },
+    "kv_firmware": {
+      "kv": 296.352,
+      "r_max": 1.1366,
+      "se": 0.0016,
+      "above_one": true,
+      "note": "r_max above 1 is impossible: the firmware motor.Kv 296 is not the real Kv; the measured K_t (Kv 339) reproduces the data with r_max = 1.00"
+    },
+    "recommended_for_phase0": {
+      "kv": 339,
+      "r_max": 1.0,
+      "modulation_margin": 0.15,
+      "no_load_rpm_per_v": 248.3
+    }
+  },
+  "runs": [
+    {
+      "run_id": "20261104T111019Z_torque-speed",
+      "bus_v": 11.0,
+      "status": "safety_stop",
+      "reason": "SafetyStop: torque exceeds limit: 0.202 N·m",
+      "skipped_trials": [
+        7,
+        8
+      ],
+      "no_load_by_direction_rpm": {
+        "positive": 2691.0,
+        "negative": 2693.0,
+        "difference": -2.5
+      },
+      "steps": [
+        {
+          "trial": 1,
+          "torque_cmd_nm": 0.05,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0412,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.72,
+          "knee_rpm": 2618.0,
+          "knee_se_rpm": 38.0,
+          "knee_bus_v": 10.78,
+          "knee_q_current_a": 1.11,
+          "no_load_rpm": 2682.0,
+          "no_load_sd_rpm": 6.0,
+          "no_load_bus_v": 10.82,
+          "lower_bound": false
+        },
+        {
+          "trial": 2,
+          "torque_cmd_nm": -0.05,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.042,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.77,
+          "knee_rpm": 2596.0,
+          "knee_se_rpm": 57.0,
+          "knee_bus_v": 10.76,
+          "knee_q_current_a": 1.22,
+          "no_load_rpm": 2685.0,
+          "no_load_sd_rpm": 6.0,
+          "no_load_bus_v": 10.82,
+          "lower_bound": false
+        },
+        {
+          "trial": 3,
+          "torque_cmd_nm": 0.1,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0844,
+          "delivered_torque_se_nm": 0.0023,
+          "q_current_a": 3.52,
+          "knee_rpm": 2556.0,
+          "knee_se_rpm": 53.0,
+          "knee_bus_v": 10.67,
+          "knee_q_current_a": 2.53,
+          "no_load_rpm": 2693.0,
+          "no_load_sd_rpm": 6.0,
+          "no_load_bus_v": 10.82,
+          "lower_bound": false
+        },
+        {
+          "trial": 4,
+          "torque_cmd_nm": -0.1,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0851,
+          "delivered_torque_se_nm": 0.0024,
+          "q_current_a": 3.55,
+          "knee_rpm": 2558.0,
+          "knee_se_rpm": 53.0,
+          "knee_bus_v": 10.6,
+          "knee_q_current_a": 3.08,
+          "no_load_rpm": 2695.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 10.82,
+          "lower_bound": false
+        },
+        {
+          "trial": 5,
+          "torque_cmd_nm": 0.15,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1295,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.29,
+          "knee_rpm": 2468.0,
+          "knee_se_rpm": 77.0,
+          "knee_bus_v": 10.5,
+          "knee_q_current_a": 4.74,
+          "no_load_rpm": 2698.0,
+          "no_load_sd_rpm": 6.0,
+          "no_load_bus_v": 10.82,
+          "lower_bound": false
+        },
+        {
+          "trial": 6,
+          "torque_cmd_nm": -0.15,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1296,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.3,
+          "knee_rpm": 2452.0,
+          "knee_se_rpm": 78.0,
+          "knee_bus_v": 10.52,
+          "knee_q_current_a": 4.58,
+          "no_load_rpm": 2700.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 10.82,
+          "lower_bound": false
+        }
+      ],
+      "operating_envelope": {
+        "bus_voltage_v": {
+          "max": 11.200000000000001,
+          "min": 10.4
+        },
+        "controller_temperature_c": {
+          "max": 26.1,
+          "min": 19.0
+        },
+        "fault_samples": 745,
+        "peak_abs_q_current_a": 7.234622478485107,
+        "peak_speed_rpm": 2709.5935821533203,
+        "limit_code_samples": 745
+      }
+    },
+    {
+      "run_id": "20261104T111832Z_torque-speed",
+      "bus_v": 12.0,
+      "status": "completed",
+      "reason": null,
+      "skipped_trials": [],
+      "no_load_by_direction_rpm": {
+        "positive": 2940.0,
+        "negative": 2941.0,
+        "difference": -1.9
+      },
+      "steps": [
+        {
+          "trial": 1,
+          "torque_cmd_nm": 0.05,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0415,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.77,
+          "knee_rpm": 2878.0,
+          "knee_se_rpm": 28.0,
+          "knee_bus_v": 11.79,
+          "knee_q_current_a": 1.08,
+          "no_load_rpm": 2932.0,
+          "no_load_sd_rpm": 6.0,
+          "no_load_bus_v": 11.81,
+          "lower_bound": false
+        },
+        {
+          "trial": 2,
+          "torque_cmd_nm": -0.05,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0423,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.81,
+          "knee_rpm": 2855.0,
+          "knee_se_rpm": 49.0,
+          "knee_bus_v": 11.77,
+          "knee_q_current_a": 1.46,
+          "no_load_rpm": 2934.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 11.81,
+          "lower_bound": false
+        },
+        {
+          "trial": 3,
+          "torque_cmd_nm": 0.1,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0845,
+          "delivered_torque_se_nm": 0.0023,
+          "q_current_a": 3.49,
+          "knee_rpm": 2811.0,
+          "knee_se_rpm": 49.0,
+          "knee_bus_v": 11.68,
+          "knee_q_current_a": 2.87,
+          "no_load_rpm": 2941.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 11.81,
+          "lower_bound": false
+        },
+        {
+          "trial": 4,
+          "torque_cmd_nm": -0.1,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0853,
+          "delivered_torque_se_nm": 0.0024,
+          "q_current_a": 3.53,
+          "knee_rpm": 2805.0,
+          "knee_se_rpm": 53.0,
+          "knee_bus_v": 11.65,
+          "knee_q_current_a": 3.12,
+          "no_load_rpm": 2943.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 11.81,
+          "lower_bound": false
+        },
+        {
+          "trial": 5,
+          "torque_cmd_nm": 0.15,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1291,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.28,
+          "knee_rpm": 2716.0,
+          "knee_se_rpm": 92.0,
+          "knee_bus_v": 11.58,
+          "knee_q_current_a": 3.95,
+          "no_load_rpm": 2946.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 11.82,
+          "lower_bound": false
+        },
+        {
+          "trial": 6,
+          "torque_cmd_nm": -0.15,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1297,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.39,
+          "knee_rpm": 2734.0,
+          "knee_se_rpm": 69.0,
+          "knee_bus_v": 11.55,
+          "knee_q_current_a": 4.33,
+          "no_load_rpm": 2947.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 11.81,
+          "lower_bound": false
+        }
+      ],
+      "operating_envelope": {
+        "bus_voltage_v": {
+          "max": 12.100000000000001,
+          "min": 11.4
+        },
+        "controller_temperature_c": {
+          "max": 26.8,
+          "min": 19.200000000000003
+        },
+        "fault_samples": 616,
+        "peak_abs_q_current_a": 6.144138336181641,
+        "peak_speed_rpm": 2957.6461029052734,
+        "limit_code_samples": 616
+      }
+    },
+    {
+      "run_id": "20261104T112455Z_torque-speed",
+      "bus_v": 13.2,
+      "status": "completed",
+      "reason": null,
+      "skipped_trials": [],
+      "no_load_by_direction_rpm": {
+        "positive": 3225.0,
+        "negative": 3228.0,
+        "difference": -2.8
+      },
+      "steps": [
+        {
+          "trial": 1,
+          "torque_cmd_nm": 0.05,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0416,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.76,
+          "knee_rpm": 3151.0,
+          "knee_se_rpm": 54.0,
+          "knee_bus_v": 12.92,
+          "knee_q_current_a": 1.44,
+          "no_load_rpm": 3217.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 12.98,
+          "lower_bound": false
+        },
+        {
+          "trial": 2,
+          "torque_cmd_nm": -0.05,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0424,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.76,
+          "knee_rpm": 3145.0,
+          "knee_se_rpm": 55.0,
+          "knee_bus_v": 12.92,
+          "knee_q_current_a": 1.5,
+          "no_load_rpm": 3219.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 12.98,
+          "lower_bound": false
+        },
+        {
+          "trial": 3,
+          "torque_cmd_nm": 0.1,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0847,
+          "delivered_torque_se_nm": 0.0023,
+          "q_current_a": 3.49,
+          "knee_rpm": 3089.0,
+          "knee_se_rpm": 58.0,
+          "knee_bus_v": 12.84,
+          "knee_q_current_a": 2.72,
+          "no_load_rpm": 3227.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 12.98,
+          "lower_bound": false
+        },
+        {
+          "trial": 4,
+          "torque_cmd_nm": -0.1,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0855,
+          "delivered_torque_se_nm": 0.0024,
+          "q_current_a": 3.54,
+          "knee_rpm": 3075.0,
+          "knee_se_rpm": 68.0,
+          "knee_bus_v": 12.87,
+          "knee_q_current_a": 2.47,
+          "no_load_rpm": 3230.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 12.98,
+          "lower_bound": false
+        },
+        {
+          "trial": 5,
+          "torque_cmd_nm": 0.15,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1293,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.21,
+          "knee_rpm": 3042.0,
+          "knee_se_rpm": 58.0,
+          "knee_bus_v": 12.77,
+          "knee_q_current_a": 3.4,
+          "no_load_rpm": 3231.0,
+          "no_load_sd_rpm": 6.0,
+          "no_load_bus_v": 12.98,
+          "lower_bound": false
+        },
+        {
+          "trial": 6,
+          "torque_cmd_nm": -0.15,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1301,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.33,
+          "knee_rpm": 3027.0,
+          "knee_se_rpm": 63.0,
+          "knee_bus_v": 12.74,
+          "knee_q_current_a": 3.99,
+          "no_load_rpm": 3234.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 12.97,
+          "lower_bound": false
+        }
+      ],
+      "operating_envelope": {
+        "bus_voltage_v": {
+          "max": 13.200000000000001,
+          "min": 12.600000000000001
+        },
+        "controller_temperature_c": {
+          "max": 25.700000000000003,
+          "min": 21.0
+        },
+        "fault_samples": 581,
+        "peak_abs_q_current_a": 6.43812894821167,
+        "peak_speed_rpm": 3244.884796142578,
+        "limit_code_samples": 581
+      }
+    },
+    {
+      "run_id": "20261104T112955Z_torque-speed",
+      "bus_v": 14.8,
+      "status": "completed",
+      "reason": null,
+      "skipped_trials": [],
+      "no_load_by_direction_rpm": {
+        "positive": 3633.0,
+        "negative": 3634.0,
+        "difference": -1.2
+      },
+      "steps": [
+        {
+          "trial": 1,
+          "torque_cmd_nm": 0.05,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0419,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.77,
+          "knee_rpm": 3547.0,
+          "knee_se_rpm": 54.0,
+          "knee_bus_v": 14.58,
+          "knee_q_current_a": 1.29,
+          "no_load_rpm": 3624.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 14.61,
+          "lower_bound": false
+        },
+        {
+          "trial": 2,
+          "torque_cmd_nm": -0.05,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0426,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.75,
+          "knee_rpm": 3571.0,
+          "knee_se_rpm": 30.0,
+          "knee_bus_v": 14.59,
+          "knee_q_current_a": 1.16,
+          "no_load_rpm": 3625.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 14.61,
+          "lower_bound": false
+        },
+        {
+          "trial": 3,
+          "torque_cmd_nm": 0.1,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0848,
+          "delivered_torque_se_nm": 0.0023,
+          "q_current_a": 3.5,
+          "knee_rpm": 3517.0,
+          "knee_se_rpm": 53.0,
+          "knee_bus_v": 14.51,
+          "knee_q_current_a": 2.5,
+          "no_load_rpm": 3634.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 14.61,
+          "lower_bound": false
+        },
+        {
+          "trial": 4,
+          "torque_cmd_nm": -0.1,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.0856,
+          "delivered_torque_se_nm": 0.0024,
+          "q_current_a": 3.53,
+          "knee_rpm": 3519.0,
+          "knee_se_rpm": 57.0,
+          "knee_bus_v": 14.55,
+          "knee_q_current_a": 1.85,
+          "no_load_rpm": 3635.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 14.6,
+          "lower_bound": false
+        },
+        {
+          "trial": 5,
+          "torque_cmd_nm": 0.15,
+          "direction": 1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1297,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.25,
+          "knee_rpm": 3444.0,
+          "knee_se_rpm": 61.0,
+          "knee_bus_v": 14.43,
+          "knee_q_current_a": 3.63,
+          "no_load_rpm": 3639.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 14.61,
+          "lower_bound": false
+        },
+        {
+          "trial": 6,
+          "torque_cmd_nm": -0.15,
+          "direction": -1,
+          "reason": "saturated",
+          "delivered_torque_nm": 0.1304,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.28,
+          "knee_rpm": 3415.0,
+          "knee_se_rpm": 72.0,
+          "knee_bus_v": 14.34,
+          "knee_q_current_a": 4.41,
+          "no_load_rpm": 3641.0,
+          "no_load_sd_rpm": 7.0,
+          "no_load_bus_v": 14.6,
+          "lower_bound": false
+        }
+      ],
+      "operating_envelope": {
+        "bus_voltage_v": {
+          "max": 14.9,
+          "min": 14.200000000000001
+        },
+        "controller_temperature_c": {
+          "max": 25.8,
+          "min": 21.3
+        },
+        "fault_samples": 523,
+        "peak_abs_q_current_a": 6.296514511108398,
+        "peak_speed_rpm": 3651.451950073242,
+        "limit_code_samples": 523
+      }
+    },
+    {
+      "run_id": "20261104T113421Z_torque-speed",
+      "bus_v": 16.0,
+      "status": "completed",
+      "reason": null,
+      "skipped_trials": [],
+      "no_load_by_direction_rpm": {
+        "positive": null,
+        "negative": null,
+        "difference": null
+      },
+      "steps": [
+        {
+          "trial": 1,
+          "torque_cmd_nm": 0.05,
+          "direction": 1,
+          "reason": "velocity-capped",
+          "delivered_torque_nm": 0.0421,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.71,
+          "knee_rpm": null,
+          "knee_se_rpm": null,
+          "knee_bus_v": null,
+          "knee_q_current_a": null,
+          "no_load_rpm": 3826.0,
+          "no_load_sd_rpm": null,
+          "no_load_bus_v": null,
+          "lower_bound": true
+        },
+        {
+          "trial": 2,
+          "torque_cmd_nm": -0.05,
+          "direction": -1,
+          "reason": "velocity-capped",
+          "delivered_torque_nm": 0.0426,
+          "delivered_torque_se_nm": 0.0013,
+          "q_current_a": 1.8,
+          "knee_rpm": null,
+          "knee_se_rpm": null,
+          "knee_bus_v": null,
+          "knee_q_current_a": null,
+          "no_load_rpm": 3823.0,
+          "no_load_sd_rpm": null,
+          "no_load_bus_v": null,
+          "lower_bound": true
+        },
+        {
+          "trial": 3,
+          "torque_cmd_nm": 0.1,
+          "direction": 1,
+          "reason": "velocity-capped",
+          "delivered_torque_nm": 0.0851,
+          "delivered_torque_se_nm": 0.0024,
+          "q_current_a": 3.54,
+          "knee_rpm": null,
+          "knee_se_rpm": null,
+          "knee_bus_v": null,
+          "knee_q_current_a": null,
+          "no_load_rpm": 3829.0,
+          "no_load_sd_rpm": null,
+          "no_load_bus_v": null,
+          "lower_bound": true
+        },
+        {
+          "trial": 4,
+          "torque_cmd_nm": -0.1,
+          "direction": -1,
+          "reason": "velocity-capped",
+          "delivered_torque_nm": 0.0856,
+          "delivered_torque_se_nm": 0.0024,
+          "q_current_a": 3.48,
+          "knee_rpm": null,
+          "knee_se_rpm": null,
+          "knee_bus_v": null,
+          "knee_q_current_a": null,
+          "no_load_rpm": 3829.0,
+          "no_load_sd_rpm": null,
+          "no_load_bus_v": null,
+          "lower_bound": true
+        },
+        {
+          "trial": 5,
+          "torque_cmd_nm": 0.15,
+          "direction": 1,
+          "reason": "velocity-capped",
+          "delivered_torque_nm": 0.1297,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.26,
+          "knee_rpm": null,
+          "knee_se_rpm": null,
+          "knee_bus_v": null,
+          "knee_q_current_a": null,
+          "no_load_rpm": 3830.0,
+          "no_load_sd_rpm": null,
+          "no_load_bus_v": null,
+          "lower_bound": true
+        },
+        {
+          "trial": 6,
+          "torque_cmd_nm": -0.15,
+          "direction": -1,
+          "reason": "velocity-capped",
+          "delivered_torque_nm": 0.1306,
+          "delivered_torque_se_nm": 0.0035,
+          "q_current_a": 5.3,
+          "knee_rpm": null,
+          "knee_se_rpm": null,
+          "knee_bus_v": null,
+          "knee_q_current_a": null,
+          "no_load_rpm": 3822.0,
+          "no_load_sd_rpm": null,
+          "no_load_bus_v": null,
+          "lower_bound": true
+        }
+      ],
+      "operating_envelope": {
+        "bus_voltage_v": {
+          "max": 16.3,
+          "min": 15.4
+        },
+        "controller_temperature_c": {
+          "max": 26.8,
+          "min": 20.400000000000002
+        },
+        "fault_samples": 4,
+        "peak_abs_q_current_a": 6.764892578125,
+        "peak_speed_rpm": 3838.293228149414,
+        "limit_code_samples": 4
+      }
+    }
+  ],
+  "envelope_run": "20261104T114445Z_envelope",
+  "acceptance": {
+    "five_design_voltages": "four of five: 11.0 (extra), 12.0, 13.2, 14.8 complete; 16.0 velocity-capped (lower bound 3822 rpm); 16.8 not run, see bench.bus_16_8_v",
+    "both_directions": true,
+    "no_fault": true,
+    "safety_stops": "one: the 0.18 Nm step at 11.0 V tripped the 0.20 Nm reported-torque cap on current noise (0.202 Nm sample at 7.2 A); the step was dropped and 0.15 Nm became the top step",
+    "no_load_slope_with_se": true,
+    "r_max_with_se": true,
+    "every_step_reason_on_record": true
+  }
+}
