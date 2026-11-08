@@ -21,6 +21,7 @@ Project knowledge and process, organized by concept.
 ## Hardware
 
 - [Hardware](hardware/hardware.md) — parameters, motor selection criteria, moteus driver integration, legacy stepper BOM
+- [moteus modes](hardware/moteus-modes.md) — controller modes, how we command torque, and bench-measured behavior (enable cost, watchdog, current offsets)
 - [BLDC motor candidates](hardware/motor-candidates.md) — 15 motors evaluated, shortlist, buy list, final choice
 - [CAD specification](hardware/specs/cad.md) — wheel, rod and table-clamp stand for OpenSCAD (`hardware/cad/`): frame, parameters, parts, BOM, mass model
 

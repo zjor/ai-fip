@@ -53,6 +53,8 @@ No composite score — rank candidates by specific torque among those passing al
 
 ## Driver: moteus — интеграция (researched 2026-08-11)
 
+Режимы контроллера и факты, измеренные на стенде: [moteus-modes.md](moteus-modes.md).
+
 **Компания:** mjbots Robotic Systems LLC — США, Cambridge, Massachusetts; основана в 2019 Josh Pieper. Прошивка и софт открыты (Apache 2.0, [github.com/mjbots/moteus](https://github.com/mjbots/moteus)). ⚠️ На сайте: "shipping holiday — new orders ship August 17, 2026".
 
 **Интерфейс:** CAN-FD 5 Mbps (разъём JST PH-3). Два протокола: register protocol (команды управления: position/velocity/torque + телеметрия) и diagnostic protocol (конфигурация, консоль). Классический CAN не подходит — нужны CAN-FD кадры; при длинной/шумной шине BRS отключается → 1 Mbps.
