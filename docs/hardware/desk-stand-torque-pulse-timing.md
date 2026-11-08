@@ -98,6 +98,9 @@ Reading the table:
 - Commanded 0.02 Nm produced only 0.45–0.57 A of q-current, which the
   controller reports as 0.012–0.014 Nm. Either torque build-up takes longer
   than 20 ms or the torque-constant estimate differs. Not resolved here.
+  *Update 2026-11-08:* the shortfall is on positive pulses only and is
+  explained by the anticogging term changing as the rotor turns; see
+  [motor-torque-fixture.md §9.3](specs/motor-torque-fixture.md#93-rise-time).
 
 ## Pilot findings (stand, encoder, controller)
 
@@ -115,7 +118,9 @@ Reading the table:
   run stayed within 0.0105–0.0174 rev (4–6°).
 - **Non-zero current at zero torque.** Baseline mean q-current in mode 10 with
   all gains scaled to zero was −0.07 to −0.09 A (std 0.12–0.16 A). Recorded,
-  not explained.
+  not explained. *Update 2026-11-08:* matches the anticogging table value at
+  the rest position; see
+  [motor-torque-fixture.md §9.3](specs/motor-torque-fixture.md#93-rise-time).
 - **Stand balance is marginal.** In one earlier run (`20261025T112603Z`) the
   arrow drifted at zero torque (−0.002 rev/s) and slipped once to 0.23 rev/s;
   later runs stood still. Tier A has reached its useful limit; a balanced

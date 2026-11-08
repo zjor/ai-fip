@@ -395,8 +395,25 @@ by the first sample after the command, 4.4 ms, at 2.6 ms host resolution; the
 loop is at least that fast. Positive steps crept for 10–23 ms while the
 barely preloaded lever settled, a mechanical effect. Steps from the stopped
 state include the firmware enable sequence (modes 2–3, about 15 ms) before any
-torque is applied, which explains the 60–80 % current shortfall seen in the
-20 ms pulses of the PNDLM-8 pilot.
+torque is applied.
+
+The enable sequence does **not** explain the current shortfall in the 20 ms
+pulses of the PNDLM-8 pilot (corrected 2026-11-08; an earlier version of this
+section claimed it did). There the controller was in mode 10 for at least
+20 samples before every pulse
+([telemetry extract](../measurements/20261025-response-timing-0020-telemetry.csv)).
+At 0.02 Nm (expected 0.72 A) the q-current change from the at-rest median by
+the third sample (≈18 ms) was +0.52/+0.53 A on positive pulses and
+−0.72/−0.73 A on negative ones. The rotor turns 0.6–1.2° during a pulse, so the
+anticogging term changes with it. Subtracting the interpolated
+`motor.cogging_dq_comp` table (index = fractional rotor revolution × 1024, run
+`20261025T115034Z` controller config) gives +0.63/+0.69 and −0.60/−0.69 A: the
+sign asymmetry disappears and the remaining 0.03–0.12 A gap is within one
+standard deviation of the at-rest current noise (0.12–0.16 A). The same table
+value at the rest position (−0.03 to −0.08 A) also matches the unexplained
+non-zero current at zero torque (−0.00 to −0.09 A). The index mapping is an
+assumption; it is supported by this rest-current match, not checked against
+firmware source.
 
 ## 10. Simulator-facing parameters
 
