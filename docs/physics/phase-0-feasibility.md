@@ -220,15 +220,27 @@ wheel as a point mass in $I_p$.
 
 ## Preliminary sensor timing budget
 
-Unchanged from the first calculation. Linearized growth rate
-$\lambda = \sqrt{G/I_p}$ gives a time constant of 160 ms nominal, 116 ms at the
-fastest corner. Allocating ≤ 10 % to total loop delay and ≤ 5 % to one sample
-period gives **delay ≤ 12 ms and sample rate ≥ 173 Hz**. The sampled nonlinear
-check (`phase0-control --pessimistic --sweep`, r4.11) fails at 50 Hz and passes
-at 75 Hz; passes at 15 ms delay and fails at 20 ms (re-run 2026-10-25; an earlier
-run reported failure at 15 ms); fails at 2° angle noise with
-20 °/s rate noise and passes at 1° / 10 °/s. These must be repeated with the
-selected sensor and estimator.
+Re-run 2026-11-08 with the CAD mass model (`poetry run phase0`). Linearized
+growth rate $\lambda = \sqrt{G/I_p}$ gives a time constant of 161 ms nominal
+(G 1.111 Nm, I_p 0.0289 kg m²) and 139 ms at the fastest corner
+(G 1.345 Nm). Allocating ≤ 10 % of the fastest time constant to total loop
+delay and ≤ 5 % to one sample period gives **delay ≤ 13.9 ms and sample rate
+≥ 144 Hz**. The earlier 116 ms / 12 ms / 173 Hz came from the planning mass
+ranges.
+
+The sampled nonlinear check (`phase0-control --pessimistic --sweep`, r4.11,
+5 trials per point, re-run 2026-11-08) passes at every sample rate from 50 to
+1000 Hz; passes at 15 ms delay and fails at 20 ms (0/5); passes at every angle
+noise up to 2° with 20 °/s rate noise. Earlier runs on the planning ranges
+failed at 50 Hz and at 2° / 20 °/s; the delay limit is unchanged. The LQR gain
+is designed on the continuous model without sampling or delay, so the 20 ms
+limit belongs to this controller, not to the plant. These must be repeated
+with the selected sensor and estimator.
+
+Measured actuator delay on the laptop + fdcanusb host: ≤ 13 ms detection
+bound ([PNDLM-8](../hardware/desk-stand-torque-pulse-timing.md)), refined to
+≤ 4.4 ms by the torque rise test
+([PNDLM-9](../hardware/specs/motor-torque-fixture.md)).
 
 ## Driver decision: moteus r4.11
 

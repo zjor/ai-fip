@@ -41,3 +41,10 @@ Rule: `software/` runs on a laptop, `hardware/` runs on the device. Each subproj
 - Do not commit `dist/`, `logs/`, `.idea/`, `.pio/`, `node_modules/`; root `.gitignore` covers them.
 - Commits: only when asked. Branch is `master`.
 - Agent process artifacts: implementation plans go to `.claude/plans/YYYY-MM-DD-<topic>.md`; design specs go to `docs/<concept>/specs/<topic>.md` (e.g. `docs/hardware/specs/cad.md`). Never create `docs/superpowers/`; `docs/` is organized by concept only.
+- Bench tasks: once the planned protocol gives the headline number, stop adding measurement steps. Write up the result with explicit assumptions (e.g. "±5 mNm residual disturbance, worst case") and record open questions in the spec as documented deviations, not as new runs. Offer at most one extra experiment, clearly optional, and do not block the write-up on it. Reason: bench time is expensive, and a bounded assumption is enough for the Phase 0 feasibility gate.
+
+## Agent knowledge
+
+- Do not use the local auto-memory (`~/.claude/projects/.../memory/`) for this project. Everything an agent should know must travel with git.
+- Working rules and preferences go into this file. Repeatable workflows go into project skills in `.claude/skills/<name>/SKILL.md`. Project facts go into `docs/` or YouTrack PNDLM, as described above.
+- Project skills: `explain-ticket` — explain a PNDLM ticket in a fixed six-section shape.
