@@ -177,6 +177,24 @@ bench test (stall current vs. winding temperature with the real wheel mounted
 as a heat sink) is a Phase 1 task. The r4.11's 12 A bare rating happens to sit
 at the low end of the same range, so the driver and motor limits are matched.
 
+**Update 2026-11-09 (PNDLM-13, assumption instead of a measurement).** The mj5208
+has no thermistor, so the thermal bench test was replaced by this assumption:
+
+- R_th = 3–6 K/W winding to ambient, winding rise ≤ 60 K as a hard limit (magnet
+  grade unknown; N-grade NdFeB loses field irreversibly above ~80 °C).
+- Hot corner at +60 K: R +23.6 % (copper 0.393 %/K), K_t −6…−7 % and Kv +6…+8 %
+  (NdFeB −0.10…−0.12 %/K, magnets assumed as hot as the winding, worst case).
+- With the copper temperature coefficient the continuous current is 10.7–15.2 A
+  (not 12–17 A); with hot K_t 0.0227 Nm/A that is 0.24–0.35 Nm against the
+  0.20 Nm requirement.
+- Break-even: 0.20 Nm needs 8.8 A hot, 6.8 W of copper loss, so the gate fails
+  only above R_th ≈ 8.9 K/W, 1.5× the worst assumed value.
+- Thermal time constant ≈ 5–10 min (estimate, C ≈ 100 J/K); swing-up and
+  poke recovery are thermally negligible.
+
+Numbers: `software/sim/app/plot_thermal.py`; story and figure:
+[thermal-assumption article](../articles/2026-11-09-thermal-assumption-draft.md).
+
 ## Flywheel momentum gate (swing-up)
 
 `phase0-swingup` simulates the reaction-wheel pendulum from hanging with
