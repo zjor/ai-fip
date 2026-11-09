@@ -208,6 +208,47 @@ class Actuator:
 
 
 @dataclass(frozen=True)
+class Losses:
+    """Rotating losses between rotor and stator; see ``[losses]`` in phase0.toml."""
+
+    coulomb_nm: Range3
+    viscous_nm_s: Range3
+    windage_nm_s2: float
+    coulomb_smoothing_rad_s: float
+
+
+@dataclass(frozen=True)
+class LossTorque:
+    """One corner of :class:`Losses`, evaluated as a torque against the wheel."""
+
+    coulomb_nm: float = 0.0
+    viscous_nm_s: float = 0.0
+    windage_nm_s2: float = 0.0
+    coulomb_smoothing_rad_s: float = 0.5
+
+    def torque_nm(self, relative_speed_rad_s: float) -> float:
+        w = relative_speed_rad_s
+        return (
+            self.coulomb_nm * math.tanh(w / self.coulomb_smoothing_rad_s)
+            + self.viscous_nm_s * w
+            + self.windage_nm_s2 * w * abs(w)
+        )
+
+    @classmethod
+    def corner(cls, losses: Losses, which: str) -> "LossTorque":
+        if which == "none":
+            return cls()
+        if which not in ("low", "nominal", "high"):
+            raise ValueError(f"unknown loss corner: {which}")
+        return cls(
+            getattr(losses.coulomb_nm, which),
+            getattr(losses.viscous_nm_s, which),
+            losses.windage_nm_s2,
+            losses.coulomb_smoothing_rad_s,
+        )
+
+
+@dataclass(frozen=True)
 class Config:
     design: Design
     battery: Battery
@@ -216,6 +257,7 @@ class Config:
     nominal_bus_voltage_v: float
     motor: Motor
     actuators: tuple[Actuator, ...]
+    losses: Losses
 
 
 @dataclass(frozen=True)
@@ -271,6 +313,12 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
         nominal_bus_voltage_v=float(raw["power"]["nominal_bus_voltage_v"]),
         motor=motor,
         actuators=tuple(Actuator(motor, driver, moteus) for driver in drivers),
+        losses=Losses(
+            coulomb_nm=Range3.from_list(raw["losses"]["coulomb_nm"], "coulomb_nm"),
+            viscous_nm_s=Range3.from_list(raw["losses"]["viscous_nm_s"], "viscous_nm_s"),
+            windage_nm_s2=float(raw["losses"]["windage_nm_s2"]),
+            coulomb_smoothing_rad_s=float(raw["losses"]["coulomb_smoothing_rad_s"]),
+        ),
     )
 
 

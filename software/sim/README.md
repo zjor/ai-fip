@@ -18,6 +18,8 @@ poetry run python -m unittest discover -s tests
 voltage-circle torque-speed envelope). `phase0-swingup` simulates energy-pumping
 swing-up plus LQR catch with that envelope and reports the required flywheel
 momentum. `phase0-control` sweeps sample rate, delay and noise for the sampled LQR.
+`--losses none|low|nominal|high` picks the rotating-loss corner from the
+`[losses]` block (bench data, PNDLM-11); the default is `nominal`.
 Mechanical low/nominal/high values are planning ranges, not measurements; the
 report stays `NOT READY` until a CAD mass model exists. Results and decisions:
 [docs/physics/phase-0-feasibility.md](../../docs/physics/phase-0-feasibility.md).

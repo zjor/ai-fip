@@ -6,6 +6,7 @@ from app.phase0 import (
     MOTEUS_TORQUE_FACTOR,
     RAD_S_PER_RPM,
     DesignPoint,
+    LossTorque,
     angular_momentum_nms,
     battery_placement,
     build_report,
@@ -13,7 +14,7 @@ from app.phase0 import (
     pessimistic_point,
     recoverable_angle_deg,
 )
-from app.phase0_control import SensorScenario, available_peak_torque_nm, simulate
+from app.phase0_control import SensorScenario, available_peak_torque_nm, dynamics, simulate
 from app.phase0_swingup import simulate_swing_up
 
 
@@ -106,6 +107,31 @@ class Phase0Test(unittest.TestCase):
         point = pessimistic_point(self.config.design)
         self.assertEqual(point.total_mass_kg, self.config.design.total_mass_kg.high)
         self.assertEqual(point.flywheel_inertia_kg_m2, self.config.design.flywheel_inertia_kg_m2.low)
+
+    def test_loss_corners_match_bench_record(self):
+        losses = self.config.losses
+        self.assertEqual(LossTorque.corner(losses, "none").torque_nm(300.0), 0.0)
+        nominal = LossTorque.corner(losses, "nominal")
+        # PNDLM-11 table: 17.26 mNm at 3000 rpm, 6.44 mNm at 500 rpm.
+        self.assertAlmostEqual(nominal.torque_nm(3000 * RAD_S_PER_RPM), 0.01726, delta=1e-4)
+        self.assertAlmostEqual(nominal.torque_nm(-500 * RAD_S_PER_RPM), -0.00644, delta=1e-4)
+        self.assertAlmostEqual(LossTorque.corner(losses, "high").coulomb_nm, 0.007)
+
+    def test_loss_torque_slows_wheel_and_reacts_on_body(self):
+        point = DesignPoint(0.7, 0.15, 0.03, 0.0027)
+        losses = LossTorque(coulomb_nm=0.005, viscous_nm_s=0.0)
+        rate = dynamics(point, [0.0, 0.0, 100.0], 0.0, losses)
+        self.assertAlmostEqual(rate[2], -0.005 / 0.0027, places=6)
+        self.assertAlmostEqual(rate[1], 0.005 / 0.03, places=6)
+        # Friction acts on the speed relative to the body.
+        still = dynamics(point, [0.0, 2.0, 2.0], 0.0, losses)
+        self.assertEqual(still[2], 0.0)
+
+    def test_lqr_holds_upright_with_high_losses(self):
+        point = pessimistic_point(self.config.design)
+        high = LossTorque.corner(self.config.losses, "high")
+        result = simulate(point, self.r4, 12.0, SensorScenario(), losses=high)
+        self.assertTrue(result.passed, result.reason)
 
 
 if __name__ == "__main__":

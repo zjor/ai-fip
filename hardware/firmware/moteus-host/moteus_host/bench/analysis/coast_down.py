@@ -176,12 +176,14 @@ def plateau_losses(rows_by_trial: dict[int, list[dict[str, str]]], kt: float,
         if not plateau:
             continue
         speeds = [abs(float(r["velocity_rev_s"])) for r in plateau]
-        currents = [abs(float(r["q_current_a"])) for r in plateau]
+        # Signed mean, then magnitude: the q-current ripple crosses zero at low speed,
+        # and averaging |i| per sample would rectify it and bias the loss upward.
+        currents = [float(r["q_current_a"]) for r in plateau]
         speed = statistics.fmean(speeds)
         result.append({
             "trial": trial,
             "speed_rev_s": speed,
-            "tau_nm": kt * statistics.fmean(currents),
+            "tau_nm": kt * abs(statistics.fmean(currents)),
             "q_current_sd_a": statistics.stdev(currents) if len(currents) > 1 else 0.0,
             "coast_tau_nm": _model(fit, TWO_PI * speed) if fit is not None else None,
         })
@@ -341,7 +343,7 @@ def analyze(run_directory: Path) -> Path:
                            "(disc + rotor, from the acceleration trials) when available, else the disc record",
             "fit": "least squares tau = a + b*omega + c*omega^2 (omega in rad/s); None below 6 points; "
                    "standard errors are statistical only and exclude the inertia uncertainty (see inertia.effective.rel_sd)",
-            "plateau": "kt * mean |q_current| while held at speed (velocity mode), next to the coast fit at that speed",
+            "plateau": "kt * |mean q_current| while held at speed (velocity mode), next to the coast fit at that speed",
         },
         "inertia": {
             "disc": resolved["inertia"],

@@ -418,147 +418,189 @@
     ]
   },
   "plateau_cross_check": {
-    "note": "velocity-mode plateau current x K_t against the coast loss at the same speed, both on the effective inertia; the plateau reads 4-14 % high with no clear trend in speed or direction (about 1 mNm). Cause not resolved: K_t at speed, or a q-current offset (the mode-0 reading shows about -1.2 A with open phases). The coast is the primary measurement.",
+    "note": "velocity-mode plateau current x K_t against the coast loss at the same speed, both on the effective inertia. Re-analysed 2026-11-08 from the same telemetry: the first pass averaged |i_q| per sample, which rectifies the ripple (sd 0.3-0.67 A, 3-16 % of samples of opposite sign) and read 4-14 % high. With |mean(i_q)| the gap is -2.9 to +8.3 % (mean 3.8 %); 11 of 14 rows are within 0.75 mNm, about the 0.72 mNm coast-fit rmse; the remaining three (2483-2978 rpm) are 1.17-1.25 mNm high. That residual is not resolved (K_t at speed is the candidate; K_t was measured on a held rotor). The -1.2 A mode-0 reading is ruled out: it is 30x the gap in current and would change sign with direction. The coast is the primary measurement. Superseded values are kept as *_superseded fields.",
     "rows": [
       {
         "run_id": "20261028T191114Z_coast-down",
         "direction": 1,
         "speed_rpm": 495,
-        "plateau_current_x_kt_nm": 0.007410425603370751,
+        "plateau_current_x_kt_nm": 0.007012218364336953,
         "coast_loss_disc_basis_nm": 0.006205204219898123,
         "coast_loss_effective_basis_nm": 0.006625695760212215,
-        "gap_pct": 11.8,
-        "q_current_sd_a": 0.29675396931598674
+        "gap_pct": 5.8,
+        "q_current_sd_a": 0.29675396931598674,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.007410425603370751,
+        "gap_pct_superseded": 11.8,
+        "gap_nm": 0.00039
       },
       {
         "run_id": "20261028T191114Z_coast-down",
         "direction": 1,
         "speed_rpm": 994,
-        "plateau_current_x_kt_nm": 0.0092105454531233,
+        "plateau_current_x_kt_nm": 0.008694058208288594,
         "coast_loss_disc_basis_nm": 0.0080155745401463,
         "coast_loss_effective_basis_nm": 0.008558744622136587,
-        "gap_pct": 7.6,
-        "q_current_sd_a": 0.42053259953401473
+        "gap_pct": 1.6,
+        "q_current_sd_a": 0.42053259953401473,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.0092105454531233,
+        "gap_pct_superseded": 7.6,
+        "gap_nm": 0.00014
       },
       {
         "run_id": "20261028T191114Z_coast-down",
         "direction": 1,
         "speed_rpm": 1491,
-        "plateau_current_x_kt_nm": 0.011100776496685125,
+        "plateau_current_x_kt_nm": 0.01053863636685485,
         "coast_loss_disc_basis_nm": 0.009181669707351554,
         "coast_loss_effective_basis_nm": 0.009803859453422938,
-        "gap_pct": 13.2,
-        "q_current_sd_a": 0.5021658449984421
+        "gap_pct": 7.5,
+        "q_current_sd_a": 0.5021658449984421,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.011100776496685125,
+        "gap_pct_superseded": 13.2,
+        "gap_nm": 0.00073
       },
       {
         "run_id": "20261101T104259Z_coast-down",
         "direction": 1,
         "speed_rpm": 1491,
-        "plateau_current_x_kt_nm": 0.011077291030075893,
+        "plateau_current_x_kt_nm": 0.010593838000260553,
         "coast_loss_disc_basis_nm": 0.009835415847530797,
         "coast_loss_effective_basis_nm": 0.01050190626634666,
-        "gap_pct": 5.5,
-        "q_current_sd_a": 0.5048559178064496
+        "gap_pct": 0.9,
+        "q_current_sd_a": 0.5048559178064496,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.011077291030075893,
+        "gap_pct_superseded": 5.5,
+        "gap_nm": 9e-05
       },
       {
         "run_id": "20261101T104259Z_coast-down",
         "direction": 1,
         "speed_rpm": 1987,
-        "plateau_current_x_kt_nm": 0.013097085294242703,
+        "plateau_current_x_kt_nm": 0.012691190882917034,
         "coast_loss_disc_basis_nm": 0.011808250902819542,
         "coast_loss_effective_basis_nm": 0.012608429178116238,
-        "gap_pct": 3.9,
-        "q_current_sd_a": 0.5684338240364728
+        "gap_pct": 0.7,
+        "q_current_sd_a": 0.5684338240364728,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.013097085294242703,
+        "gap_pct_superseded": 3.9,
+        "gap_nm": 8e-05
       },
       {
         "run_id": "20261101T104259Z_coast-down",
         "direction": 1,
         "speed_rpm": 2483,
-        "plateau_current_x_kt_nm": 0.01552725996000652,
+        "plateau_current_x_kt_nm": 0.015076639278507165,
         "coast_loss_disc_basis_nm": 0.013820501715589113,
         "coast_loss_effective_basis_nm": 0.014757038829978723,
-        "gap_pct": 5.2,
-        "q_current_sd_a": 0.6023305941113607
+        "gap_pct": 2.2,
+        "q_current_sd_a": 0.6023305941113607,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.01552725996000652,
+        "gap_pct_superseded": 5.2,
+        "gap_nm": 0.00032
       },
       {
         "run_id": "20261101T104531Z_coast-down",
         "direction": 1,
         "speed_rpm": 2484,
-        "plateau_current_x_kt_nm": 0.015474297357295923,
+        "plateau_current_x_kt_nm": 0.015144751948883851,
         "coast_loss_disc_basis_nm": 0.01391461938585844,
         "coast_loss_effective_basis_nm": 0.014857534321628275,
-        "gap_pct": 4.2,
-        "q_current_sd_a": 0.6126659277948856
+        "gap_pct": 1.9,
+        "q_current_sd_a": 0.6126659277948856,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.015474297357295923,
+        "gap_pct_superseded": 4.2,
+        "gap_nm": 0.00029
       },
       {
         "run_id": "20261101T104531Z_coast-down",
         "direction": 1,
         "speed_rpm": 2978,
-        "plateau_current_x_kt_nm": 0.01854573599702921,
+        "plateau_current_x_kt_nm": 0.018396882137798398,
         "coast_loss_disc_basis_nm": 0.01610198767454534,
         "coast_loss_effective_basis_nm": 0.017193128168789908,
-        "gap_pct": 7.9,
-        "q_current_sd_a": 0.6578330775932749
+        "gap_pct": 7.0,
+        "q_current_sd_a": 0.6578330775932749,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.01854573599702921,
+        "gap_pct_superseded": 7.9,
+        "gap_nm": 0.0012
       },
       {
         "run_id": "20261101T104928Z_coast-down",
         "direction": -1,
         "speed_rpm": 495,
-        "plateau_current_x_kt_nm": 0.007356663489478552,
+        "plateau_current_x_kt_nm": 0.0069571167542297275,
         "coast_loss_disc_basis_nm": 0.006031553372329529,
         "coast_loss_effective_basis_nm": 0.006440277578357214,
-        "gap_pct": 14.2,
-        "q_current_sd_a": 0.2987530294804716
+        "gap_pct": 8.0,
+        "q_current_sd_a": 0.2987530294804716,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.007356663489478552,
+        "gap_pct_superseded": 14.2,
+        "gap_nm": 0.00052
       },
       {
         "run_id": "20261101T104928Z_coast-down",
         "direction": -1,
         "speed_rpm": 994,
-        "plateau_current_x_kt_nm": 0.008961870554981871,
+        "plateau_current_x_kt_nm": 0.008262589524277164,
         "coast_loss_disc_basis_nm": 0.007968702371693542,
         "coast_loss_effective_basis_nm": 0.008508696192337368,
-        "gap_pct": 5.3,
-        "q_current_sd_a": 0.4084224787869389
+        "gap_pct": -2.9,
+        "q_current_sd_a": 0.4084224787869389,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.008961870554981871,
+        "gap_pct_superseded": 5.3,
+        "gap_nm": -0.00025
       },
       {
         "run_id": "20261101T104928Z_coast-down",
         "direction": -1,
         "speed_rpm": 1491,
-        "plateau_current_x_kt_nm": 0.011494319821077294,
+        "plateau_current_x_kt_nm": 0.010859261118837255,
         "coast_loss_disc_basis_nm": 0.009960652541657681,
         "coast_loss_effective_basis_nm": 0.010635629541825434,
-        "gap_pct": 8.1,
-        "q_current_sd_a": 0.5159383536889016
+        "gap_pct": 2.1,
+        "q_current_sd_a": 0.5159383536889016,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.011494319821077294,
+        "gap_pct_superseded": 8.1,
+        "gap_nm": 0.00022
       },
       {
         "run_id": "20261101T104928Z_coast-down",
         "direction": -1,
         "speed_rpm": 1988,
-        "plateau_current_x_kt_nm": 0.013950286732973423,
+        "plateau_current_x_kt_nm": 0.013192092336088031,
         "coast_loss_disc_basis_nm": 0.012012814326041087,
         "coast_loss_effective_basis_nm": 0.012826854705770465,
-        "gap_pct": 8.8,
-        "q_current_sd_a": 0.5817831695390489
+        "gap_pct": 2.8,
+        "q_current_sd_a": 0.5817831695390489,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.013950286732973423,
+        "gap_pct_superseded": 8.8,
+        "gap_nm": 0.00037
       },
       {
         "run_id": "20261101T104928Z_coast-down",
         "direction": -1,
         "speed_rpm": 2483,
-        "plateau_current_x_kt_nm": 0.016754176017295886,
+        "plateau_current_x_kt_nm": 0.016331026828018545,
         "coast_loss_disc_basis_nm": 0.014120036624139227,
         "coast_loss_effective_basis_nm": 0.015076871522551834,
-        "gap_pct": 11.1,
-        "q_current_sd_a": 0.6236782692429604
+        "gap_pct": 8.3,
+        "q_current_sd_a": 0.6236782692429604,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.016754176017295886,
+        "gap_pct_superseded": 11.1,
+        "gap_nm": 0.00125
       },
       {
         "run_id": "20261101T104928Z_coast-down",
         "direction": -1,
         "speed_rpm": 2978,
-        "plateau_current_x_kt_nm": 0.018863822977122472,
+        "plateau_current_x_kt_nm": 0.018564204130606856,
         "coast_loss_disc_basis_nm": 0.01628801729777993,
         "coast_loss_effective_basis_nm": 0.017391763965817635,
-        "gap_pct": 8.5,
-        "q_current_sd_a": 0.6539945594216617
+        "gap_pct": 6.7,
+        "q_current_sd_a": 0.6539945594216617,
+        "plateau_mean_abs_x_kt_nm_superseded": 0.018863822977122472,
+        "gap_pct_superseded": 8.5,
+        "gap_nm": 0.00117
       }
     ]
   },

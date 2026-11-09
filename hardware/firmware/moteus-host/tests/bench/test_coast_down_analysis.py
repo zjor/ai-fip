@@ -176,6 +176,14 @@ class CoastDownAnalysisTest(unittest.TestCase):
             expected = _loss(row["speed_rev_s"], 0.004, 2e-5, 1e-7)
             self.assertAlmostEqual(row["tau_nm"], expected, delta=1e-6)
 
+    def test_plateau_noise_crossing_zero_is_not_rectified(self) -> None:
+        # Mean 0.3 A with +/-0.5 A ripple: mean(|i|) would read 0.4 A, mean(i) reads 0.3 A.
+        rows = [{"experiment_phase": "plateau", "velocity_rev_s": "-10.0",
+                 "q_current_a": str(-0.3 + (0.5 if k % 2 else -0.5))} for k in range(100)]
+        result = coast_down.plateau_losses({0: rows}, kt=0.0244)
+        self.assertAlmostEqual(result[0]["tau_nm"], 0.0244 * 0.3, delta=1e-9)
+        self.assertAlmostEqual(result[0]["q_current_sd_a"], 0.5, delta=0.01)
+
     def test_effective_inertia(self) -> None:
         inertia = self._summary()["effective_inertia"]
         self.assertEqual(len(inertia["trials"]), 2)

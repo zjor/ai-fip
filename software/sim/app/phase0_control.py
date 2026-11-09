@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.linalg import solve_continuous_are
 
-from app.phase0 import Actuator, DesignPoint, actuator_result, load_config, nominal_point
+from app.phase0 import Actuator, DesignPoint, LossTorque, actuator_result, load_config, nominal_point
 from app.phase0 import pessimistic_point as _pessimistic_point
 
 
@@ -64,6 +64,28 @@ def available_peak_torque_nm(
     return actuator.available_torque_nm(bus_voltage_v, wheel_speed_rad_s)
 
 
+def dynamics(
+    point: DesignPoint, state, torque: float, losses: LossTorque | None = None
+) -> np.ndarray:
+    """d/dt of [angle, angle rate, absolute wheel speed].
+
+    The motor torque and the rotating losses both act between the wheel and
+    the body, so each appears with opposite signs on the two. Losses use the
+    wheel speed relative to the body.
+    """
+    theta, theta_rate, wheel_speed = state
+    loss = losses.torque_nm(wheel_speed - theta_rate) if losses is not None else 0.0
+    internal = torque - loss
+    return np.array(
+        [
+            theta_rate,
+            (point.gravity_coefficient_nm() * math.sin(theta) - internal)
+            / point.pivot_inertia_kg_m2,
+            internal / point.flywheel_inertia_kg_m2,
+        ]
+    )
+
+
 def simulate(
     point: DesignPoint,
     actuator: Actuator,
@@ -73,6 +95,7 @@ def simulate(
     initial_angle_deg: float = 10.0,
     duration_s: float = 5.0,
     seed: int = 0,
+    losses: LossTorque | None = None,
 ) -> SimulationResult:
     sample_period_s = 1.0 / sensor.sample_rate_hz
     integration_period_s = min(0.0005, sample_period_s / 4.0)
@@ -92,17 +115,7 @@ def simulate(
     settled_wheel_speeds: list[float] = []
 
     def derivative(current: np.ndarray, torque: float) -> np.ndarray:
-        theta, theta_rate, _wheel_speed = current
-        return np.array(
-            [
-                theta_rate,
-                (
-                    point.gravity_coefficient_nm() * math.sin(theta) - torque
-                )
-                / point.pivot_inertia_kg_m2,
-                torque / point.flywheel_inertia_kg_m2,
-            ]
-        )
+        return dynamics(point, current, torque, losses)
 
     for step in range(steps):
         if step % sample_steps == 0:
@@ -190,6 +203,7 @@ def sweep_sensor_budget(
     bus_voltage_v: float,
     *,
     trials: int = 5,
+    losses: LossTorque | None = None,
 ) -> dict[str, list[tuple[float, int]]]:
     """Sweep one sensor dimension at a time around the reference scenario."""
 
@@ -201,6 +215,7 @@ def sweep_sensor_budget(
                 bus_voltage_v,
                 scenario,
                 seed=seed,
+                losses=losses,
             ).passed
             for seed in range(trials)
         )
@@ -244,19 +259,28 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--sweep", action="store_true")
     parser.add_argument("--trials", type=int, default=5)
+    parser.add_argument(
+        "--losses",
+        choices=("none", "low", "nominal", "high"),
+        default="nominal",
+        help="rotating-loss corner from [losses] in phase0.toml (PNDLM-11)",
+    )
     args = parser.parse_args()
 
     config = load_config()
     point = pessimistic_point() if args.pessimistic else nominal_point(config.design)
     actuator = config.actuators[0 if args.actuator == "c1" else 1]
+    losses = LossTorque.corner(config.losses, args.losses)
     if args.sweep:
         results = sweep_sensor_budget(
             point,
             actuator,
             config.minimum_bus_voltage_v,
             trials=args.trials,
+            losses=losses,
         )
         print(f"actuator: {actuator.name}")
+        print(f"losses: {args.losses}")
         print(f"design: {'pessimistic' if args.pessimistic else 'nominal'}")
         print(f"trials per point: {args.trials}")
         for dimension, values in results.items():
@@ -277,6 +301,7 @@ def main() -> None:
         config.minimum_bus_voltage_v,
         scenario,
         seed=args.seed,
+        losses=losses,
     )
     actuator_summary = actuator_result(
         actuator, point, config.requirements, config.minimum_bus_voltage_v
@@ -284,6 +309,7 @@ def main() -> None:
     print(f"actuator: {actuator.name}")
     print(f"design: {'pessimistic' if args.pessimistic else 'nominal'}")
     print(f"sensor scenario: {scenario}")
+    print(f"losses: {args.losses} {losses}")
     print(f"peak torque: {actuator_summary['peak_torque_nm']:.3f} Nm")
     print(f"result: {'PASS' if result.passed else 'FAIL'} — {result.reason}")
     print(f"maximum angle: {result.maximum_angle_deg:.2f} deg")

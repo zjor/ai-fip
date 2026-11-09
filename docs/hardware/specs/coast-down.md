@@ -127,8 +127,10 @@ only steps with a `step_complete` event count.
   least-squares fit τ = a + b·ω + c·ω² (Coulomb, viscous, windage) with
   statistical parameter standard errors; the inertia's relative sd is
   reported beside it and is not folded in.
-- Plateau: mean q-current × K_t per step, listed next to the coast fit at the
-  same speed.
+- Plateau: |mean signed q-current| × K_t per step, listed next to the coast
+  fit at the same speed. The sign is kept until after the mean: the ripple
+  crosses zero at low speed, and a per-sample |i_q| reads several percent high
+  (fixed 2026-11-08, see §8).
 - `summary.json` plus SVG plots: speed versus time per step, loss torque
   versus speed with the fit.
 
@@ -150,3 +152,42 @@ automatic balancing checks.
 6. Tests in `tests/bench/`: config validation, fake-controller sequence,
    override restore on failure, wait-for-standstill on safety stop,
    analysis on synthetic data with known a, b, c and I.
+
+## 8. Documented deviations and assumptions (2026-11-08)
+
+Results: [measurements/2026-11-01-rotating-losses.json](../measurements/2026-11-01-rotating-losses.json).
+These points replace further bench runs for the Phase 0 gate.
+
+- **Plateau cross-check.** The first analysis averaged |i_q| per sample, so it
+  read 4–14 % above the coast loss. Re-analysed from the same telemetry with the
+  signed mean: −2.9 … +8.3 % (mean 3.8 %). 11 of 14 steps agree within
+  0.75 mNm, which is about the coast-fit rmse (0.72 mNm). Three steps at
+  2483–2978 rpm stay 1.2 mNm high. Not resolved. The candidate is K_t at speed,
+  because K_t was measured on a held rotor. The −1.2 A reading in mode 0 is
+  ruled out: it is 30× the gap in current, and it would flip sign with
+  direction. Not a blocker, because the coast is the primary measurement.
+- **Coulomb term on the final assembly (assumption, not measured).**
+  a = 4.4 mNm nominal. For the final assembly the models use a range of
+  3–7 mNm (−30 % / +60 %) to cover bearing preload and temperature. These runs
+  covered only 19–28 °C on the controller. The RL environment should randomize a in
+  this range, and LQR must be checked at both ends. No separate measurement is
+  planned unless a check at 7 mNm fails.
+- **Losses near zero speed (assumption).** Below ~1 rev/s the loss map is
+  noisy (sd 2.2 mNm in the 0.5 rev/s bin), and breakaway torque was not
+  measured. The models use a smooth Coulomb term a·tanh(ω/ω_s) with
+  ω_s = 0.5 rad/s. One optional run measures breakaway torque with a slow
+  torque ramp from rest. It is needed only if the simulation shows that
+  stick-slip limits the wheel-stop behaviour.
+- **Simulation check, 2026-11-08 (`software/sim`, `phase0-control --losses`).**
+  Sampled LQR, 500 Hz, 5 ms delay, nominal and pessimistic design points,
+  last 3 s of a 10 s hold. With sensor noise, the LQR torque is about
+  120 mNm rms, 17× the high Coulomb term. The relative wheel speed changes sign
+  75–105 times per second, so the wheel never rests in stiction. Losses from
+  none up to 3× the high corner (21 mNm) change the angle rms by less than
+  0.003° and the wheel-speed rms by less than 0.4 rpm. Without noise and with a
+  sharp Coulomb step (ω_s = 0.05 rad/s), friction leaves a steady wheel speed of
+  0.16 rpm at 7 mNm and 1.5 rpm at 21 mNm. There is no limit cycle. The LQR has
+  no integrator, so the friction torque stays as a small speed offset. Result:
+  stick-slip does not limit balance or wheel stop. The breakaway run is not
+  needed for Phase 0. Breakaway above the Coulomb level (Stribeck) is not
+  modelled.
