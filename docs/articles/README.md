@@ -1,10 +1,11 @@
-# Content drafts
+# Articles
 
 Drafts of articles, posts and video scenarios about the project. A draft is
 not a specification and not the progress log: facts and numbers live in the
-concept docs it links to, the draft only tells the story. Publication status is
-stated at the top of each draft; the Telegram channel is
-[AI-FIP](https://t.me/ai_fip).
+concept docs it links to, the draft only tells the story. Each draft starts
+with YAML frontmatter: `title`, `status`, `language`, `issues`, `sources`
+(paths relative to this folder), and where they apply `runs`, `figures` and
+`figure_script`. The Telegram channel is [AI-FIP](https://t.me/ai_fip).
 
 Figures go to `figures/` and are rendered from data in the repository by a
 script in `software/sim/app/`, so they can be regenerated.
@@ -14,4 +15,5 @@ script in `software/sim/app/`, so they can be regenerated.
 | [2026-10-26-torque-constant-draft.md](2026-10-26-torque-constant-draft.md) | Static torque constant of the mj5208: 87.5 % of the firmware value, anticogging explains the "missing" current, rise time | draft |
 | [2026-11-08-response-delay-draft.md](2026-11-08-response-delay-draft.md) | Command-to-torque delay of the moteus actuator: ≤13 ms bound at 5.5 ms host resolution, why it fits the 139–161 ms fall time, next steps for the controller | draft |
 | [2026-11-01-rotating-losses-draft.md](2026-11-01-rotating-losses-draft.md) | Rotating losses and inertia of the mj5208 with a test disc: 6–17 mNm from 500 to 3000 rpm, rotor ≈ 0.000024 kg·m² by difference, the plateau gap that was an averaging bug, friction does not affect LQR | draft |
+| [2026-11-04-torque-speed-draft.md](2026-11-04-torque-speed-draft.md) | Torque-speed envelope of the mj5208 + moteus: no-load 248 rpm/V (9 % above the old model), voltage circle r_max 1.00 with Kv 339, firmware Kv 296 wrong, why 248 and not 339, Kv does not change with voltage | draft |
 | [2026-10-26-torque-constant-video-scenario.md](2026-10-26-torque-constant-video-scenario.md) | English video scenario: why measure torque per amp, lever-and-scale experiment, measured gain versus controller estimate | draft |

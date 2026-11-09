@@ -1,4 +1,4 @@
-"""Shared look for the article figures in docs/content/figures.
+"""Shared look for the article figures in docs/articles/figures.
 
 One colour code for every article:
 

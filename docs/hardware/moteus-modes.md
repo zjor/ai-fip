@@ -70,7 +70,7 @@ Modes are fixed in firmware. Other behaviors are parameter sets of mode 10:
   with open phases, likely an uncalibrated offset while PWM is off
   ([log, PNDLM-11 entries of 28.10 and 01.11.2026](../project/log.md)).
   Figure A of the
-  [response-delay draft](../content/2026-11-08-response-delay-draft.md) shows
+  [response-delay draft](../articles/2026-11-08-response-delay-draft.md) shows
   the same −1.2 A after the watchdog trip. Do not read current outside an
   active mode.
 - **Reported q-current includes the anticogging term in mode 10.** At zero

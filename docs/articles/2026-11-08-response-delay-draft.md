@@ -1,21 +1,24 @@
-# Черновик: «Сколько миллисекунд есть у маятника»
+---
+title: "Сколько миллисекунд есть у маятника"
+status: draft
+language: ru
+issues: [PNDLM-8, PNDLM-9]
+sources:
+  - ../hardware/desk-stand-torque-pulse-timing.md  # отчёт о торк-импульсах
+  - ../hardware/specs/response-timing.md
+  - ../hardware/measurements/20261025-response-timing-0010.json
+  - ../hardware/measurements/20261025-response-timing-0015.json
+  - ../hardware/measurements/20261025-response-timing-0020.json
+  - ../physics/phase-0-feasibility.md#preliminary-sensor-timing-budget  # допустимая задержка
+  - ../hardware/specs/motor-torque-fixture.md  # §9.3–10, уточнение PNDLM-9
+sim_check: "текущая модель масс из CAD, poetry run phase0 в software/sim (2026-11-08)"
+figures:
+  - figures/2026-11-08-response-delay-pulse.png  # A
+  - figures/2026-11-08-response-delay-scale.png  # B
+figure_script: software/sim/app/plot_response_delay.py  # команды — в docstring
+---
 
-Статус: черновик статьи. Не опубликовано. Площадка: не Telegram-пост
-(длинный текст; Telegraph или блог — решить при публикации).
-Данные: [отчёт о торк-импульсах](../hardware/desk-stand-torque-pulse-timing.md),
-[спецификация опыта](../hardware/specs/response-timing.md),
-[response-timing-0010.json](../hardware/measurements/20261025-response-timing-0010.json),
-[0015](../hardware/measurements/20261025-response-timing-0015.json),
-[0020](../hardware/measurements/20261025-response-timing-0020.json),
-[допустимая задержка (Phase 0)](../physics/phase-0-feasibility.md#preliminary-sensor-timing-budget),
-[PNDLM-8](https://zjor.youtrack.cloud/issue/PNDLM-8),
-уточнение — [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9)
-([fixture spec §9.3–10](../hardware/specs/motor-torque-fixture.md)).
-Числа конструкции: текущая модель масс из CAD, `poetry run phase0` в
-`software/sim` (2026-11-08).
-Графики: `figures/2026-11-08-response-delay-pulse.png` (A),
-`figures/2026-11-08-response-delay-scale.png` (B); строит
-`software/sim/app/plot_response_delay.py` (команды — в docstring скрипта).
+# Сколько миллисекунд есть у маятника
 
 ![Задержка привода против времени падения маятника](figures/2026-11-08-response-delay-scale.png)
 

@@ -1,20 +1,28 @@
-# Черновик: «Сколько момента мотор тратит сам на себя»
+---
+title: "Сколько момента мотор тратит сам на себя"
+status: draft
+language: ru
+issues: [PNDLM-11, PNDLM-9]
+sources:
+  - ../hardware/specs/coast-down.md  # §8 — отклонения и допущения
+  - ../hardware/specs/test-disc.md
+  - ../hardware/measurements/2026-11-01-rotating-losses.json
+  - ../hardware/measurements/2026-10-28-test-disc.json
+related_articles:
+  - 2026-10-26-torque-constant-draft.md  # K_t, PNDLM-9
+runs:  # _coast-down, локальные логи, не в git
+  - 20261028T191114Z
+  - 20261101T104259Z
+  - 20261101T104531Z
+  - 20261101T104928Z
+  - 20261101T105228Z
+sim_check: "poetry run phase0-control --losses … в software/sim (2026-11-08)"
+figures:
+  - figures/2026-11-01-rotating-losses.png
+figure_script: software/sim/app/plot_rotating_losses.py  # команда — в docstring
+---
 
-Статус: черновик статьи. Не опубликовано. Площадка: не Telegram-пост
-(длинный текст; Telegraph или блог — решить при публикации).
-Данные: [спецификация опыта, §8 — отклонения и допущения](../hardware/specs/coast-down.md),
-[тестовый диск](../hardware/specs/test-disc.md),
-[2026-11-01-rotating-losses.json](../hardware/measurements/2026-11-01-rotating-losses.json),
-[2026-10-28-test-disc.json](../hardware/measurements/2026-10-28-test-disc.json),
-[PNDLM-11](https://zjor.youtrack.cloud/issue/PNDLM-11),
-K_t — [PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9)
-([статья о константе момента](2026-10-26-torque-constant-draft.md)).
-Прогоны: `20261028T191114Z`, `20261101T104259Z`, `20261101T104531Z`,
-`20261101T104928Z`, `20261101T105228Z` (`_coast-down`, локальные логи, не в
-git). Проверка в симуляторе: `poetry run phase0-control --losses …` в
-`software/sim` (2026-11-08).
-График: `figures/2026-11-01-rotating-losses.png`; строит
-`software/sim/app/plot_rotating_losses.py` (команда — в docstring скрипта).
+# Сколько момента мотор тратит сам на себя
 
 ![Момент потерь против скорости](figures/2026-11-01-rotating-losses.png)
 

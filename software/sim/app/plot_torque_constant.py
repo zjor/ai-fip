@@ -4,7 +4,7 @@ Usage, from software/sim:
 
     poetry run python -m app.plot_torque_constant constant \
         ../../docs/hardware/measurements/2026-10-26-torque-constant.json \
-        ../../docs/content/figures/2026-10-26-torque-constant.png
+        ../../docs/articles/figures/2026-10-26-torque-constant.png
 
     poetry run python -m app.plot_torque_constant extract-rise \
         ../../hardware/firmware/moteus-host/logs/bench/20261026T180300Z_torque-constant/telemetry.csv \
@@ -13,7 +13,7 @@ Usage, from software/sim:
     poetry run python -m app.plot_torque_constant rise \
         ../../docs/hardware/measurements/2026-10-26-torque-rise-time-telemetry.csv \
         ../../docs/hardware/measurements/2026-10-26-torque-rise-time.json \
-        ../../docs/content/figures/2026-10-26-torque-rise-time.png
+        ../../docs/articles/figures/2026-10-26-torque-rise-time.png
 
 ``constant``: top, physical torque on the scale against commanded q-current
 with the documented line (8.27/Kv) and the measured linear-region line; bottom,

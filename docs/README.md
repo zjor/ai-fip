@@ -33,7 +33,7 @@ Project knowledge and process, organized by concept.
 
 ## Content
 
-- [Content drafts](content/README.md) — article, post and video-scenario drafts with their figures
+- [Articles](articles/README.md) — article, post and video-scenario drafts with their figures
 
 ## References
 

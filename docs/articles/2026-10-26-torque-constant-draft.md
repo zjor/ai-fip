@@ -1,18 +1,23 @@
-# Черновик: «Какой момент развивает мотор на 1 A»
+---
+title: "Какой момент развивает мотор на 1 A"
+status: draft
+language: ru
+issues: [PNDLM-9, PNDLM-8]
+sources:
+  - ../hardware/specs/motor-torque-fixture.md  # спецификация стенда, §9–10
+  - ../hardware/measurements/2026-10-26-torque-constant.json
+  - ../hardware/measurements/2026-10-26-torque-rise-time.json
+  - ../physics/phase-0-feasibility.md  # запас по моменту (Phase 0)
+related_articles:
+  - 2026-11-08-response-delay-draft.md  # PNDLM-8, задержка
+runs:
+  - 20261026T180300Z_torque-constant  # controller-config.txt, локальный лог, не в git; хеш в JSON
+figures:
+  - figures/2026-10-26-torque-constant.png
+figure_script: software/sim/app/plot_torque_constant.py  # команда — в docstring
+---
 
-Статус: черновик статьи. Не опубликовано. Площадка: не Telegram-пост
-(длинный текст; Telegraph или блог — решить при публикации).
-Данные: [спецификация стенда, §9–10](../hardware/specs/motor-torque-fixture.md),
-[2026-10-26-torque-constant.json](../hardware/measurements/2026-10-26-torque-constant.json),
-[2026-10-26-torque-rise-time.json](../hardware/measurements/2026-10-26-torque-rise-time.json),
-[запас по моменту (Phase 0)](../physics/phase-0-feasibility.md),
-[PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9),
-связанный опыт — [PNDLM-8](https://zjor.youtrack.cloud/issue/PNDLM-8)
-([статья о задержке](2026-11-08-response-delay-draft.md)).
-Конфигурация драйвера: `controller-config.txt` прогона
-`20261026T180300Z_torque-constant` (локальный лог, не в git; хеш в JSON).
-График: `figures/2026-10-26-torque-constant.png`; строит
-`software/sim/app/plot_torque_constant.py` (команда — в docstring скрипта).
+# Какой момент развивает мотор на 1 A
 
 ![Момент на весах против командного тока](figures/2026-10-26-torque-constant.png)
 

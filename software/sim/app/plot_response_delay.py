@@ -5,10 +5,10 @@ Usage, from software/sim:
     poetry run python -m app.plot_response_delay pulse \
         ../../docs/hardware/measurements/20261025-response-timing-0020-telemetry.csv \
         ../../docs/hardware/measurements/20261025-response-timing-0020.json \
-        0 ../../docs/content/figures/2026-11-08-response-delay-pulse.png
+        0 ../../docs/articles/figures/2026-11-08-response-delay-pulse.png
 
     poetry run python -m app.plot_response_delay scale \
-        ../../docs/content/figures/2026-11-08-response-delay-scale.png
+        ../../docs/articles/figures/2026-11-08-response-delay-scale.png
 
 ``pulse`` (figure A): one torque pulse against time from the host request,
 with every host sample, the noise thresholds and the detection times from the

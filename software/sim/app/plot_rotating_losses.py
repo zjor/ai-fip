@@ -4,7 +4,7 @@ Usage, from software/sim:
 
     poetry run python -m app.plot_rotating_losses \
         ../../docs/hardware/measurements/2026-11-01-rotating-losses.json \
-        ../../docs/content/figures/2026-11-01-rotating-losses.png
+        ../../docs/articles/figures/2026-11-01-rotating-losses.png
 
 Top panel: coast-down loss torque against speed (1 rev/s bins, mean ± sd, both
 directions pooled), the pooled fit a + b·ω + c·ω², its windage part c·ω², and

@@ -1,15 +1,18 @@
+---
+title: "Torque constant: can I trust my simulated motor?"
+status: draft
+kind: video-scenario  # defines the story and edit, not the final spoken script
+language: en
+target_length: "about 2 min 40 s"
+audience: technically curious viewers and engineers without motor-control or robotics experience
+issues: [PNDLM-9]
+sources:
+  - 2026-10-26-torque-constant-draft.md  # Russian article draft
+  - ../hardware/specs/motor-torque-fixture.md#9-results-2026-10-26  # sections 9–10
+  - ../project/roadmap.md  # project rationale
+---
+
 # Torque constant: can I trust my simulated motor?
-
-Status: unpublished scenario draft. This defines the story and edit, not the
-final spoken script. Target length: about 2 minutes 40 seconds.
-
-Audience: technically curious viewers and engineers without motor-control or
-robotics experience. Language of the planned video: English.
-
-Sources: [existing Russian article draft](2026-10-26-torque-constant-draft.md),
-[measurement report, sections 9–10](../hardware/specs/motor-torque-fixture.md#9-results-2026-10-26),
-[project rationale](../project/roadmap.md),
-[completed experiment PNDLM-9](https://zjor.youtrack.cloud/issue/PNDLM-9).
 
 ## Story
 

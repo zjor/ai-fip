@@ -10,6 +10,7 @@ AI-FIP: a flywheel (reaction wheel) inverted pendulum, to be stabilized by a neu
 | `docs/physics/` | equations of motion, controllability, torque budget | Markdown + LaTeX |
 | `docs/hardware/` | motor selection criteria, candidates, moteus driver notes, BOM | Markdown |
 | `docs/drl/`, `docs/references/` | DRL notes, reference papers (numbered PDFs, index in README) | |
+| `docs/articles/` | article and video drafts (YAML frontmatter), figures rendered by `software/sim/app/plot_*.py` | Markdown |
 | `software/sim/` | RK4 dynamics, LQR/PID regulators | Python, Poetry, package `app` |
 | `software/rl/` | Gymnasium env `fip_env`, SB3 training `train/`, ONNX export `export/`, artifacts `models/` | Python, Poetry |
 | `software/web/` | browser demo running the ONNX policy | TypeScript, webpack, pnpm |
