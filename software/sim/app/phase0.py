@@ -89,8 +89,7 @@ class Moteus:
 @dataclass(frozen=True)
 class Motor:
     name: str
-    kv_rpm_per_v: float
-    kv_measured_rpm_per_v: float
+    torque_constant_nm_per_a: float
     phase_resistance_ohm: float
     phase_inductance_h: float
     poles: int
@@ -99,19 +98,33 @@ class Motor:
     mass_kg: float
     thermal_resistance_k_per_w: Range3
     allowed_winding_rise_k: float
+    copper_tempco_per_k: float
+    magnet_tempco_per_k: float
 
-    def torque_constant_nm_per_a(self, kv_rpm_per_v: float | None = None) -> float:
-        return MOTEUS_TORQUE_FACTOR / (kv_rpm_per_v or self.kv_rpm_per_v)
+    @property
+    def kv_rpm_per_v(self) -> float:
+        """Kv implied by the measured K_t under the moteus convention."""
+        return MOTEUS_TORQUE_FACTOR / self.torque_constant_nm_per_a
 
-    def v_per_hz(self, kv_rpm_per_v: float | None = None) -> float:
-        return 60.0 / (math.sqrt(3.0) * (kv_rpm_per_v or self.kv_rpm_per_v))
+    def v_per_hz(self) -> float:
+        return 60.0 / (math.sqrt(3.0) * self.kv_rpm_per_v)
+
+    def hot_resistance_ohm(self) -> float:
+        return self.phase_resistance_ohm * (1.0 + self.copper_tempco_per_k * self.allowed_winding_rise_k)
+
+    def hot_torque_constant_nm_per_a(self) -> float:
+        """K_t with the magnets at the allowed winding rise (worst case)."""
+        return self.torque_constant_nm_per_a * (
+            1.0 + self.magnet_tempco_per_k * self.allowed_winding_rise_k
+        )
 
     def copper_loss_w(self, peak_phase_current_a: float) -> float:
         return 1.5 * peak_phase_current_a**2 * self.phase_resistance_ohm
 
     def thermal_continuous_current_a(self, thermal_resistance_k_per_w: float) -> float:
+        """Steady current that heats the winding by the allowed rise, hot R."""
         power = self.allowed_winding_rise_k / thermal_resistance_k_per_w
-        return math.sqrt(power / (1.5 * self.phase_resistance_ohm))
+        return math.sqrt(power / (1.5 * self.hot_resistance_ohm()))
 
 
 @dataclass(frozen=True)
@@ -143,7 +156,7 @@ class Actuator:
 
     @property
     def motor_kt_nm_per_a(self) -> float:
-        return self.motor.torque_constant_nm_per_a()
+        return self.motor.torque_constant_nm_per_a
 
     def peak_torque_nm(self) -> float:
         return min(
@@ -162,7 +175,7 @@ class Actuator:
             self.motor.thermal_continuous_current_a(thermal_resistance_k_per_w),
             self.driver.continuous_phase_current_cooled_a,
         )
-        return min(self.motor_kt_nm_per_a * current, self.motor.peak_torque_nm)
+        return min(self.motor.hot_torque_constant_nm_per_a() * current, self.motor.peak_torque_nm)
 
     def max_q_current_a(self, bus_voltage_v: float, rotor_speed_rad_s: float) -> float:
         """Largest q-axis current inside the voltage circle at this speed."""
@@ -456,7 +469,7 @@ def build_report(config: Config) -> dict[str, Any]:
                 result["motor_thermal_continuous_torque_nm"]["pessimistic"],
                 requirements.minimum_continuous_torque_nm,
             )
-            + " (model, unverified)"
+            + " (assumption, PNDLM-13)"
         )
         result["swing_up_momentum_gate"] = "see phase0-swingup"
         robust_actuators.append(result)
@@ -465,7 +478,7 @@ def build_report(config: Config) -> dict[str, Any]:
     return {
         "status": "NOT READY",
         "reason": (
-            "mass distribution is a planning range, motor thermal model is unverified, "
+            "parts are not weighed, the motor thermal model is an assumption (PNDLM-13), "
             "cogging is unknown, and the sensor/estimator is not selected"
         ),
         "nominal_design": {
@@ -573,9 +586,10 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "Kt uses the moteus firmware convention 8.27/Kv with the nominal Kv 330 (measured devkit Kv 304 gives 9% more torque per amp). "
-            "The driver proxy is the controller current rating times Kt. The motor thermal value is a copper-loss model "
-            "(P = 1.5 I² R, R = 0.047 Ω) with an assumed winding-to-ambient thermal resistance; it is not a measurement.",
+            "Kt is the measured 0.0244 Nm/A (PNDLM-9, ±3 %); Kv 339 and the no-load speed follow from it with the "
+            "measured r_max 1.00 (PNDLM-12). The driver proxy is the controller current rating times Kt. The motor "
+            "thermal value is a copper-loss model with hot R (+0.393 %/K) and hot K_t (magnets −0.12 %/K) at the "
+            "allowed rise, and an assumed winding-to-ambient thermal resistance (PNDLM-13); it is not a measurement.",
             "",
             "## Preliminary sensor timing envelope",
             "",
@@ -585,8 +599,8 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "## Remaining gate inputs",
             "",
-            "- component-level mass, placement, and inertia from CAD or measurements",
-            "- bench confirmation of the mj5208 thermal model (stall current vs. winding temperature)",
+            "- weighed parts: mass, placement, and inertia are CAD plus catalogue estimates",
+            "- motor thermal model is an assumption (PNDLM-13); break-even R_th for the requirement is about 8.9 K/W",
             "- cogging torque before and after moteus anti-cogging",
             "- swing-up momentum: run `poetry run phase0-swingup` (results in docs/physics/phase-0-feasibility.md)",
             "- validation with the selected sensor/estimator, quantization, and jitter",

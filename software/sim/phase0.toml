@@ -1,6 +1,7 @@
 # Phase 0 feasibility inputs. Provenance is given per block; anything marked
 # PLANNING or UNSURE has not been measured and must be replaced before the gate
-# is declared passed.
+# is declared passed. ASSUMPTION marks an input that stays unmeasured by
+# decision, with a bound and a documented margin.
 
 [design]
 # From hardware/cad (make masses), 2026-09-04. Nominal = CAD + catalogue hardware
@@ -11,7 +12,10 @@ center_of_mass_m = [0.1313, 0.1459, 0.1605]
 # Pendulum body inertia about the pivot, wheel counted as a point mass
 # (wheel spin inertia is the separate state below).
 pivot_inertia_kg_m2 = [0.02598, 0.02887, 0.03176]
-flywheel_inertia_kg_m2 = [0.002389, 0.002654, 0.00292]
+# Wheel from CAD plus the measured rotor + hub inertia 0.000024 kg*m^2
+# (PNDLM-11, docs/hardware/measurements/2026-11-01-rotating-losses.json,
+# inertia.rotor_and_hub_kg_m2, +/- 0.00001).
+flywheel_inertia_kg_m2 = [0.002413, 0.002678, 0.002944]
 
 [battery]
 # Placement study only. 4S LiPo, 850–1300 mAh class. Mass is UNSURE (typical
@@ -47,29 +51,48 @@ nominal_bus_voltage_v = 14.8
 #   V_eff = 0.5 * V_bus * max_voltage_ratio * (1 - modulation_margin)
 #   (v_per_hz f + R iq)^2 + (pi poles L iq f)^2 <= V_eff^2   (voltage circle)
 modulation_margin = 0.15
-# UNSURE (0.85-0.95): max_voltage_ratio = (max_pwm - 0.5) * 2, max_pwm = 1 - min_pwm,
-# and min_pwm depends on the PWM rate. Confirm on the real controller.
-max_voltage_ratio = 0.94
+# Measured 2026-11-04, PNDLM-12: r_max = 1.00 +/- 0.03 (0.9959, se 0.0294,
+# n 48; the K_t uncertainty dominates) from no-load and base speeds at
+# 11-15 V with Kv 339 from the measured K_t.
+# docs/hardware/measurements/2026-11-04-torque-speed.json (r_max). Replaces the
+# UNSURE 0.94. Measured no-load slope: 248.3 +/- 1.0 rpm/V of loaded bus.
+max_voltage_ratio = 1.0
 
 [motor]
 name = "mjbots mj5208"
-# Product page (2026-09-04): Kv 330, peak 1.7 Nm, 600 W, 7500 rpm, 193 g, 63x25 mm.
-kv_rpm_per_v = 330.0
-# mjbots blog 2025-04-24 "Improving motor constant calibration": measured on a
-# devkit motor. R and L are line-to-center.
-kv_measured_rpm_per_v = 304.0
-phase_resistance_ohm = 0.047
-phase_inductance_h = 28.6e-6
+# Measured 2026-10-26, PNDLM-9: lever and scale on a held rotor, 7 runs
+# 20261026T095749Z..175936Z, 1-8 A per commanded amp, linear region.
+# docs/hardware/measurements/2026-10-26-torque-constant.json
+# (simulator.kt_linear_region_per_commanded_a_nm_per_a = 0.02444), +/- 3 % (1 sd).
+# Not measured above 8 A; the 1.7 Nm peak (about 70 A) is an extrapolation.
+torque_constant_nm_per_a = 0.0244
+# Kv follows from K_t by the moteus convention: 8.27 / 0.0244 = 339 rpm/V.
+# PNDLM-12 confirms it: with Kv 339 the voltage circle fits every measured
+# no-load and base speed with r_max 1.00. Product page Kv 330 and firmware
+# motor.Kv 296 are not used (296 would need the impossible r_max 1.137).
+# Controller calibration dump (PNDLM-12 runs, 2026-11-04), line-to-centre:
+# R 0.0467 ohm, L_q 44.8 uH. The mjbots blog values (0.047 ohm, 28.6 uH) are
+# replaced; R matches, L is 57 % higher.
+phase_resistance_ohm = 0.0467
+phase_inductance_h = 44.8e-6
 # moteus documentation example configuration for the mj5208 (motor.poles = 14).
 poles = 14
+# Product page (2026-09-04): peak 1.7 Nm, 600 W, 7500 rpm, 193 g, 63x25 mm.
 peak_torque_nm = 1.7
 max_rpm = 7500.0
 mass_kg = 0.193
-# UNSURE thermal model: winding-to-ambient thermal resistance for a 63 mm
-# outrunner with no airflow, and the allowed steady-state winding rise.
-# Copper loss for peak phase current I is P = 1.5 * I^2 * R.
+# ASSUMPTION, not measured (PNDLM-13 closed by assumption on 2026-11-09, no
+# temperature sensor): winding-to-ambient thermal resistance for a 63 mm
+# outrunner with no airflow, and the allowed steady-state winding rise (a
+# hard limit: magnet grade unknown, N grades lose field for good above ~80 C).
+# Copper loss P = 1.5 * I^2 * R(T), R(T) = R * (1 + copper_tempco * dT).
+# Hot K_t = K_t * (1 + magnet_tempco * dT), worst case: magnets as hot as the
+# winding. Break-even for 0.20 Nm continuous is R_th 8.9 K/W.
+# docs/physics/phase-0-feasibility.md#continuous-thermal-gate
 thermal_resistance_k_per_w = [3.0, 4.5, 6.0]
 allowed_winding_rise_k = 60.0
+copper_tempco_per_k = 0.00393
+magnet_tempco_per_k = -0.0012
 
 [[drivers]]
 # mjbots product page (2026-09-04).
@@ -101,8 +124,7 @@ price_usd = 94.0
 # b range is +/- 2 SE and the 2.6 % inertia uncertainty. c is disc windage and
 # barely resolved; it does not transfer to the final wheel, kept for scale.
 # Breakaway below ~1 rev/s was not measured; w_s smooths the Coulomb step.
-# The bench also gives the rotor + hub inertia, 0.000024 kg*m^2; it is not
-# yet added to [design] flywheel_inertia_kg_m2 (about 1 % of the wheel).
+# The bench rotor + hub inertia is added to [design] flywheel_inertia_kg_m2.
 coulomb_nm = [0.003, 0.00443, 0.007]
 viscous_nm_s = [3.55e-5, 3.78e-5, 4.0e-5]
 windage_nm_s2 = 9.7e-9

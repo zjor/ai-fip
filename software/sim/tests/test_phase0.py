@@ -35,7 +35,9 @@ class Phase0Test(unittest.TestCase):
     def test_torque_constant_uses_moteus_firmware_convention(self):
         # fw/bldc_servo.cc: kTorqueFactor = (3/2) * (1/sqrt3) * (60/2pi)
         self.assertAlmostEqual(MOTEUS_TORQUE_FACTOR, 8.2699, places=3)
-        self.assertAlmostEqual(self.c1.motor_kt_nm_per_a, 8.2699 / 330.0, places=5)
+        # PNDLM-9 measured K_t; Kv follows from it (PNDLM-12: 339 rpm/V).
+        self.assertAlmostEqual(self.c1.motor_kt_nm_per_a, 0.0244)
+        self.assertAlmostEqual(self.c1.motor.kv_rpm_per_v, 338.9, delta=0.1)
 
     def test_c1_passes_finger_poke_but_fails_preferred_angle(self):
         c1 = self.report["robust_actuators"][0]
@@ -61,19 +63,30 @@ class Phase0Test(unittest.TestCase):
     def test_gate_remains_not_ready_while_mass_model_is_planning_range(self):
         self.assertEqual(self.report["status"], "NOT READY")
         for actuator in self.report["robust_actuators"]:
-            self.assertIn("unverified", actuator["motor_thermal_gate"])
+            self.assertIn("assumption", actuator["motor_thermal_gate"])
 
     def test_no_load_speed_follows_moteus_effective_voltage(self):
         # v_per_hz = 60/(sqrt3 Kv); V_eff = 0.5 V_bus ratio (1 - margin)
-        v_eff = 0.5 * 12.0 * 0.94 * 0.85
-        expected_rpm = v_eff / (60.0 / (math.sqrt(3.0) * 330.0)) * 60.0
+        kv = MOTEUS_TORQUE_FACTOR / 0.0244
+        v_eff = 0.5 * 12.0 * 1.0 * 0.85
+        expected_rpm = v_eff / (60.0 / (math.sqrt(3.0) * kv)) * 60.0
         self.assertAlmostEqual(self.r4.no_load_rpm(12.0), expected_rpm, places=6)
-        self.assertLess(expected_rpm, 330.0 * 12.0)  # below the hobby Kv*V rule
+        self.assertLess(expected_rpm, kv * 12.0)  # below the hobby Kv*V rule
+        # PNDLM-12 measured 248.3 +/- 1.0 rpm/V of loaded bus.
+        self.assertAlmostEqual(self.r4.no_load_rpm(1.0), 248.3, delta=2.0)
+
+    def test_hot_motor_corner_matches_pndlm13(self):
+        motor = self.config.motor
+        self.assertAlmostEqual(motor.hot_resistance_ohm() / motor.phase_resistance_ohm, 1.236, places=3)
+        self.assertAlmostEqual(motor.hot_torque_constant_nm_per_a(), 0.0227, delta=0.0001)
+        # 0.20 Nm continuous holds at the pessimistic assumed R_th 6 K/W.
+        self.assertGreater(self.r4.motor_thermal_continuous_torque_nm(6.0), 0.20)
+        self.assertLess(self.r4.motor_thermal_continuous_torque_nm(9.0), 0.20)
 
     def test_torque_speed_envelope_reaches_zero_at_no_load_speed(self):
         speed_rad_s = self.c1.no_load_rpm(12.0) * RAD_S_PER_RPM
         self.assertAlmostEqual(available_peak_torque_nm(self.c1, 12.0, speed_rad_s), 0.0, places=6)
-        self.assertGreater(available_peak_torque_nm(self.c1, 12.0, 0.0), 0.49)
+        self.assertAlmostEqual(available_peak_torque_nm(self.c1, 12.0, 0.0), 20.0 * 0.0244)
 
     def test_r4_peak_torque_is_motor_limited_at_stall_and_fades_with_speed(self):
         self.assertAlmostEqual(self.r4.available_torque_nm(12.0, 0.0), 1.7)
