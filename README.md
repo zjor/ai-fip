@@ -30,7 +30,7 @@ Digital soul aka AI-FIP (flywheel inverted pendulum) — обратный мая
 
 - [Current tasks](https://zjor.youtrack.cloud/projects/PNDLM) — unfinished work in YouTrack
 - [Roadmap](docs/project/roadmap.md) — phases, milestones and gates
-- [Progress log](docs/project/log.md) — completed work and decisions
+- [Progress log](docs/project/log/README.md) — completed work and decisions
 - [Project-management process](docs/project/README.md) — ownership and update rules
 
 ## Repository map

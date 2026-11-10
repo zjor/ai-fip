@@ -6,7 +6,7 @@ Project knowledge and process, organized by concept.
 
 - [Current tasks](https://zjor.youtrack.cloud/projects/PNDLM) — unfinished work in YouTrack
 - [Roadmap](project/roadmap.md) — phases, milestones and gates
-- [Progress log](project/log.md) — completed work and decisions
+- [Progress log](project/log/README.md) — completed work and decisions
 - [Process](project/README.md) — ownership and update rules
 
 ## Physics

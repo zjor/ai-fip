@@ -14,7 +14,7 @@ Goal of the answer. The user wants to:
 ## Steps
 
 1. Read the issue with `mcp__youtrack__get_issue` (ask for 10 recent comments). If `totalComments` is larger, read the rest with `mcp__youtrack__get_issue_comments`.
-2. Read the repo files the ticket names (reports in `docs/hardware/`, derived JSON in `docs/hardware/measurements/`, the entry in `docs/project/log.md`). Read only the parts you need.
+2. Read the repo files the ticket names (reports in `docs/hardware/`, derived JSON in `docs/hardware/measurements/`, the entry in the newest file of `docs/project/log/`). Read only the parts you need.
 3. Check every number against its source. If the ticket contradicts itself (for example, a margin that does not follow from the numbers), mark it **inferred** and name the one check that settles it.
 4. Write the answer in the shape below.
 

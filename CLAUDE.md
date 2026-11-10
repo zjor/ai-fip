@@ -26,11 +26,10 @@ Rule: `software/` runs on a laptop, `hardware/` runs on the device. Each subproj
 
 - `README.md` — vision and Definition of done. Rarely changes.
 - YouTrack PNDLM is the single source of truth for every unfinished action or open decision. Use Epic → Task and keep one globally ordered queue across hardware, software, learning and content; do not duplicate task state in the repository.
-- `docs/project/tasks.md` — static legacy task ID → YouTrack issue mapping only.
-- `docs/project/roadmap.md` — phases 0–4 with milestones and gates, not fine-grained tasks. The 2026 principle is *hardware feasibility first*: no training code until an honest simulation with real motor limits shows LQR stabilizes the system and stops the wheel.
-- `docs/project/log.md` — dated, append-only journal of completed progress and decisions with rationale. Newest entry on top. Do not add future task lists; put them in YouTrack PNDLM.
+- `docs/project/roadmap.md` — phases 0–4 with milestones and gates, plus a dated snapshot of open tasks and their dependency graph (legacy T-IDs → PNDLM links). The 2026 principle is *hardware feasibility first*: no training code until an honest simulation with real motor limits shows LQR stabilizes the system and stops the wheel.
+- `docs/project/log/` — dated, append-only journal split into files by period (index in `log/README.md`; write to the newest file) of completed progress and decisions with rationale. Newest entry on top. Do not add future task lists; put them in YouTrack PNDLM.
 - `docs/project/README.md` — process ownership and update rules.
-- Component READMEs and technical notes provide context only. Link to YouTrack issues (legacy IDs resolve through `docs/project/tasks.md`) instead of maintaining `Status / Next` lists or progress checkboxes.
+- Component READMEs and technical notes provide context only. Link to YouTrack issues (legacy IDs resolve through the roadmap snapshot) instead of maintaining `Status / Next` lists or progress checkboxes.
 
 ## Conventions
 

@@ -68,7 +68,7 @@ Modes are fixed in firmware. Other behaviors are parameter sets of mode 10:
 - **Reported q-current is not zero with the power stage off.** In mode 0
   (and in mode 11 with `timeout_mode` 0) the controller reports about −1.2 A
   with open phases, likely an uncalibrated offset while PWM is off
-  ([log, PNDLM-11 entries of 28.10 and 01.11.2026](../project/log.md)).
+  ([log, PNDLM-11 entries of 28.10 and 01.11.2026](../project/log/README.md)).
   Figure A of the
   [response-delay draft](../articles/2026-11-08-response-delay-draft.md) shows
   the same −1.2 A after the watchdog trip. Do not read current outside an

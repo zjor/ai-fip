@@ -1,7 +1,7 @@
 # MuJoCo learning exercises
 
 Small, cumulative exercises for learning MuJoCo while working toward
-[T-001 (completed)](../../../../docs/project/log.md). Each numbered directory is a runnable
+[T-001 (completed)](../../../../docs/project/log/README.md). Each numbered directory is a runnable
 snapshot and should remain understandable on its own.
 
 Assets reused by multiple exercises live in [`assets/`](assets/). Exercise MJCF

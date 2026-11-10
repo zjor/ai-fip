@@ -5,9 +5,10 @@ keeps process rules, milestones and engineering history. Unfinished work lives
 in YouTrack PNDLM.
 
 - [YouTrack PNDLM](https://zjor.youtrack.cloud/projects/PNDLM) — all unfinished work
-- [Task reference index](tasks.md) — static legacy ID → YouTrack issue mapping
-- [Roadmap](roadmap.md) — phases, milestones and go/no-go gates
-- [Log](log.md) — append-only history of progress and decisions, newest first
+- [Roadmap](roadmap.md) — phases, milestones, go/no-go gates and a dated
+  snapshot of open tasks with their dependency graph (legacy T-IDs → PNDLM)
+- [Log](log/README.md) — append-only history of progress and decisions, newest
+  first, split into files by period
 
 ## YouTrack connection
 
@@ -25,20 +26,22 @@ projects, so scope issue searches explicitly.
 
 The backlog migrated on 2026-10-25: seven Epics and 23 child Tasks, preserving
 full descriptions and 27 explicit task dependencies. YouTrack is now the single
-source of truth; `tasks.md` contains only a static ID mapping.
+source of truth.
 
 ## Rules
 
 1. Every unfinished action or open decision lives in YouTrack PNDLM, regardless of
    whether it concerns hardware, simulation, controls, learning, RL or content.
-2. `roadmap.md` tracks phase outcomes and gates, not fine-grained actions.
+2. `roadmap.md` tracks phase outcomes and gates. Its open-task section is a
+   dated snapshot of YouTrack dependencies; YouTrack wins on any mismatch.
 3. Component READMEs and technical documents provide context and link to task
    issues; they do not maintain separate task lists or progress checkboxes.
    Use Epic → Task; create dependencies with issue links. Legacy IDs resolve
-   through `tasks.md`; new work uses PNDLM issue IDs.
-4. `log.md` records completed work and decisions with rationale. It does not own
+   through the roadmap snapshot; new work uses PNDLM issue IDs.
+4. `log/` records completed work and decisions with rationale. It does not own
    future work. Historical entries are not rewritten merely because an old task
-   has since moved or been completed.
+   has since moved or been completed. Add entries to the newest file; start a
+   new file and list it in `log/README.md` when the current one grows large.
 5. `Now` is globally prioritized and limited to three active tasks. `Waiting`
    contains externally blocked work; `Next` is ordered; `Later` is the backlog.
    Maintain this global queue in YouTrack. Currently queue placement and order
