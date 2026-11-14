@@ -189,21 +189,21 @@ its STL and combines them with catalogue hardware masses. Rendered on
 | Part | Mass | z of CoM | Contribution to G (Nm) |
 |---|---:|---:|---:|
 | wheel plastic + 8 tuning bolts | 194 g | 250 | 0.48 |
-| mj5208 + r4.11 + screws | 212 g | 250 | 0.52 |
+| mj5208 + r4.11 + devkit bracket + screws (weighed 2026-11-14) | 235.2 g | 250 | 0.58 |
 | motor flange | 42 g | 228 | 0.09 |
 | beam | 64 g | 36 | 0.02 |
 | axle, collars, clamp screws (estimate) | 60 g | 0 | 0 |
 | 4S pack | 120 g | 0 | 0 |
 | RPi 4 + pi3hat + standoffs (estimate) | 85 g | 0 | 0 |
-| **total** | **0.776 kg** | l_c = 0.146 m | **G = 1.11 Nm** |
+| **total** | **0.800 kg** | l_c = 0.149 m | **G = 1.17 Nm** |
 
-I_p = 0.029 kg m² (beam as a slender rod, everything else as point masses),
+I_p = 0.030 kg m² (beam as a slender rod, everything else as point masses),
 I_w = 0.0027 kg m² with 8 bolts (10 bolts give 0.0030). This sits between the
 Phase 0 nominal (0.97 Nm) and pessimistic (1.34 Nm) corners, where the r4.11
-has ≥ 3.7× margin at 20° and passes torque-capped swing-up at every point. The
-uncapped direct lift at 12 V reaches 71–79 % of no-load wheel speed at
-I_w 0.0027, above the 70 % limit: fit 10 bolts (0.0030) or cap swing-up torque
-at 0.5 Nm in software. Two levers if the printed parts
+has ≥ 3.5× margin at 20° and passes torque-capped (0.5 Nm) swing-up at every
+point. The uncapped direct lift fails the 70 % wheel-speed limit only at
+I_w 0.0024 and 12 V (71 % nominal, 78 % pessimistic); at the nominal 0.0027
+it reaches 65–69 %. Re-run 2026-11-14 with the weighed motor unit. Two levers if the printed parts
 come out heavier: shorten `rod_len` (G ∝ rod length), or use an RPi Zero 2 W.
 These numbers are the `[design]` block of `software/sim/phase0.toml`
 (nominal, −10 % / +10 %); `poetry run phase0 && poetry run phase0-swingup

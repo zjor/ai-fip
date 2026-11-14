@@ -5,13 +5,14 @@
 
 [design]
 # From hardware/cad (make masses), 2026-09-04. Nominal = CAD + catalogue hardware
-# masses; -10 % / +10 % covers print density, screws and cable. Still no
-# measured parts.
-total_mass_kg = [0.6988, 0.7765, 0.8541]
-center_of_mass_m = [0.1313, 0.1459, 0.1605]
+# masses; -10 % / +10 % covers print density, screws and cable.
+# Measured 2026-11-14: mj5208 + r4.11 + devkit bracket weighed 235.2 g as one
+# unit (CAD had 212 g without the bracket), taken at the motor axis, 250 mm.
+total_mass_kg = [0.7197, 0.7997, 0.8797]
+center_of_mass_m = [0.1340, 0.1489, 0.1638]
 # Pendulum body inertia about the pivot, wheel counted as a point mass
 # (wheel spin inertia is the separate state below).
-pivot_inertia_kg_m2 = [0.02598, 0.02887, 0.03176]
+pivot_inertia_kg_m2 = [0.02729, 0.03032, 0.03335]
 # Wheel from CAD plus the measured rotor + hub inertia 0.000024 kg*m^2
 # (PNDLM-11, docs/hardware/measurements/2026-11-01-rotating-losses.json,
 # inertia.rotor_and_hub_kg_m2, +/- 0.00001).
