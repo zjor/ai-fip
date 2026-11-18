@@ -4,6 +4,61 @@ Control loop for the 2026 build: Raspberry Pi + pi3hat (CAN-FD, IMU) commanding 
 
 See [docs/hardware/hardware.md → Driver: moteus](../../../docs/hardware/hardware.md) and [docs/project/roadmap.md](../../../docs/project/roadmap.md) Phase 3. Current work is tracked in [YouTrack PNDLM](https://zjor.youtrack.cloud/projects/PNDLM).
 
+## Raspberry Pi setup
+
+Tested 2026-11-18 on a Raspberry Pi 4B 4 GB with the pi3hat r4.5 mounted.
+
+1. Flash **Raspberry Pi OS Lite (64-bit)** with Raspberry Pi Imager
+   (`brew install --cask raspberry-pi-imager`). In *Edit settings* set the
+   hostname (`ai-fip-rpi`), user, Wi-Fi and SSH with public-key auth.
+   The current release is Debian 13 trixie with Python 3.13; the older
+   bookworm release ships Python 3.11, which is below this package's minimum.
+2. Allow passwordless `sudo`, because the pi3hat library accesses the SPI and
+   GPIO registers directly and must run as root:
+
+   ```shell
+   echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/010_$USER-nopasswd
+   sudo chmod 440 /etc/sudoers.d/010_$USER-nopasswd
+   ```
+
+3. Install the toolchain:
+
+   ```shell
+   sudo apt update && sudo apt full-upgrade -y
+   sudo apt install -y git python3-venv python3-dev pipx build-essential
+   pipx install poetry && pipx ensurepath
+   ```
+
+4. `pip install moteus-pi3hat` uses a prebuilt `cp313` aarch64 wheel
+   (1.1.0); SPI does not need to be enabled in `raspi-config`.
+
+IMU check, from a venv with `moteus-pi3hat` installed (run with `sudo`):
+
+```python
+import asyncio, math, moteus_pi3hat
+
+async def main():
+    t = moteus_pi3hat.Pi3HatRouter(servo_bus_map={})
+    for _ in range(20):
+        r = await t.cycle([], request_attitude=True)
+        a = next(x for x in r if isinstance(x, moteus_pi3hat.CanAttitudeWrapper))
+        e = a.euler_rad
+        print(math.degrees(e.roll), math.degrees(e.pitch), a.rate_dps.x, a.rate_dps.y)
+        await asyncio.sleep(0.1)
+
+asyncio.run(main())
+```
+
+IMU conventions seen on the bench (board lying flat, components up):
+
+- roll rests at about 180°, so it wraps at ±180° near the rest pose; derive the
+  pendulum angle with an explicit offset and wrap;
+- `accel_mps2` has gravity removed (about 0.1 m/s² at rest);
+- raw gyro z bias was about 0.6 dps, so yaw drifts.
+
+The pendulum axis, its sign and zero offset must be measured with the board
+mounted on the pendulum.
+
 ## Minute clock
 
 `minute-clock` is a small bench exercise for learning position control. An arrow
