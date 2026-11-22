@@ -32,6 +32,43 @@ Tested 2026-11-18 on a Raspberry Pi 4B 4 GB with the pi3hat r4.5 mounted.
 4. `pip install moteus-pi3hat` uses a prebuilt `cp313` aarch64 wheel
    (1.1.0); SPI does not need to be enabled in `raspi-config`.
 
+### Connect
+
+The Pi is reachable over mDNS on the local network:
+
+| | |
+|---|---|
+| Hostname | `ai-fip-rpi` (`ai-fip-rpi.local`) |
+| User | `zjor`, SSH public-key auth |
+
+```shell
+ssh zjor@ai-fip-rpi.local
+```
+
+### moteus over the pi3hat
+
+The moteus (CAN ID 1) is cabled to pi3hat port **JC1**, which is CAN bus 1.
+JC1–JC4 are the fast CAN-FD buses; JC5 is the slow auxiliary bus and is not
+used for control. In `moteus` tools the mapping is `--pi3hat-cfg "1=1"`
+(bus 1 has servo ID 1). All commands need `sudo`.
+
+Read-only checks, from a venv with `moteus` and `moteus-pi3hat`:
+
+```shell
+sudo .venv/bin/python -m moteus.moteus_tool --pi3hat-cfg "1=1" -t 1 --info
+sudo .venv/bin/python tools/pi3hat_ping.py   # --bus, --id, --count
+```
+
+`moteus_tool` has no timeout of its own and hangs if nothing answers on the
+given bus. `tools/pi3hat_ping.py` runs 100 steps, each one moteus query plus one
+IMU attitude read, and prints the state and step time. On 2026-11-22 the median
+step time was 1.39 ms (max 2.37 ms), with 0/100 missed replies.
+
+Known issue: `moteus-pi3hat` 1.1.0 with `moteus` 1.1.3 raises
+`AttributeError: 'CanAttitudeWrapper' object has no attribute 'channel'`
+when a moteus query and `request_attitude=True` share one `cycle()`. Read the
+IMU in a separate cycle until this is fixed.
+
 IMU check, from a venv with `moteus-pi3hat` installed (run with `sudo`):
 
 ```python
