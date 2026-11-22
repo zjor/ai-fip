@@ -69,6 +69,37 @@ Known issue: `moteus-pi3hat` 1.1.0 with `moteus` 1.1.3 raises
 when a moteus query and `request_attitude=True` share one `cycle()`. Read the
 IMU in a separate cycle until this is fixed.
 
+Config over the pi3hat: `moteus_tool --write-config FILE` sends the first line
+and then hangs while it waits for `OK`, and `--dump-config` output lags one
+call behind. Send one command per call with a timeout, then dump at least twice:
+
+```shell
+printf "conf set servopos.position_max nan\n" > /tmp/c.cfg
+timeout 15 sudo .venv/bin/python -m moteus.moteus_tool --pi3hat-cfg "1=1" -t 1 --write-config /tmp/c.cfg
+```
+
+The moteus position bounds `servopos.position_min/max` are `nan` (saved with
+`conf write` on 2026-11-22). The `[-1.1, +1.1]` rev bounds of the arrow bench
+fixture stopped the reaction wheel with fault 103.
+
+### Wheel motion on the pendulum
+
+Both scripts run on the Pi from the same directory (`wheel_swing.py` imports
+`wheel_nudge.py`). The pendulum hangs down and is free to swing. Run with
+`--dry-run` first. Aborts: torque cap, 0.1 s watchdog, fault, wheel speed, and
+body rotation from the start (quaternion angle; Euler roll is unusable because
+the board sits near pitch 90°, where roll and yaw merge).
+
+```shell
+sudo .venv/bin/python tools/wheel_nudge.py --speed 1 --accel 2 --hold 0.3
+sudo .venv/bin/python tools/wheel_swing.py --amp 0.6 --max-torque 0.10 --cycles 10
+```
+
+`wheel_nudge.py` ramps the wheel to a set speed and back. `wheel_swing.py`
+drives the wheel velocity as a sine at the pendulum's natural frequency
+(default 1.42 Hz, measured), then logs the free swing. With the command above
+the swing grows to about 22° with a peak torque of 0.048 Nm.
+
 IMU check, from a venv with `moteus-pi3hat` installed (run with `sudo`):
 
 ```python
